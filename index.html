@@ -428,9 +428,9 @@
             <span class="btn-text">GERAR E ENVIAR NO WHATSAPP</span>
         </button>
         
-        <!-- PAINEL DE DEBUG (remover em produção) -->
+        <!-- PAINEL DE DEBUG -->
         <div class="debug-panel" id="debugPanel">
-            <div>🕒 <strong>Horário Brasília:</strong> <span id="debugHoraBrasilia"></span></div>
+            <div>🕒 <strong>Horário Brasília (fixo):</strong> <span id="debugHoraBrasilia"></span></div>
             <div>📅 <strong>Oferta:</strong> <span id="debugOfertaInfo"></span></div>
             <div>⏰ <strong>Status:</strong> <span id="debugStatus"></span></div>
         </div>
@@ -466,39 +466,23 @@ try {
 }
 
 // ============================================
-// FUNÇÃO PARA OBTER HORÁRIO DE BRASÍLIA FIXO
+// FUNÇÃO PARA OBTER HORÁRIO DE BRASÍLIA (CORRIGIDA!)
 // ============================================
 function getHorarioBrasilia() {
+    // Criar data atual em UTC
     const agora = new Date();
     
-    // Converter para string no formato de Brasília
-    const options = {
-        timeZone: 'America/Sao_Paulo',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-    };
+    // Converter para o horário de Brasília (UTC-3)
+    // Brasilía = UTC-3 = UTC - 3 horas
+    const brasiliaOffset = -3; // UTC-3
     
-    const dataBrasiliaStr = agora.toLocaleString('pt-BR', options);
+    // Pegar o UTC atual
+    const utc = new Date(agora.getTime() + (agora.getTimezoneOffset() * 60000));
     
-    // Converter de volta para Date object (interpretando como Brasília)
-    const [data, hora] = dataBrasiliaStr.split(' ');
-    const [dia, mes, ano] = data.split('/');
-    const [horaParte, minutoParte, segundoParte] = hora.split(':');
+    // Aplicar offset de Brasília
+    const brasiliaTime = new Date(utc.getTime() + (brasiliaOffset * 3600000));
     
-    // Criar data no formato UTC mas com hora de Brasília
-    return new Date(Date.UTC(
-        parseInt(ano),
-        parseInt(mes) - 1,
-        parseInt(dia),
-        parseInt(horaParte),
-        parseInt(minutoParte),
-        parseInt(segundoParte || 0)
-    ));
+    return brasiliaTime;
 }
 
 // ============================================
@@ -506,21 +490,41 @@ function getHorarioBrasilia() {
 // ============================================
 function verificarOfertaAtivaIndex() {
     const agoraBrasilia = getHorarioBrasilia();
+    console.log('🕒 Horário de Brasília (fixo):', agoraBrasilia.toLocaleString('pt-BR'));
     
     const ofertaAtiva = JSON.parse(localStorage.getItem('ofertaAtiva'));
     const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
     
     if (!ofertaAtiva || modoExpirado) {
+        console.log('ℹ️ Nenhuma oferta ativa');
         return null;
     }
     
     try {
+        // As ofertas estão salvas em UTC
         const dataInicio = new Date(ofertaAtiva.dataInicio);
         const dataFim = new Date(ofertaAtiva.dataFim);
         
+        console.log('📅 Início (UTC):', dataInicio.toISOString());
+        console.log('📅 Fim (UTC):', dataFim.toISOString());
+        console.log('📅 Agora (Brasília):', agoraBrasilia.toISOString());
+        
+        // Comparar usando o horário de Brasília
         if (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim) {
+            console.log('✅ Oferta ATIVA!');
             return ofertaAtiva;
         } else {
+            console.log('⏰ Oferta não está ativa neste momento');
+            
+            if (agoraBrasilia < dataInicio) {
+                const diffMs = dataInicio - agoraBrasilia;
+                const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                console.log(`⏳ Faltam ${diffHrs}h${diffMins}min para iniciar`);
+            } else {
+                console.log('⌛ Oferta já expirou');
+            }
+            
             return null;
         }
     } catch (e) {
@@ -780,12 +784,12 @@ async function enviar() {
 // ============================================
 function atualizarDebug() {
     const agora = getHorarioBrasilia();
-    document.getElementById('debugHoraBrasilia').innerText = agora.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    document.getElementById('debugHoraBrasilia').innerText = agora.toLocaleString('pt-BR');
     
     const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
     if (oferta) {
-        const inicio = new Date(oferta.dataInicio).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-        const fim = new Date(oferta.dataFim).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        const inicio = new Date(oferta.dataInicio).toLocaleString('pt-BR');
+        const fim = new Date(oferta.dataFim).toLocaleString('pt-BR');
         document.getElementById('debugOfertaInfo').innerHTML = `${oferta.tituloPagina} (${inicio} até ${fim})`;
         
         if (agora >= new Date(oferta.dataInicio) && agora <= new Date(oferta.dataFim)) {
