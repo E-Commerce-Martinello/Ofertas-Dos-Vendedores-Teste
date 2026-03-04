@@ -373,6 +373,32 @@
                 box-shadow: 0 8px 25px rgba(208, 37, 42, 0.6);
             }
         }
+
+        .mensagem-embreve {
+            color: #666;
+            margin: 15px 0;
+            font-size: 16px;
+            line-height: 1.5;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .debug-panel {
+            font-size: 11px;
+            color: #999;
+            margin-top: 20px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            text-align: left;
+            border: 1px solid #eee;
+        }
+
+        .debug-panel div {
+            margin: 3px 0;
+        }
     </style>
 </head>
 <body>
@@ -390,6 +416,9 @@
         
         <img id="fotoProduto" class="product-image" src="produto.png" alt="Imagem do Produto">
         
+        <!-- Mensagem para tela "EM BREVE" -->
+        <div id="mensagemEmBreve" class="mensagem-embreve"></div>
+        
         <div class="input-group">
             <i class="fas fa-tag input-icon"></i>
             <input type="text" id="cod" placeholder="DIGITE SUA MATRÍCULA AQUI!" oninput="validarMatricula(this)">
@@ -398,6 +427,13 @@
         <button class="btn-primary" onclick="enviar()" id="btnEnviar">
             <span class="btn-text">GERAR E ENVIAR NO WHATSAPP</span>
         </button>
+        
+        <!-- PAINEL DE DEBUG (remover em produção) -->
+        <div class="debug-panel" id="debugPanel">
+            <div>🕒 <strong>Horário Brasília:</strong> <span id="debugHoraBrasilia"></span></div>
+            <div>📅 <strong>Oferta:</strong> <span id="debugOfertaInfo"></span></div>
+            <div>⏰ <strong>Status:</strong> <span id="debugStatus"></span></div>
+        </div>
     </div>
 </div>
 
@@ -411,68 +447,145 @@
 
 <script>
 // ============================================
-// CONFIGURAÇÕES PADRÃO (IMAGEM DO REPOSITÓRIO)
+// CONFIGURAÇÕES DA TELA "EM BREVE"
 // ============================================
-let configPadrao = {
-    imagemPadrao: 'produto.png',
-    textoPadrao: '🔜 AGUARDE! Em breve teremos novidades para você!\n\nNova oferta chegando em breve no Martinello.\nFique ligado para não perder!'
+let configTelaEmBreve = {
+    imagem: 'produto.png',
+    titulo: 'EM BREVE',
+    mensagem: ''
 };
 
 try {
-    const configPadraoSalva = localStorage.getItem('configPadraoMartinello');
-    if (configPadraoSalva) {
-        configPadrao = { ...configPadrao, ...JSON.parse(configPadraoSalva) };
+    const configSalva = localStorage.getItem('configTelaEmBreve');
+    if (configSalva) {
+        configTelaEmBreve = { ...configTelaEmBreve, ...JSON.parse(configSalva) };
+        console.log('✅ Configurações da tela "EM BREVE" carregadas');
     }
 } catch (e) {
-    console.log('Usando configuração padrão do repositório');
+    console.log('Usando configurações padrão da tela "EM BREVE"');
 }
 
 // ============================================
-// VERIFICAR OFERTA ATIVA
+// FUNÇÃO PARA OBTER HORÁRIO DE BRASÍLIA FIXO
 // ============================================
-const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
-const ofertaAtiva = JSON.parse(localStorage.getItem('ofertaAtiva'));
+function getHorarioBrasilia() {
+    const agora = new Date();
+    
+    // Converter para string no formato de Brasília
+    const options = {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    };
+    
+    const dataBrasiliaStr = agora.toLocaleString('pt-BR', options);
+    
+    // Converter de volta para Date object (interpretando como Brasília)
+    const [data, hora] = dataBrasiliaStr.split(' ');
+    const [dia, mes, ano] = data.split('/');
+    const [horaParte, minutoParte, segundoParte] = hora.split(':');
+    
+    // Criar data no formato UTC mas com hora de Brasília
+    return new Date(Date.UTC(
+        parseInt(ano),
+        parseInt(mes) - 1,
+        parseInt(dia),
+        parseInt(horaParte),
+        parseInt(minutoParte),
+        parseInt(segundoParte || 0)
+    ));
+}
 
+// ============================================
+// VERIFICAR OFERTA ATIVA (COM HORÁRIO FIXO)
+// ============================================
+function verificarOfertaAtivaIndex() {
+    const agoraBrasilia = getHorarioBrasilia();
+    
+    const ofertaAtiva = JSON.parse(localStorage.getItem('ofertaAtiva'));
+    const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
+    
+    if (!ofertaAtiva || modoExpirado) {
+        return null;
+    }
+    
+    try {
+        const dataInicio = new Date(ofertaAtiva.dataInicio);
+        const dataFim = new Date(ofertaAtiva.dataFim);
+        
+        if (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim) {
+            return ofertaAtiva;
+        } else {
+            return null;
+        }
+    } catch (e) {
+        console.error('❌ Erro ao processar oferta:', e);
+        return null;
+    }
+}
+
+// ============================================
+// APLICAR CONFIGURAÇÕES NA PÁGINA
+// ============================================
+const ofertaValida = verificarOfertaAtivaIndex();
 let CONFIG = {};
 
-if (modoExpirado || !ofertaAtiva) {
-    // MODO SEM OFERTA
+if (ofertaValida) {
+    // MODO OFERTA ATIVA
     CONFIG = {
-        urlProduto: '#',
-        textoOferta: configPadrao.textoPadrao,
-        tituloPagina: 'EM BREVE'
+        urlProduto: ofertaValida.linkProduto,
+        textoOferta: ofertaValida.textoOferta,
+        tituloPagina: ofertaValida.tituloPagina
     };
     
-    document.getElementById('fotoProduto').src = configPadrao.imagemPadrao;
-    document.getElementById('cod').disabled = true;
-    document.getElementById('btnEnviar').disabled = true;
-    document.querySelector('.btn-text').textContent = 'AGUARDE NOVA OFERTA';
-    
-} else {
-    // MODO COM OFERTA ATIVA
-    CONFIG = {
-        urlProduto: ofertaAtiva.linkProduto,
-        textoOferta: ofertaAtiva.textoOferta,
-        tituloPagina: ofertaAtiva.tituloPagina
-    };
-    
-    if (ofertaAtiva.urlImagem) {
-        document.getElementById('fotoProduto').src = ofertaAtiva.urlImagem;
+    if (ofertaValida.urlImagem) {
+        document.getElementById('fotoProduto').src = ofertaValida.urlImagem;
     }
     
     document.getElementById('cod').disabled = false;
     document.getElementById('btnEnviar').disabled = false;
     document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
+    
+    // Esconder mensagem
+    const mensagemElement = document.getElementById('mensagemEmBreve');
+    if (mensagemElement) {
+        mensagemElement.style.display = 'none';
+    }
+    
+} else {
+    // MODO "EM BREVE"
+    CONFIG = {
+        urlProduto: '#',
+        textoOferta: '',
+        tituloPagina: configTelaEmBreve.titulo
+    };
+    
+    document.getElementById('fotoProduto').src = configTelaEmBreve.imagem;
+    document.getElementById('cod').disabled = true;
+    document.getElementById('btnEnviar').disabled = true;
+    document.querySelector('.btn-text').textContent = 'EM BREVE';
+    
+    // Mostrar mensagem se existir
+    const mensagemElement = document.getElementById('mensagemEmBreve');
+    if (mensagemElement) {
+        mensagemElement.innerText = configTelaEmBreve.mensagem || '';
+        mensagemElement.style.display = configTelaEmBreve.mensagem ? 'block' : 'none';
+    }
 }
 
+// Aplicar título
 document.querySelector('h2').innerText = CONFIG.tituloPagina;
 
 // ============================================
-// FALLBACK DE IMAGEM (SE NÃO CARREGAR)
+// FALLBACK DE IMAGEM
 // ============================================
 function verificarImagem(img) {
     if (img.complete && img.naturalHeight > 0) {
-        console.log('✅ Imagem carregada');
         return;
     }
     
@@ -482,7 +595,6 @@ function verificarImagem(img) {
         if (img.complete && img.naturalHeight > 0) {
             clearInterval(intervalo);
         } else if (tentativas > 10) {
-            console.log('⚠️ Usando fallback');
             img.src = 'produto.png';
             clearInterval(intervalo);
         }
@@ -582,7 +694,7 @@ function setLoading(isLoading) {
 }
 
 async function enviar() {
-    if (modoExpirado || !ofertaAtiva) {
+    if (!ofertaValida) {
         alert('Nenhuma oferta ativa no momento. Aguarde a próxima promoção!');
         return;
     }
@@ -663,6 +775,34 @@ async function enviar() {
     }
 }
 
+// ============================================
+// DEBUG - ATUALIZAR A CADA SEGUNDO
+// ============================================
+function atualizarDebug() {
+    const agora = getHorarioBrasilia();
+    document.getElementById('debugHoraBrasilia').innerText = agora.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    
+    const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
+    if (oferta) {
+        const inicio = new Date(oferta.dataInicio).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        const fim = new Date(oferta.dataFim).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+        document.getElementById('debugOfertaInfo').innerHTML = `${oferta.tituloPagina} (${inicio} até ${fim})`;
+        
+        if (agora >= new Date(oferta.dataInicio) && agora <= new Date(oferta.dataFim)) {
+            document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
+        } else {
+            document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
+        }
+    } else {
+        document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
+        document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ MODO ESPERA</span>';
+    }
+}
+
+setInterval(atualizarDebug, 1000);
+atualizarDebug();
+
+// Efeito de brilho
 setInterval(() => {
     const btn = document.getElementById('btnEnviar');
     if (btn && !btn.disabled) {
