@@ -400,29 +400,6 @@
         .debug-panel div {
             margin: 5px 0;
         }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .status-ativa {
-            background: #28a745;
-            color: white;
-        }
-
-        .status-inativa {
-            background: #dc3545;
-            color: white;
-        }
-
-        .status-embreve {
-            background: #ffc107;
-            color: black;
-        }
     </style>
 </head>
 <body>
@@ -471,7 +448,7 @@
 
 <script>
 // ============================================
-// CARREGAR CONFIGURAÇÕES DA TELA "EM BREVE"
+// CONFIGURAÇÕES DA TELA "EM BREVE" (do admin)
 // ============================================
 let configTelaEmBreve = {
     imagem: 'produto.png',
@@ -483,34 +460,35 @@ try {
     const configSalva = localStorage.getItem('configTelaEmBreve');
     if (configSalva) {
         configTelaEmBreve = { ...configTelaEmBreve, ...JSON.parse(configSalva) };
-        console.log('✅ Configurações da tela "EM BREVE" carregadas');
+        console.log('✅ Configurações "EM BREVE" carregadas');
     }
 } catch (e) {
     console.log('Usando configurações padrão');
 }
 
 // ============================================
-// FUNÇÃO PARA OBTER HORÁRIO DE BRASÍLIA
+// FUNÇÃO SIMPLES: HORÁRIO BRASÍLIA FIXO
 // ============================================
 function getHorarioBrasilia() {
     const agora = new Date();
-    const utc = Date.UTC(
-        agora.getUTCFullYear(),
-        agora.getUTCMonth(),
-        agora.getUTCDate(),
-        agora.getUTCHours(),
-        agora.getUTCMinutes(),
-        agora.getUTCSeconds()
-    );
-    return new Date(utc - (3 * 60 * 60 * 1000));
+    
+    // Criar data no formato ISO e ajustar para Brasília (UTC-3)
+    const ano = agora.getUTCFullYear();
+    const mes = agora.getUTCMonth();
+    const dia = agora.getUTCDate();
+    const hora = agora.getUTCHours() - 3; // Subtrai 3 horas (Brasília)
+    const minuto = agora.getUTCMinutes();
+    const segundo = agora.getUTCSeconds();
+    
+    return new Date(Date.UTC(ano, mes, dia, hora, minuto, segundo));
 }
 
 // ============================================
-// FORMATAR DATA NO HORÁRIO BRASÍLIA
+// FORMATAR DATA (sempre Brasília)
 // ============================================
-function formatarBrasilia(data) {
+function formatarDataBrasilia(data) {
     return data.toLocaleString('pt-BR', {
-        timeZone: 'America/Sao_Paulo',
+        timeZone: 'UTC', // Importante: usar UTC porque nossa data já está em Brasília
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -522,7 +500,7 @@ function formatarBrasilia(data) {
 }
 
 // ============================================
-// VERIFICAR OFERTA ATIVA
+// VERIFICAR STATUS DA OFERTA
 // ============================================
 function verificarStatus() {
     const agoraBrasilia = getHorarioBrasilia();
@@ -530,7 +508,7 @@ function verificarStatus() {
     const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
     
     // Atualizar horário no debug
-    document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia);
+    document.getElementById('debugHoraBrasilia').innerText = formatarDataBrasilia(agoraBrasilia);
     
     // Se não tem oferta ativa ou está expirado
     if (!oferta || modoExpirado) {
@@ -570,7 +548,7 @@ function verificarStatus() {
         document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
         document.getElementById('mensagemEmBreve').style.display = 'none';
         
-        document.getElementById('debugOfertaInfo').innerHTML = `${oferta.tituloPagina} (${formatarBrasilia(dataInicio)} até ${formatarBrasilia(dataFim)})`;
+        document.getElementById('debugOfertaInfo').innerHTML = `${oferta.tituloPagina} (${formatarDataBrasilia(dataInicio)} até ${formatarDataBrasilia(dataFim)})`;
         document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
     } else {
         // OFERTA EXPIRADA OU AGENDADA - Voltar para EM BREVE
@@ -585,31 +563,13 @@ function verificarStatus() {
             document.getElementById('mensagemEmBreve').style.display = 'block';
         }
         
-        document.getElementById('debugOfertaInfo').innerHTML = `Oferta expirada (era ${formatarBrasilia(dataInicio)} até ${formatarBrasilia(dataFim)})`;
+        document.getElementById('debugOfertaInfo').innerHTML = `Oferta expirada (era ${formatarDataBrasilia(dataInicio)} até ${formatarDataBrasilia(dataFim)})`;
         document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ EXPIRADA</span>';
     }
 }
 
 // ============================================
-// FALLBACK DE IMAGEM
-// ============================================
-function verificarImagem(img) {
-    if (img.complete && img.naturalHeight > 0) return;
-    
-    let tentativas = 0;
-    const intervalo = setInterval(() => {
-        tentativas++;
-        if (img.complete && img.naturalHeight > 0) {
-            clearInterval(intervalo);
-        } else if (tentativas > 10) {
-            img.src = configTelaEmBreve.imagem;
-            clearInterval(intervalo);
-        }
-    }, 500);
-}
-
-// ============================================
-// FUNÇÕES EXISTENTES
+// DEMAIS FUNÇÕES (mantidas iguais)
 // ============================================
 function validarMatricula(input) {
     let valor = input.value.replace(/\D/g, '').replace(/^0+/, '');
@@ -777,11 +737,25 @@ async function enviar() {
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
+function verificarImagem(img) {
+    if (img.complete && img.naturalHeight > 0) return;
+    
+    let tentativas = 0;
+    const intervalo = setInterval(() => {
+        tentativas++;
+        if (img.complete && img.naturalHeight > 0) {
+            clearInterval(intervalo);
+        } else if (tentativas > 10) {
+            img.src = configTelaEmBreve.imagem;
+            clearInterval(intervalo);
+        }
+    }, 500);
+}
+
 verificarImagem(document.getElementById('fotoProduto'));
 setInterval(verificarStatus, 1000);
 verificarStatus();
 
-// Efeito de brilho
 setInterval(() => {
     const btn = document.getElementById('btnEnviar');
     if (btn && !btn.disabled) {
