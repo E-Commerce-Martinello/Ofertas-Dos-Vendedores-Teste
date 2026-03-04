@@ -220,10 +220,6 @@
             margin: 30px 0;
         }
         
-        .hidden {
-            display: none;
-        }
-        
         #msgSucesso {
             background: #d4edda;
             color: #155724;
@@ -255,9 +251,8 @@
             </div>
         </div>
         
-        <!-- PAINEL ADMIN (aparece após login) -->
+        <!-- PAINEL ADMIN -->
         <div id="painelAdmin" style="display: none;">
-            <!-- CABEÇALHO -->
             <div class="admin-card">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h1>⚙️ AGENDADOR DE OFERTAS</h1>
@@ -268,15 +263,11 @@
                 <p>Configure as ofertas programadas. Apenas UMA fica ativa por vez.</p>
             </div>
             
-            <!-- LISTA DE OFERTAS -->
             <div class="admin-card">
                 <h2>📋 OFERTAS PROGRAMADAS</h2>
-                <div id="listaOfertas">
-                    <!-- As ofertas aparecerão aqui via JavaScript -->
-                </div>
+                <div id="listaOfertas"></div>
             </div>
             
-            <!-- FORMULÁRIO NOVA OFERTA (inicia oculto) -->
             <div class="admin-card" id="formNovaOferta" style="display: none;">
                 <h2>➕ NOVA OFERTA</h2>
                 
@@ -326,23 +317,23 @@
                 </div>
             </div>
             
-            <!-- CONFIGURAÇÕES PADRÃO -->
             <div class="admin-card">
                 <h2>⚙️ CONFIGURAÇÕES PADRÃO</h2>
                 <p>Estas configurações aparecem quando NÃO HÁ OFERTA ativa.</p>
                 
                 <div class="form-group">
-                    <label>🖼️ Imagem Padrão (quando sem oferta):</label>
+                    <label>🖼️ Imagem Padrão:</label>
                     <div class="upload-area" onclick="document.getElementById('filePadrao').click()">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <p>Clique para selecionar imagem padrão</p>
                         <input type="file" id="filePadrao" accept="image/*" style="display: none;" onchange="previewPadrao(this)">
                     </div>
-                    <img id="previewPadrao" class="preview-image" src="aguarde.jpg" style="max-width: 150px;">
+                    <img id="previewPadrao" class="preview-image" src="produto.png" style="max-width: 150px;">
+                    <small>Imagem atual: produto.png (no repositório)</small>
                 </div>
                 
                 <div class="form-group">
-                    <label>📝 Texto Padrão (quando sem oferta):</label>
+                    <label>📝 Texto Padrão:</label>
                     <textarea id="textoPadrao" rows="4">🔜 AGUARDE! Em breve teremos novidades para você!
 
 Nova oferta chegando em breve no Martinello.
@@ -352,21 +343,14 @@ Fique ligado para não perder!</textarea>
                 <button class="btn-primary" onclick="salvarConfigPadrao()">SALVAR CONFIGURAÇÕES PADRÃO</button>
             </div>
             
-            <!-- MENSAGENS -->
             <div id="msgSucesso"></div>
             <div id="msgErro"></div>
         </div>
     </div>
 
     <script>
-        // ============================================
-        // CONFIGURAÇÕES
-        // ============================================
         const SENHA_ADMIN = "martinello2026";
         
-        // ============================================
-        // FUNÇÕES DE LOGIN
-        // ============================================
         function verificarSenha() {
             const senha = document.getElementById('senhaInput').value;
             if (senha === SENHA_ADMIN) {
@@ -379,9 +363,6 @@ Fique ligado para não perder!</textarea>
             }
         }
         
-        // ============================================
-        // GERENCIAMENTO DE OFERTAS
-        // ============================================
         let ofertas = [];
         
         function carregarOfertas() {
@@ -400,7 +381,6 @@ Fique ligado para não perder!</textarea>
                 return;
             }
             
-            // Ordenar por data de início
             ofertas.sort((a, b) => new Date(a.dataInicio) - new Date(b.dataInicio));
             
             let html = '';
@@ -428,11 +408,11 @@ Fique ligado para não perder!</textarea>
                     <div class="oferta-card ${status === 'ATIVA' ? 'ativa' : ''}">
                         <div class="status-badge ${statusClass}">${status}</div>
                         <div style="display: grid; grid-template-columns: 100px 1fr auto; gap: 20px; align-items: center;">
-                            <img src="${oferta.urlImagem || 'aguarde.jpg'}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 10px;">
+                            <img src="${oferta.urlImagem || 'produto.png'}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 10px;">
                             <div>
-                                <strong>${oferta.titulo || 'Sem título'}</strong><br>
+                                <strong>${oferta.tituloPagina || 'Sem título'}</strong><br>
                                 📅 ${formatarData(dataInicio)} até ${formatarData(dataFim)}<br>
-                                🔗 ${oferta.linkProduto.substring(0, 50)}...
+                                🔗 ${(oferta.linkProduto || '').substring(0, 50)}...
                             </div>
                             <div>
                                 <button class="btn-secondary" onclick="editarOferta(${index})" style="margin-right: 5px;">✏️</button>
@@ -470,19 +450,14 @@ Fique ligado para não perder!</textarea>
             document.getElementById('formNovaOferta').style.display = 'none';
         }
         
-        // ============================================
-        // UPLOAD DE IMAGEM (MAGIA AQUI!)
-        // ============================================
         function previewImagem(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-                
                 reader.onload = function(e) {
                     const preview = document.getElementById('preview');
                     preview.src = e.target.result;
                     preview.style.display = 'block';
                 }
-                
                 reader.readAsDataURL(input.files[0]);
             }
         }
@@ -490,16 +465,13 @@ Fique ligado para não perder!</textarea>
         function previewPadrao(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-                
                 reader.onload = function(e) {
                     document.getElementById('previewPadrao').src = e.target.result;
                 }
-                
                 reader.readAsDataURL(input.files[0]);
             }
         }
         
-        // Função que converte imagem para Base64 (salva direto no JSON!)
         function converterImagemParaBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -509,12 +481,8 @@ Fique ligado para não perder!</textarea>
             });
         }
         
-        // ============================================
-        // SALVAR NOVA OFERTA
-        // ============================================
         async function salvarNovaOferta() {
             try {
-                // Validações
                 if (!document.getElementById('dataInicio').value) {
                     alert('Selecione a data de início!');
                     return;
@@ -528,7 +496,6 @@ Fique ligado para não perder!</textarea>
                 const fileInput = document.getElementById('fileInput');
                 let imagemBase64 = '';
                 
-                // Se tem imagem, converte para Base64
                 if (fileInput.files && fileInput.files[0]) {
                     if (fileInput.files[0].size > 5 * 1024 * 1024) {
                         alert('Imagem muito grande! Máximo 5MB.');
@@ -537,31 +504,22 @@ Fique ligado para não perder!</textarea>
                     imagemBase64 = await converterImagemParaBase64(fileInput.files[0]);
                 }
                 
-                // Criar nova oferta
                 const novaOferta = {
                     id: Date.now(),
                     dataInicio: document.getElementById('dataInicio').value,
                     dataFim: document.getElementById('dataFim').value,
                     linkProduto: document.getElementById('linkProduto').value,
-                    urlImagem: imagemBase64 || '', // Se não tiver imagem, fica vazio (usa padrão)
+                    urlImagem: imagemBase64,
                     textoOferta: document.getElementById('textoOferta').value,
                     tituloPagina: document.getElementById('tituloPagina').value,
                     dataCriacao: new Date().toISOString()
                 };
                 
-                // Adicionar à lista
                 ofertas.push(novaOferta);
-                
-                // Salvar no localStorage
                 localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
-                
-                // Verificar qual oferta deve estar ativa AGORA
                 verificarOfertaAtiva();
                 
-                // Feedback
                 mostrarMensagem('✅ Oferta salva com sucesso!', 'sucesso');
-                
-                // Esconder formulário e atualizar lista
                 document.getElementById('formNovaOferta').style.display = 'none';
                 renderizarListaOfertas();
                 
@@ -570,9 +528,6 @@ Fique ligado para não perder!</textarea>
             }
         }
         
-        // ============================================
-        // VERIFICAR QUAL OFERTA ESTÁ ATIVA
-        // ============================================
         function verificarOfertaAtiva() {
             const agora = new Date();
             let ofertaAtiva = null;
@@ -587,18 +542,15 @@ Fique ligado para não perder!</textarea>
                 }
             }
             
-            // Salvar no localStorage qual é a oferta ativa (para o index.html ler)
             if (ofertaAtiva) {
                 localStorage.setItem('ofertaAtiva', JSON.stringify(ofertaAtiva));
                 localStorage.setItem('modoExpirado', 'false');
             } else {
                 localStorage.setItem('modoExpirado', 'true');
+                localStorage.removeItem('ofertaAtiva');
             }
         }
         
-        // ============================================
-        // CONFIGURAÇÕES PADRÃO
-        // ============================================
         async function salvarConfigPadrao() {
             const filePadrao = document.getElementById('filePadrao');
             let imagemPadraoBase64 = '';
@@ -608,7 +560,7 @@ Fique ligado para não perder!</textarea>
             }
             
             const configPadrao = {
-                imagemPadrao: imagemPadraoBase64 || 'aguarde.jpg',
+                imagemPadrao: imagemPadraoBase64 || 'produto.png',
                 textoPadrao: document.getElementById('textoPadrao').value
             };
             
@@ -620,7 +572,7 @@ Fique ligado para não perder!</textarea>
             const configPadrao = localStorage.getItem('configPadraoMartinello');
             if (configPadrao) {
                 const config = JSON.parse(configPadrao);
-                if (config.imagemPadrao) {
+                if (config.imagemPadrao && config.imagemPadrao !== 'produto.png') {
                     document.getElementById('previewPadrao').src = config.imagemPadrao;
                 }
                 if (config.textoPadrao) {
@@ -629,9 +581,6 @@ Fique ligado para não perder!</textarea>
             }
         }
         
-        // ============================================
-        // UTILITÁRIOS
-        // ============================================
         function mostrarMensagem(texto, tipo) {
             const msgDiv = document.getElementById('msg' + (tipo === 'sucesso' ? 'Sucesso' : 'Erro'));
             msgDiv.innerHTML = texto;
@@ -656,7 +605,6 @@ Fique ligado para não perder!</textarea>
             }
         }
         
-        // Verificar oferta ativa a cada minuto
         setInterval(verificarOfertaAtiva, 60000);
     </script>
 </body>
