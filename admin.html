@@ -194,6 +194,18 @@
             width: 100%;
         }
         
+        .btn-warning {
+            background: #ffc107;
+            color: black;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 15px;
+            width: 100%;
+        }
+        
         .btn-danger {
             background: #dc3545;
             color: white;
@@ -340,6 +352,21 @@
             align-items: center;
             gap: 5px;
         }
+        
+        .logout-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .logout-button:hover {
+            background: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -351,21 +378,25 @@
                 <h2>Acesso Restrito</h2>
                 <input type="password" id="senhaInput" placeholder="Digite sua senha">
                 <button onclick="verificarSenha()">ENTRAR</button>
+                <p style="margin-top: 15px; font-size: 12px; color: #666;">✅ Sessão será salva - não precisa logar toda vez</p>
             </div>
         </div>
         
         <!-- PAINEL ADMIN -->
         <div id="painelAdmin" style="display: none;">
             
-            <!-- CABEÇALHO -->
+            <!-- CABEÇALHO COM LOGOUT -->
             <div class="admin-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <h1>⚙️ AGENDADOR</h1>
+                    <div style="display: flex; align-items: center;">
+                        <h1>⚙️ AGENDADOR</h1>
+                        <button class="logout-button" onclick="logout()">SAIR</button>
+                    </div>
                     <button class="btn-secondary" onclick="mostrarNovaOferta()" style="width: auto; padding: 12px 25px;">
                         <i class="fas fa-plus"></i> NOVA OFERTA
                     </button>
                 </div>
-                <p style="color: #666;">Apenas UMA oferta fica ativa por vez</p>
+                <p style="color: #666;">Apenas UMA oferta fica ativa por vez | Sessão permanente (F5 não desloga)</p>
             </div>
             
             <!-- LISTA DE OFERTAS -->
@@ -374,13 +405,14 @@
                 <div id="listaOfertas"></div>
             </div>
             
-            <!-- FORMULÁRIO NOVA OFERTA -->
+            <!-- FORMULÁRIO NOVA OFERTA / EDIÇÃO -->
             <div class="admin-card" id="formNovaOferta" style="display: none;">
-                <button class="back-button" onclick="cancelarNovaOferta()">
+                <button class="back-button" onclick="cancelarEdicao()">
                     <i class="fas fa-arrow-left"></i> VOLTAR
                 </button>
                 
-                <h2>➕ NOVA OFERTA</h2>
+                <h2 id="formTitulo">➕ NOVA OFERTA</h2>
+                <input type="hidden" id="editandoId" value="">
                 
                 <div class="row">
                     <div class="form-group">
@@ -425,8 +457,8 @@
                 </div>
                 
                 <div class="btn-group">
-                    <button class="btn-primary" onclick="salvarNovaOferta()">✅ SALVAR OFERTA</button>
-                    <button class="btn-danger" onclick="cancelarNovaOferta()">❌ CANCELAR</button>
+                    <button class="btn-primary" onclick="salvarOferta()">✅ SALVAR OFERTA</button>
+                    <button class="btn-danger" onclick="cancelarEdicao()">❌ CANCELAR</button>
                 </div>
             </div>
             
@@ -469,15 +501,51 @@
         // ============================================
         // CONFIGURAÇÕES
         // ============================================
-        const SENHA_ADMIN = "3617";
+        const SENHA_ADMIN = "777";
+        const SESSION_KEY = 'adminLogado';
         let ofertas = [];
         
         // ============================================
-        // INICIALIZAÇÃO
+        // VERIFICAR SESSÃO AO CARREGAR
         // ============================================
         document.addEventListener('DOMContentLoaded', function() {
             carregarOfertasSalvas();
+            
+            // Verificar se já estava logado
+            const logado = localStorage.getItem(SESSION_KEY) === 'true';
+            if (logado) {
+                document.getElementById('loginBox').style.display = 'none';
+                document.getElementById('painelAdmin').style.display = 'block';
+                renderizarListaOfertas();
+                carregarConfigPadrao();
+                setupDragAndDrop();
+            }
         });
+        
+        // ============================================
+        // FUNÇÕES DE LOGIN
+        // ============================================
+        function verificarSenha() {
+            const senha = document.getElementById('senhaInput').value;
+            if (senha === SENHA_ADMIN) {
+                // Salvar sessão
+                localStorage.setItem(SESSION_KEY, 'true');
+                
+                document.getElementById('loginBox').style.display = 'none';
+                document.getElementById('painelAdmin').style.display = 'block';
+                renderizarListaOfertas();
+                carregarConfigPadrao();
+                setupDragAndDrop();
+            } else {
+                alert('❌ Senha incorreta!');
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem(SESSION_KEY);
+            document.getElementById('loginBox').style.display = 'block';
+            document.getElementById('painelAdmin').style.display = 'none';
+        }
         
         function carregarOfertasSalvas() {
             try {
@@ -489,22 +557,6 @@
             } catch (e) {
                 console.error('❌ Erro ao carregar ofertas:', e);
                 ofertas = [];
-            }
-        }
-        
-        // ============================================
-        // FUNÇÕES DE LOGIN
-        // ============================================
-        function verificarSenha() {
-            const senha = document.getElementById('senhaInput').value;
-            if (senha === SENHA_ADMIN) {
-                document.getElementById('loginBox').style.display = 'none';
-                document.getElementById('painelAdmin').style.display = 'block';
-                renderizarListaOfertas();
-                carregarConfigPadrao();
-                setupDragAndDrop();
-            } else {
-                alert('❌ Senha incorreta!');
             }
         }
         
@@ -610,6 +662,40 @@
         }
         
         // ============================================
+        // FUNÇÕES DE FORMATAÇÃO DE DATA
+        // ============================================
+        function formatarDataParaInput(dataISO) {
+            const data = new Date(dataISO);
+            const ano = data.getFullYear();
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const dia = String(data.getDate()).padStart(2, '0');
+            const hora = String(data.getHours()).padStart(2, '0');
+            const minuto = String(data.getMinutes()).padStart(2, '0');
+            
+            return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
+        }
+        
+        function formatarDataBrasilia(data) {
+            try {
+                return data.toLocaleString('pt-BR', {
+                    timeZone: 'America/Sao_Paulo',
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return 'Data inválida';
+            }
+        }
+        
+        function getHorarioBrasilia() {
+            const agora = new Date();
+            const utc = agora.getTime() + (agora.getTimezoneOffset() * 60000);
+            return new Date(utc - (3 * 3600000));
+        }
+        
+        // ============================================
         // GERENCIAMENTO DE OFERTAS
         // ============================================
         function renderizarListaOfertas() {
@@ -624,7 +710,7 @@
             ofertas.sort((a, b) => new Date(a.dataInicio) - new Date(b.dataInicio));
             
             let html = '';
-            const agora = new Date();
+            const agoraBrasilia = getHorarioBrasilia();
             
             ofertas.forEach((oferta, index) => {
                 try {
@@ -634,10 +720,10 @@
                     let status = '';
                     let statusClass = '';
                     
-                    if (agora >= dataInicio && agora <= dataFim) {
+                    if (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim) {
                         status = 'ATIVA';
                         statusClass = 'status-ativa';
-                    } else if (agora < dataInicio) {
+                    } else if (agoraBrasilia < dataInicio) {
                         status = 'AGENDADA';
                         statusClass = 'status-agendada';
                     } else {
@@ -656,7 +742,7 @@
                                     🔗 ${(oferta.linkProduto || '').substring(0, 40)}...
                                 </div>
                                 <div class="oferta-actions">
-                                    <button class="btn-secondary" onclick="editarOferta(${index})" style="padding: 10px 15px; width: auto;">✏️</button>
+                                    <button class="btn-warning" onclick="editarOferta(${index})" style="padding: 10px 15px; width: auto;">✏️ EDITAR</button>
                                     <button class="btn-danger" onclick="excluirOferta(${index})" style="padding: 10px 15px; width: auto;">🗑️</button>
                                 </div>
                             </div>
@@ -670,150 +756,85 @@
             container.innerHTML = html;
         }
         
-        function formatarDataBrasilia(data) {
-            try {
-                return data.toLocaleString('pt-BR', {
-                    timeZone: 'America/Sao_Paulo',
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            } catch (e) {
-                return 'Data inválida';
+        // ============================================
+        // EDIÇÃO DE OFERTA
+        // ============================================
+        function editarOferta(index) {
+            const oferta = ofertas[index];
+            
+            document.getElementById('formTitulo').innerHTML = '✏️ EDITAR OFERTA';
+            document.getElementById('editandoId').value = index;
+            
+            // Converter UTC para horário local para o input
+            const dataInicio = new Date(oferta.dataInicio);
+            const dataFim = new Date(oferta.dataFim);
+            
+            // Ajustar para o fuso do input (que espera hora local)
+            const offset = dataInicio.getTimezoneOffset() * 60000;
+            const dataInicioLocal = new Date(dataInicio.getTime() - offset);
+            const dataFimLocal = new Date(dataFim.getTime() - offset);
+            
+            document.getElementById('dataInicio').value = dataInicioLocal.toISOString().slice(0, 16);
+            document.getElementById('dataFim').value = dataFimLocal.toISOString().slice(0, 16);
+            document.getElementById('linkProduto').value = oferta.linkProduto || '';
+            document.getElementById('textoOferta').value = oferta.textoOferta || '';
+            document.getElementById('tituloPagina').value = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
+            
+            // Mostrar preview da imagem se existir
+            if (oferta.urlImagem) {
+                const preview = document.getElementById('preview');
+                preview.src = oferta.urlImagem;
+                preview.style.display = 'block';
+                document.getElementById('btnRemoverImagem').style.display = 'inline-block';
             }
+            
+            document.getElementById('formNovaOferta').style.display = 'block';
+            document.getElementById('formNovaOferta').scrollIntoView({ behavior: 'smooth' });
         }
         
         // ============================================
-        // VALIDAÇÃO DE CONFLITO
+        // SALVAR OFERTA (NOVA OU EDITADA)
         // ============================================
-        function verificarConflitoDatas(novaDataInicioUTC, novaDataFimUTC, ofertaIgnorarId = null) {
+        async function salvarOferta() {
             try {
-                const novaInicio = new Date(novaDataInicioUTC);
-                const novaFim = new Date(novaDataFimUTC);
+                console.log('🔄 Salvando oferta...');
                 
-                if (novaFim <= novaInicio) {
-                    return {
-                        conflito: true,
-                        mensagem: '❌ Data de fim deve ser posterior à data de início!'
-                    };
-                }
-                
-                for (const oferta of ofertas) {
-                    if (ofertaIgnorarId && oferta.id === ofertaIgnorarId) continue;
-                    
-                    const ofertaInicio = new Date(oferta.dataInicio);
-                    const ofertaFim = new Date(oferta.dataFim);
-                    
-                    if (novaInicio >= ofertaInicio && novaInicio <= ofertaFim) {
-                        return {
-                            conflito: true,
-                            mensagem: `❌ Conflito! Já existe uma oferta de ${formatarDataBrasilia(ofertaInicio)} até ${formatarDataBrasilia(ofertaFim)}`
-                        };
-                    }
-                    
-                    if (novaFim >= ofertaInicio && novaFim <= ofertaFim) {
-                        return {
-                            conflito: true,
-                            mensagem: `❌ Conflito! Já existe uma oferta de ${formatarDataBrasilia(ofertaInicio)} até ${formatarDataBrasilia(ofertaFim)}`
-                        };
-                    }
-                    
-                    if (novaInicio <= ofertaInicio && novaFim >= ofertaFim) {
-                        return {
-                            conflito: true,
-                            mensagem: `❌ Conflito! Já existe uma oferta de ${formatarDataBrasilia(ofertaInicio)} até ${formatarDataBrasilia(ofertaFim)}`
-                        };
-                    }
-                }
-                
-                return { conflito: false };
-            } catch (e) {
-                console.error('Erro ao verificar conflito:', e);
-                return { conflito: true, mensagem: '❌ Erro ao verificar datas' };
-            }
-        }
-        
-        // ============================================
-        // SALVAR NOVA OFERTA (CORRIGIDO!)
-        // ============================================
-        async function salvarNovaOferta() {
-            try {
-                console.log('🔄 Iniciando salvamento...');
-                
-                // PEGAR VALORES DOS CAMPOS
                 const dataInicioInput = document.getElementById('dataInicio').value;
                 const dataFimInput = document.getElementById('dataFim').value;
                 const linkProduto = document.getElementById('linkProduto').value;
                 const textoOferta = document.getElementById('textoOferta').value;
                 const tituloPagina = document.getElementById('tituloPagina').value;
+                const editandoId = document.getElementById('editandoId').value;
                 
-                // VALIDAÇÕES
-                if (!dataInicioInput) {
-                    alert('❌ Selecione a data de início!');
+                if (!dataInicioInput || !dataFimInput || !linkProduto || !textoOferta) {
+                    alert('❌ Preencha todos os campos obrigatórios!');
                     return;
                 }
                 
-                if (!dataFimInput) {
-                    alert('❌ Selecione a data de fim!');
+                // Converter para UTC
+                const dataInicioObj = new Date(dataInicioInput + ':00-03:00');
+                const dataFimObj = new Date(dataFimInput + ':00-03:00');
+                
+                if (isNaN(dataInicioObj.getTime()) || isNaN(dataFimObj.getTime())) {
+                    alert('❌ Datas inválidas!');
                     return;
                 }
                 
-                if (!linkProduto) {
-                    alert('❌ Digite o link do produto!');
-                    return;
-                }
-                
-                if (!textoOferta) {
-                    alert('❌ Digite o texto da oferta!');
-                    return;
-                }
-                
-                // CONVERTER DATAS - FORMA CORRETA!
-                // O input datetime-local retorna: "2026-03-10T16:30"
-                // Vamos adicionar o fuso de Brasília corretamente
-                
-                const dataInicioStr = dataInicioInput + ':00-03:00'; // Adiciona segundos e fuso -03:00
-                const dataFimStr = dataFimInput + ':00-03:00';
-                
-                const dataInicioObj = new Date(dataInicioStr);
-                const dataFimObj = new Date(dataFimStr);
-                
-                // Verificar se as datas são válidas
-                if (isNaN(dataInicioObj.getTime())) {
-                    alert('❌ Data de início inválida!');
-                    return;
-                }
-                
-                if (isNaN(dataFimObj.getTime())) {
-                    alert('❌ Data de fim inválida!');
-                    return;
-                }
-                
-                // Verificar se data fim é maior que data início
                 if (dataFimObj <= dataInicioObj) {
                     alert('❌ Data de fim deve ser posterior à data de início!');
                     return;
                 }
                 
-                console.log('📅 Data início (objeto):', dataInicioObj);
-                console.log('📅 Data fim (objeto):', dataFimObj);
-                
-                // Converter para ISO string (UTC)
                 const dataInicioUTC = dataInicioObj.toISOString();
                 const dataFimUTC = dataFimObj.toISOString();
                 
-                console.log('📅 Data início (UTC):', dataInicioUTC);
-                console.log('📅 Data fim (UTC):', dataFimUTC);
-                
-                // VERIFICAR CONFLITO
-                const conflito = verificarConflitoDatas(dataInicioUTC, dataFimUTC);
+                // Verificar conflito (exceto com ela mesma se for edição)
+                const conflito = verificarConflitoDatas(dataInicioUTC, dataFimUTC, editandoId ? parseInt(editandoId) : null);
                 if (conflito.conflito) {
                     alert(conflito.mensagem);
                     return;
                 }
                 
-                // PROCESSAR IMAGEM
                 const fileInput = document.getElementById('fileInput');
                 let imagemBase64 = '';
                 
@@ -822,59 +843,94 @@
                         alert('❌ Imagem muito grande! Máximo 5MB.');
                         return;
                     }
-                    console.log('🖼️ Convertendo imagem...');
                     imagemBase64 = await converterImagemParaBase64(fileInput.files[0]);
                 }
                 
-                // CRIAR OFERTA
-                const novaOferta = {
-                    id: Date.now(),
+                const ofertaDados = {
+                    id: editandoId ? ofertas[parseInt(editandoId)].id : Date.now(),
                     dataInicio: dataInicioUTC,
                     dataFim: dataFimUTC,
                     linkProduto: linkProduto,
-                    urlImagem: imagemBase64,
+                    urlImagem: imagemBase64 || (editandoId ? ofertas[parseInt(editandoId)].urlImagem : ''),
                     textoOferta: textoOferta,
                     tituloPagina: tituloPagina || 'DISPARO EM ANDAMENTO!',
-                    dataCriacao: new Date().toISOString()
+                    dataCriacao: editandoId ? ofertas[parseInt(editandoId)].dataCriacao : new Date().toISOString(),
+                    dataAtualizacao: new Date().toISOString()
                 };
                 
-                console.log('📦 Nova oferta:', novaOferta);
+                if (editandoId !== '') {
+                    // Edição
+                    ofertas[parseInt(editandoId)] = ofertaDados;
+                    console.log('✏️ Oferta editada:', editandoId);
+                } else {
+                    // Nova oferta
+                    ofertas.push(ofertaDados);
+                    console.log('➕ Nova oferta adicionada');
+                }
                 
-                // SALVAR
-                ofertas.push(novaOferta);
                 localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
-                
-                console.log('💾 Ofertas salvas no localStorage');
-                
-                // ATUALIZAR TUDO
                 verificarOfertaAtiva();
                 renderizarListaOfertas();
                 
-                // FECHAR FORMULÁRIO
-                document.getElementById('formNovaOferta').style.display = 'none';
-                removerImagem();
-                
-                // MENSAGEM DE SUCESSO
+                cancelarEdicao();
                 mostrarMensagem('✅ Oferta salva com sucesso!', 'sucesso');
                 
-                console.log('✅ Processo concluído!');
-                
             } catch (error) {
-                console.error('❌ Erro detalhado:', error);
+                console.error('❌ Erro:', error);
                 mostrarMensagem('❌ Erro ao salvar: ' + error.message, 'erro');
+            }
+        }
+        
+        function verificarConflitoDatas(novaDataInicioUTC, novaDataFimUTC, ofertaIgnorarId = null) {
+            try {
+                const novaInicio = new Date(novaDataInicioUTC);
+                const novaFim = new Date(novaDataFimUTC);
+                
+                for (let i = 0; i < ofertas.length; i++) {
+                    if (ofertaIgnorarId !== null && i === ofertaIgnorarId) continue;
+                    
+                    const oferta = ofertas[i];
+                    const ofertaInicio = new Date(oferta.dataInicio);
+                    const ofertaFim = new Date(oferta.dataFim);
+                    
+                    if (novaInicio >= ofertaInicio && novaInicio <= ofertaFim) {
+                        return {
+                            conflito: true,
+                            mensagem: `❌ Conflito! Já existe uma oferta neste período`
+                        };
+                    }
+                    
+                    if (novaFim >= ofertaInicio && novaFim <= ofertaFim) {
+                        return {
+                            conflito: true,
+                            mensagem: `❌ Conflito! Já existe uma oferta neste período`
+                        };
+                    }
+                    
+                    if (novaInicio <= ofertaInicio && novaFim >= ofertaFim) {
+                        return {
+                            conflito: true,
+                            mensagem: `❌ Conflito! Já existe uma oferta neste período`
+                        };
+                    }
+                }
+                
+                return { conflito: false };
+            } catch (e) {
+                return { conflito: true, mensagem: '❌ Erro ao verificar conflito' };
             }
         }
         
         function verificarOfertaAtiva() {
             try {
-                const agora = new Date();
+                const agoraBrasilia = getHorarioBrasilia();
                 let ofertaAtiva = null;
                 
                 for (const oferta of ofertas) {
                     const dataInicio = new Date(oferta.dataInicio);
                     const dataFim = new Date(oferta.dataFim);
                     
-                    if (agora >= dataInicio && agora <= dataFim) {
+                    if (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim) {
                         ofertaAtiva = oferta;
                         break;
                     }
@@ -883,11 +939,9 @@
                 if (ofertaAtiva) {
                     localStorage.setItem('ofertaAtiva', JSON.stringify(ofertaAtiva));
                     localStorage.setItem('modoExpirado', 'false');
-                    console.log('✅ Oferta ativa:', ofertaAtiva.tituloPagina);
                 } else {
                     localStorage.setItem('modoExpirado', 'true');
                     localStorage.removeItem('ofertaAtiva');
-                    console.log('ℹ️ Nenhuma oferta ativa no momento');
                 }
             } catch (e) {
                 console.error('Erro ao verificar oferta ativa:', e);
@@ -895,18 +949,32 @@
         }
         
         function mostrarNovaOferta() {
-            document.getElementById('formNovaOferta').style.display = 'block';
+            document.getElementById('formTitulo').innerHTML = '➕ NOVA OFERTA';
+            document.getElementById('editandoId').value = '';
             document.getElementById('dataInicio').value = '';
             document.getElementById('dataFim').value = '';
             document.getElementById('linkProduto').value = '';
             document.getElementById('textoOferta').value = '';
             document.getElementById('tituloPagina').value = 'DISPARO EM ANDAMENTO!';
             removerImagem();
+            document.getElementById('formNovaOferta').style.display = 'block';
             document.getElementById('formNovaOferta').scrollIntoView({ behavior: 'smooth' });
         }
         
-        function cancelarNovaOferta() {
+        function cancelarEdicao() {
             document.getElementById('formNovaOferta').style.display = 'none';
+            document.getElementById('editandoId').value = '';
+            removerImagem();
+        }
+        
+        function excluirOferta(index) {
+            if (confirm('Tem certeza que deseja excluir esta oferta?')) {
+                ofertas.splice(index, 1);
+                localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
+                verificarOfertaAtiva();
+                renderizarListaOfertas();
+                mostrarMensagem('✅ Oferta excluída!', 'sucesso');
+            }
         }
         
         // ============================================
@@ -977,22 +1045,11 @@
             }, 3000);
         }
         
-        function editarOferta(index) {
-            alert('🚀 Edição será implementada em breve! Por enquanto, exclua e crie novamente.');
-        }
-        
-        function excluirOferta(index) {
-            if (confirm('Tem certeza que deseja excluir esta oferta?')) {
-                ofertas.splice(index, 1);
-                localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
-                verificarOfertaAtiva();
-                renderizarListaOfertas();
-                mostrarMensagem('✅ Oferta excluída!', 'sucesso');
-            }
-        }
-        
-        // Verificar oferta ativa a cada 30 segundos
-        setInterval(verificarOfertaAtiva, 30000);
+        // Auto-atualizar status a cada 30 segundos
+        setInterval(() => {
+            verificarOfertaAtiva();
+            renderizarListaOfertas();
+        }, 30000);
     </script>
 </body>
 </html>
