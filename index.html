@@ -423,74 +423,98 @@
 
 <script>
 // ============================================
-// NOVO: CARREGAR CONFIGURAÇÕES DO PAINEL ADMIN
+// VERIFICAR OFERTA ATIVA (NOVO SISTEMA)
 // ============================================
 
-// Configurações padrão (caso não tenha nada salvo no admin)
-const CONFIG_PADRAO = {
-    dataInicio: "2026-03-10",
-    dataFim: "2026-03-16",
-    linkProduto: "https://www.martinello.com.br/cafeteira-arno-dolce-gusto-genio-s-basic-grafite-110v-80083",
-    urlImagem: "produto.png",
-    textoOferta: `☕✨ Seu café favorito na sua casa todos os dias! ✨☕
-
-No FEIRÃO DE ANIVERSÁRIO MARTINELLO, chegou a oportunidade perfeita para você!
-
-🔥 Cafeteira Arno Dolce Gusto Gênio S Basic – Grafite 110V
-Moderna, compacta e super prática! Prepare cafés, cappuccinos, chocolates e várias outras bebidas com qualidade profissional no conforto da sua casa.
-
-✔️ Design sofisticado
-✔️ Sistema de cápsulas
-✔️ Bebidas quentes e frias
-✔️ Fácil de usar
-
-E o melhor 👇
-💳 Parcelamento em até 12x sem juros!
-
-Agora é a hora de garantir a sua com condição especial!
-
-👉 Clique no meu link exclusivo e aproveite:
-🔗 [LINK]
-
-Qualquer dúvida me chama aqui que eu te ajudo 😉
-Mas corre que é por tempo limitado! 🚀`,
-    tituloPagina: "DISPARO EM ANDAMENTO!"
+// Carregar configurações padrão (para quando não há oferta)
+let configPadrao = {
+    imagemPadrao: 'aguarde.jpg',
+    textoPadrao: '🔜 AGUARDE! Em breve teremos novidades para você!\n\nNova oferta chegando em breve no Martinello.\nFique ligado para não perder!'
 };
 
-// Tentar carregar configurações salvas pelo admin
-let CONFIG_ADMIN = { ...CONFIG_PADRAO };
-
 try {
-    const configSalva = localStorage.getItem('configMartinello');
-    if (configSalva) {
-        CONFIG_ADMIN = { ...CONFIG_PADRAO, ...JSON.parse(configSalva) };
-        console.log('✅ Configurações carregadas do painel admin');
-    } else {
-        console.log('⚠️ Nenhuma configuração no admin. Usando padrão.');
+    const configPadraoSalva = localStorage.getItem('configPadraoMartinello');
+    if (configPadraoSalva) {
+        configPadrao = JSON.parse(configPadraoSalva);
     }
 } catch (e) {
-    console.log('⚠️ Erro ao carregar config. Usando padrão.');
+    console.log('Usando configuração padrão');
+}
+
+// Verificar se há oferta ativa
+const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
+const ofertaAtiva = JSON.parse(localStorage.getItem('ofertaAtiva'));
+
+let CONFIG = {};
+
+if (modoExpirado || !ofertaAtiva) {
+    // ========================================
+    // MODO EXPIRADO - Sem oferta no momento
+    // ========================================
+    CONFIG = {
+        urlProduto: '#',
+        textoOferta: configPadrao.textoPadrao,
+        tituloPagina: 'EM BREVE'
+    };
+    
+    // Aplicar imagem padrão
+    document.getElementById('fotoProduto').src = configPadrao.imagemPadrao;
+    
+    // Desabilitar campos (não pode enviar oferta)
+    document.getElementById('cod').disabled = true;
+    document.getElementById('btnEnviar').disabled = true;
+    
+    // Mudar texto do botão
+    document.querySelector('.btn-text').textContent = 'AGUARDE NOVA OFERTA';
+    
+} else {
+    // ========================================
+    // MODO OFERTA ATIVA
+    // ========================================
+    CONFIG = {
+        urlProduto: ofertaAtiva.linkProduto,
+        textoOferta: ofertaAtiva.textoOferta,
+        tituloPagina: ofertaAtiva.tituloPagina
+    };
+    
+    // Aplicar imagem da oferta (se tiver)
+    if (ofertaAtiva.urlImagem) {
+        document.getElementById('fotoProduto').src = ofertaAtiva.urlImagem;
+    }
+    
+    // Habilitar campos
+    document.getElementById('cod').disabled = false;
+    document.getElementById('btnEnviar').disabled = false;
+    
+    // Restaurar texto do botão
+    document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
+}
+
+// Aplicar título da página
+const tituloElement = document.querySelector('h2');
+if (tituloElement) {
+    tituloElement.innerText = CONFIG.tituloPagina;
 }
 
 // ============================================
-// CONFIGURAÇÕES - AGORA USA OS VALORES DO ADMIN
+// CONFIGURAÇÕES ORIGINAIS (MANTIDAS)
 // ============================================
 
-const CONFIG = {
+const CONFIG_ORIGINAL = {
     // Google Forms (RASTREIO) - Não mexa aqui
     googleFormUrl: "https://docs.google.com/forms/d/e/1FAIpQLSfdheHBbGMCLIXXAeM0b8rTbpextHznj6BDS6lKGLN9ZMjd4g/formResponse",
     entryIdCodigo: "entry.200360405",
     entryIdBrowser: "entry.2003110990",
     
     // ========================================
-    // ÁREA DE PERSONALIZAÇÃO - AGORA VEM DO ADMIN
+    // ÁREA DE PERSONALIZAÇÃO - AGORA USA OFERTA ATIVA
     // ========================================
     
-    // 1. LINK DO PRODUTO (vem do admin)
-    urlProduto: CONFIG_ADMIN.linkProduto,
+    // 1. LINK DO PRODUTO (vem da oferta ativa)
+    urlProduto: CONFIG.urlProduto,
     
-    // 2. TEXTO DA OFERTA (vem do admin)
-    textoOferta: CONFIG_ADMIN.textoOferta,
+    // 2. TEXTO DA OFERTA (vem da oferta ativa)
+    textoOferta: CONFIG.textoOferta,
     
     // 3. WHATSAPP DE SUPORTE (mantém igual)
     suporteWhatsApp: "556598115091",
@@ -498,26 +522,7 @@ const CONFIG = {
 };
 
 // ============================================
-// APLICAR CONFIGURAÇÕES VISUAIS
-// ============================================
-
-// Quando a página carregar, aplicar as configurações do admin
-document.addEventListener('DOMContentLoaded', function() {
-    // Mudar o título da página
-    const tituloElement = document.getElementById('tituloPagina');
-    if (tituloElement) {
-        tituloElement.innerText = CONFIG_ADMIN.tituloPagina;
-    }
-    
-    // Mudar a imagem do produto (se foi configurada no admin)
-    const imgElement = document.getElementById('fotoProduto');
-    if (imgElement && CONFIG_ADMIN.urlImagem) {
-        imgElement.src = CONFIG_ADMIN.urlImagem;
-    }
-});
-
-// ============================================
-// NOVA FUNÇÃO: VALIDAR E LIMPAR MATRÍCULA
+// FUNÇÕES EXISTENTES (TUDO IGUAL)
 // ============================================
 
 function validarMatricula(input) {
@@ -530,10 +535,6 @@ function validarMatricula(input) {
     // Atualiza o valor no input
     input.value = valor;
 }
-
-// ============================================
-// OTIMIZAÇÕES - PREVENIR ERROS
-// ============================================
 
 let enviando = false;
 const TIMEOUT_MS = 5000;
@@ -548,10 +549,6 @@ async function validarImagem(src) {
     }
 }
 
-// ============================================
-// FUNÇÕES (NÃO MEXER DAQUI PARA BAIXO)
-// ============================================
-
 // Dark Mode
 function toggleDarkMode() {
     document.body.classList.toggle('dark-mode');
@@ -565,20 +562,17 @@ function toggleDarkMode() {
     }
 }
 
-// Função melhorada para identificar o navegador (CORRIGIDO)
+// Função melhorada para identificar o navegador
 function getBrowserName() {
     const ua = navigator.userAgent;
     const platform = navigator.platform;
     
-    // Detecção específica para Samsung Internet
     if (ua.includes('SamsungBrowser')) {
         return 'Samsung Internet';
     }
     
-    // Detecção específica para iPhone/iPad
     const isIOS = /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     
-    // Detecção para iOS
     if (isIOS) {
         if (ua.includes('CriOS')) return 'Chrome (iOS)';
         if (ua.includes('FxiOS')) return 'Firefox (iOS)';
@@ -586,7 +580,6 @@ function getBrowserName() {
         return 'Safari (iOS)';
     }
     
-    // Detecção para Android
     if (ua.includes('Android')) {
         if (ua.includes('Chrome') && !ua.includes('Edg')) return 'Chrome (Android)';
         if (ua.includes('Firefox')) return 'Firefox (Android)';
@@ -594,7 +587,6 @@ function getBrowserName() {
         return 'Navegador Padrão (Android)';
     }
     
-    // Detecção para Desktop
     if (ua.includes('Chrome') && !ua.includes('Edg')) return 'Chrome (Desktop)';
     if (ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Edg')) return 'Safari (Desktop)';
     if (ua.includes('Edg')) return 'Edge (Desktop)';
@@ -604,7 +596,6 @@ function getBrowserName() {
     return 'Outro/Desconhecido';
 }
 
-// Função para mostrar/ocultar loading
 function setLoading(isLoading) {
     const btn = document.getElementById('btnEnviar');
     const btnText = btn.querySelector('.btn-text');
@@ -618,9 +609,14 @@ function setLoading(isLoading) {
     }
 }
 
-// Função principal com otimizações
+// Função principal
 async function enviar() {
-    // Prevenir múltiplos cliques
+    // Se estiver no modo expirado, não faz nada
+    if (modoExpirado || !ofertaAtiva) {
+        alert('Nenhuma oferta ativa no momento. Aguarde a próxima promoção!');
+        return;
+    }
+    
     if (enviando) {
         console.log("⏳ Já está processando, aguarde...");
         return;
@@ -629,13 +625,11 @@ async function enviar() {
     try {
         const codInput = document.getElementById('cod').value.trim();
         
-        // Validação: não permite campo vazio
         if(!codInput) { 
             alert("Por favor, digite sua matrícula!"); 
             return; 
         }
         
-        // Validação: não permite apenas zeros
         if(codInput === '') { 
             alert("Matrícula inválida!"); 
             return; 
@@ -646,57 +640,44 @@ async function enviar() {
 
         const navegador = getBrowserName();
         
-        // Monta o link final com o código do vendedor (já limpo dos zeros à esquerda)
-        const linkFinal = `https://www.martinello.com.br/parceiros/${codInput}?redir=${encodeURIComponent(CONFIG.urlProduto)}`;
+        const linkFinal = `https://www.martinello.com.br/parceiros/${codInput}?redir=${encodeURIComponent(CONFIG_ORIGINAL.urlProduto)}`;
         
-        // Substitui [LINK] e [CODIGO] no texto
-        const textoDaOferta = CONFIG.textoOferta
+        const textoDaOferta = CONFIG_ORIGINAL.textoOferta
             .replace('[LINK]', linkFinal)
             .replace('[CODIGO]', codInput);
 
-        // RASTREIO INVISÍVEL COM TIMEOUT
+        // RASTREIO
         try {
-            if(CONFIG.googleFormUrl.includes("formResponse")) {
+            if(CONFIG_ORIGINAL.googleFormUrl.includes("formResponse")) {
                 const formData = new FormData();
-                formData.append(CONFIG.entryIdCodigo, codInput);
-                formData.append(CONFIG.entryIdBrowser, navegador);
+                formData.append(CONFIG_ORIGINAL.entryIdCodigo, codInput);
+                formData.append(CONFIG_ORIGINAL.entryIdBrowser, navegador);
                 
-                console.log("📤 Enviando rastreio:", { 
-                    codigo: codInput, 
-                    navegador: navegador
-                });
-                
-                // Adiciona timeout para não travar
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
                 
-                await fetch(CONFIG.googleFormUrl, {
+                await fetch(CONFIG_ORIGINAL.googleFormUrl, {
                     method: 'POST',
                     mode: 'no-cors',
                     body: formData,
                     signal: controller.signal
                 }).catch(error => {
                     if (error.name === 'AbortError') {
-                        console.warn("⚠️ Rastreio timeout, mas continuando...");
-                    } else {
-                        console.error("❌ Erro no rastreio:", error);
+                        console.warn("⚠️ Rastreio timeout");
                     }
                 }).finally(() => clearTimeout(timeoutId));
-                
-                console.log("✅ Rastreio processado");
             }
         } catch (error) {
-            console.error("❌ Erro crítico no rastreio:", error);
+            console.error("❌ Erro no rastreio:", error);
         }
 
-        // TENTATIVA DE COMPARTILHAMENTO COM VALIDAÇÃO
+        // COMPARTILHAMENTO
         try {
             const imgElement = document.getElementById('fotoProduto');
             
-            // Valida se a imagem existe
             const imagemValida = await validarImagem(imgElement.src);
             if (!imagemValida) {
-                throw new Error('Imagem não encontrada ou inválida');
+                throw new Error('Imagem não encontrada');
             }
             
             const response = await fetch(imgElement.src);
@@ -705,25 +686,21 @@ async function enviar() {
             if (blob.type.startsWith('image/')) {
                 const file = new File([blob], 'oferta.png', { type: 'image/png' });
 
-                // Tenta compartilhar com imagem
                 if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({
                         files: [file],
                         text: textoDaOferta
                     });
-                    console.log("✅ Compartilhamento realizado com sucesso");
+                    console.log("✅ Compartilhamento realizado");
                     setLoading(false);
                     enviando = false;
                     return;
                 } else {
-                    throw new Error('Web Share não suporta arquivos');
+                    throw new Error('Web Share não suporta');
                 }
-            } else {
-                throw new Error('Arquivo não é imagem válida');
             }
         } catch (error) {
-            console.log("📱 Usando fallback do WhatsApp:", error.message);
-            // Fallback: Abre o WhatsApp apenas com texto
+            console.log("📱 Usando fallback do WhatsApp");
             const msgZap = encodeURIComponent(textoDaOferta);
             window.open(`https://wa.me/?text=${msgZap}`, '_blank');
         }
@@ -738,7 +715,7 @@ async function enviar() {
     }
 }
 
-// Adicionar efeito de brilho no botão principal a cada 3 segundos
+// Efeito de brilho
 setInterval(() => {
     const btn = document.getElementById('btnEnviar');
     if (btn && !btn.disabled) {
