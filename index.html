@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal do Vendedor - Martinello</title>
+    
+    <!-- Fontes -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Variáveis de cor */
+        :root {
+            --primary-color: #d0252a;
+            --primary-dark: #a01d21;
+            --whatsapp-color: #25D366;
+            --whatsapp-dark: #128C7E;
+            --bg-light: #f4f4f4;
+            --bg-dark: #1a1a1a;
+            --text-light: #333;
+            --text-dark: #f4f4f4;
+            --card-light: white;
+            --card-dark: #2d2d2d;
+        }
+
+        /* Dark mode */
+        body.dark-mode {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        body.dark-mode .card {
+            background: var(--card-dark);
+            color: var(--text-dark);
+        }
+
+        body.dark-mode input {
+            background: #3d3d3d;
+            color: white;
+            border-color: #555;
+        }
+
+        body.dark-mode input::placeholder {
+            color: #aaa;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            text-align: center;
+            padding: 0;
+            background: var(--bg-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.3s, color 0.3s;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Cabeçalho simplificado */
+        .header {
+            background: var(--primary-color);
+            padding: 25px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(208, 37, 42, 0.3);
+            position: relative;
+            z-index: 100;
+        }
+
+        /* Logo aumentada */
+        .logo-image {
+            height: 100px;
+            width: auto;
+            object-fit: contain;
+            transition: 0.3s;
+        }
+
+        .dark-mode-toggle {
+            position: absolute;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: 0.3s;
+        }
+
+        .dark-mode-toggle:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(180deg);
+        }
+
+        /* Container principal - centralizado */
+        .main-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            min-height: calc(100vh - 130px);
+        }
+
+        /* Card principal */
+        .card {
+            background: var(--card-light);
+            padding: 30px 25px;
+            border-radius: 30px;
+            max-width: 450px;
+            width: 100%;
+            margin: 20px auto;
+            box-shadow: 0 20px 40px rgba(208, 37, 42, 0.15);
+            position: relative;
+            z-index: 10;
+            animation: slideUp 0.5s ease;
+            border: 1px solid rgba(208, 37, 42, 0.1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Título principal */
+        h2 { 
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            font-size: 32px;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 4px rgba(208, 37, 42, 0.2);
+            position: relative;
+            display: inline-block;
+        }
+
+        h2:after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 4px;
+            background: var(--primary-color);
+            margin: 10px auto 0;
+            border-radius: 2px;
+        }
+
+        /* Imagem do produto */
+        .product-image {
+            width: 100%;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: 0.3s;
+            border: 3px solid white;
+        }
+
+        .product-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 15px 30px rgba(208, 37, 42, 0.2);
+        }
+
+        /* Input group */
+        .input-group {
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-color);
+            font-size: 18px;
+        }
+
+        input { 
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            box-sizing: border-box;
+            font-size: 16px;
+            font-family: 'Montserrat', sans-serif;
+            transition: 0.3s;
+            background: var(--card-light);
+        }
+
+        input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(208, 37, 42, 0.1);
+        }
+
+        /* Botão principal */
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 18px;
+            width: 100%;
+            border-radius: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 18px;
+            font-family: 'Montserrat', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: 0.3s;
+            box-shadow: 0 8px 15px rgba(208, 37, 42, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(208, 37, 42, 0.4);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Botão flutuante do WhatsApp */
+        .whatsapp-float {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--whatsapp-color);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 8px 20px rgba(37, 211, 102, 0.4);
+            cursor: pointer;
+            transition: 0.3s;
+            z-index: 1000;
+            border: none;
+            animation: pulse 2s infinite;
+            text-decoration: none;
+        }
+
+        .whatsapp-float:hover {
+            transform: scale(1.1);
+            background: var(--whatsapp-dark);
+            box-shadow: 0 12px 25px rgba(37, 211, 102, 0.5);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 15px rgba(37, 211, 102, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+            }
+        }
+
+        /* Tooltip do WhatsApp */
+        .whatsapp-tooltip {
+            position: absolute;
+            right: 70px;
+            background: white;
+            color: #333;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.3s;
+            pointer-events: none;
+        }
+
+        .whatsapp-float:hover .whatsapp-tooltip {
+            opacity: 1;
+            visibility: visible;
+            right: 80px;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .logo-image {
+                height: 90px;
+            }
+            
+            h2 {
+                font-size: 28px;
+            }
+
+            .btn-primary {
+                font-size: 16px;
+                padding: 15px;
+            }
+
+            .whatsapp-float {
+                width: 50px;
+                height: 50px;
+                font-size: 25px;
+                bottom: 20px;
+                right: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-image {
+                height: 80px;
+            }
+            
+            h2 {
+                font-size: 24px;
+            }
+        }
+
+        /* Animações adicionais */
+        .glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 0 8px 15px rgba(208, 37, 42, 0.3);
+            }
+            50% {
+                box-shadow: 0 8px 25px rgba(208, 37, 42, 0.6);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Cabeçalho com logo centralizada -->
+<header class="header">
+    <img src="logo.png" alt="Logo Martinello" class="logo-image">
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()">
+        <i class="fas fa-moon"></i>
+    </button>
+</header>
+
+<!-- Container principal com card centralizado -->
+<div class="main-container">
+    <!-- Card principal -->
+    <div class="card">
+        <h2>DISPARO EM ANDAMENTO!</h2>
+        
+        <img id="fotoProduto" class="product-image" src="produto.png" alt="Imagem do Produto">
+        
+        <div class="input-group">
+            <i class="fas fa-tag input-icon"></i>
+            <input type="text" id="cod" placeholder="DIGITE SUA MATRÍCULA AQUI!" oninput="validarMatricula(this)">
+        </div>
+        
+        <button class="btn-primary" onclick="enviar()" id="btnEnviar">
+            <span class="btn-text">GERAR E ENVIAR NO WHATSAPP</span>
+        </button>
+    </div>
+</div>
+
+<!-- Botão flutuante do WhatsApp -->
+<a href="https://wa.me/556598115091?text=Olá!%20Preciso%20de%20ajuda%20com%20o%20Portal%20do%20Vendedor%20Martinello" 
+   class="whatsapp-float" 
+   target="_blank"
+   title="Suporte via WhatsApp">
+    <i class="fab fa-whatsapp"></i>
+    <span class="whatsapp-tooltip">Precisa de ajuda?</span>
+</a>
+
+<script>
+// ============================================
+// CONFIGURAÇÕES - COLE SEU TEXTO AQUI
+// ============================================
+
+const CONFIG = {
+    // Google Forms (RASTREIO) - Não mexa aqui
+    googleFormUrl: "https://docs.google.com/forms/d/e/1FAIpQLSfdheHBbGMCLIXXAeM0b8rTbpextHznj6BDS6lKGLN9ZMjd4g/formResponse",
+    entryIdCodigo: "entry.200360405",
+    entryIdBrowser: "entry.2003110990",
+    
+    // ========================================
+    // ÁREA DE PERSONALIZAÇÃO - SÓ MEXER AQUI
+    // ========================================
+    
+    // 1. LINK DO PRODUTO (só trocar a URL)
+    urlProduto: "https://www.martinello.com.br/cafeteira-arno-dolce-gusto-genio-s-basic-grafite-110v-80083",
+    
+    // 2. TEXTO DA OFERTA - COLE AQUI EXATAMENTE COMO QUER QUE APAREÇA
+    // Use [LINK] no lugar onde o link do produto deve ir
+    // Use [CODIGO] no lugar onde o código do vendedor deve aparecer
+    textoOferta: `☕✨ Seu café favorito na sua casa todos os dias! ✨☕
+
+No FEIRÃO DE ANIVERSÁRIO MARTINELLO, chegou a oportunidade perfeita para você!
+
+🔥 Cafeteira Arno Dolce Gusto Gênio S Basic – Grafite 110V
+Moderna, compacta e super prática! Prepare cafés, cappuccinos, chocolates e várias outras bebidas com qualidade profissional no conforto da sua casa.
+
+✔️ Design sofisticado
+✔️ Sistema de cápsulas
+✔️ Bebidas quentes e frias
+✔️ Fácil de usar
+
+E o melhor 👇
+💳 Parcelamento em até 12x sem juros!
+
+Agora é a hora de garantir a sua com condição especial!
+
+👉 Clique no meu link exclusivo e aproveite:
+🔗 [LINK]
+
+Qualquer dúvida me chama aqui que eu te ajudo 😉
+Mas corre que é por tempo limitado! 🚀`,
+    
+    // 3. WHATSAPP DE SUPORTE (só trocar o número)
+    suporteWhatsApp: "556598115091",
+    mensagemSuporte: "Olá! Preciso de ajuda."
+};
+
+// ============================================
+// NOVA FUNÇÃO: VALIDAR E LIMPAR MATRÍCULA
+// ============================================
+
+function validarMatricula(input) {
+    // Remove qualquer caractere que não seja número
+    let valor = input.value.replace(/\D/g, '');
+    
+    // Remove zeros à esquerda
+    valor = valor.replace(/^0+/, '');
+    
+    // Atualiza o valor no input
+    input.value = valor;
+}
+
+// ============================================
+// OTIMIZAÇÕES - PREVENIR ERROS
+// ============================================
+
+let enviando = false;
+const TIMEOUT_MS = 5000;
+
+async function validarImagem(src) {
+    if (!src || src === '') return false;
+    try {
+        const response = await fetch(src, { method: 'HEAD' });
+        return response.ok;
+    } catch {
+        return false;
+    }
+}
+
+// ============================================
+// FUNÇÕES (NÃO MEXER DAQUI PARA BAIXO)
+// ============================================
+
+// Dark Mode
+function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    const icon = document.querySelector('.dark-mode-toggle i');
+    if(document.body.classList.contains('dark-mode')) {
+        icon.classList.remove('fa-moon');
+        icon.classList.add('fa-sun');
+    } else {
+        icon.classList.remove('fa-sun');
+        icon.classList.add('fa-moon');
+    }
+}
+
+// Função melhorada para identificar o navegador (CORRIGIDO)
+function getBrowserName() {
+    const ua = navigator.userAgent;
+    const platform = navigator.platform;
+    
+    // Detecção específica para Samsung Internet
+    if (ua.includes('SamsungBrowser')) {
+        return 'Samsung Internet';
+    }
+    
+    // Detecção específica para iPhone/iPad
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    // Detecção para iOS
+    if (isIOS) {
+        if (ua.includes('CriOS')) return 'Chrome (iOS)';
+        if (ua.includes('FxiOS')) return 'Firefox (iOS)';
+        if (ua.includes('EdgiOS')) return 'Edge (iOS)';
+        return 'Safari (iOS)';
+    }
+    
+    // Detecção para Android
+    if (ua.includes('Android')) {
+        if (ua.includes('Chrome') && !ua.includes('Edg')) return 'Chrome (Android)';
+        if (ua.includes('Firefox')) return 'Firefox (Android)';
+        if (ua.includes('Edg')) return 'Edge (Android)';
+        return 'Navegador Padrão (Android)';
+    }
+    
+    // Detecção para Desktop
+    if (ua.includes('Chrome') && !ua.includes('Edg')) return 'Chrome (Desktop)';
+    if (ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Edg')) return 'Safari (Desktop)';
+    if (ua.includes('Edg')) return 'Edge (Desktop)';
+    if (ua.includes('Firefox')) return 'Firefox (Desktop)';
+    if (ua.includes('OPR') || ua.includes('Opera')) return 'Opera (Desktop)';
+    
+    return 'Outro/Desconhecido';
+}
+
+// Função para mostrar/ocultar loading
+function setLoading(isLoading) {
+    const btn = document.getElementById('btnEnviar');
+    const btnText = btn.querySelector('.btn-text');
+    
+    if(isLoading) {
+        btn.disabled = true;
+        btnText.innerHTML = '<span class="spinner"></span>Processando...';
+    } else {
+        btn.disabled = false;
+        btnText.textContent = 'GERAR E ENVIAR NO WHATSAPP';
+    }
+}
+
+// Função principal com otimizações
+async function enviar() {
+    // Prevenir múltiplos cliques
+    if (enviando) {
+        console.log("⏳ Já está processando, aguarde...");
+        return;
+    }
+    
+    try {
+        const codInput = document.getElementById('cod').value.trim();
+        
+        // Validação: não permite campo vazio
+        if(!codInput) { 
+            alert("Por favor, digite sua matrícula!"); 
+            return; 
+        }
+        
+        // Validação: não permite apenas zeros
+        if(codInput === '') { 
+            alert("Matrícula inválida!"); 
+            return; 
+        }
+
+        enviando = true;
+        setLoading(true);
+
+        const navegador = getBrowserName();
+        
+        // Monta o link final com o código do vendedor (já limpo dos zeros à esquerda)
+        const linkFinal = `https://www.martinello.com.br/parceiros/${codInput}?redir=${encodeURIComponent(CONFIG.urlProduto)}`;
+        
+        // Substitui [LINK] e [CODIGO] no texto
+        const textoDaOferta = CONFIG.textoOferta
+            .replace('[LINK]', linkFinal)
+            .replace('[CODIGO]', codInput);
+
+        // RASTREIO INVISÍVEL COM TIMEOUT
+        try {
+            if(CONFIG.googleFormUrl.includes("formResponse")) {
+                const formData = new FormData();
+                formData.append(CONFIG.entryIdCodigo, codInput);
+                formData.append(CONFIG.entryIdBrowser, navegador);
+                
+                console.log("📤 Enviando rastreio:", { 
+                    codigo: codInput, 
+                    navegador: navegador
+                });
+                
+                // Adiciona timeout para não travar
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+                
+                await fetch(CONFIG.googleFormUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: formData,
+                    signal: controller.signal
+                }).catch(error => {
+                    if (error.name === 'AbortError') {
+                        console.warn("⚠️ Rastreio timeout, mas continuando...");
+                    } else {
+                        console.error("❌ Erro no rastreio:", error);
+                    }
+                }).finally(() => clearTimeout(timeoutId));
+                
+                console.log("✅ Rastreio processado");
+            }
+        } catch (error) {
+            console.error("❌ Erro crítico no rastreio:", error);
+        }
+
+        // TENTATIVA DE COMPARTILHAMENTO COM VALIDAÇÃO
+        try {
+            const imgElement = document.getElementById('fotoProduto');
+            
+            // Valida se a imagem existe
+            const imagemValida = await validarImagem(imgElement.src);
+            if (!imagemValida) {
+                throw new Error('Imagem não encontrada ou inválida');
+            }
+            
+            const response = await fetch(imgElement.src);
+            const blob = await response.blob();
+            
+            if (blob.type.startsWith('image/')) {
+                const file = new File([blob], 'oferta.png', { type: 'image/png' });
+
+                // Tenta compartilhar com imagem
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        text: textoDaOferta
+                    });
+                    console.log("✅ Compartilhamento realizado com sucesso");
+                    setLoading(false);
+                    enviando = false;
+                    return;
+                } else {
+                    throw new Error('Web Share não suporta arquivos');
+                }
+            } else {
+                throw new Error('Arquivo não é imagem válida');
+            }
+        } catch (error) {
+            console.log("📱 Usando fallback do WhatsApp:", error.message);
+            // Fallback: Abre o WhatsApp apenas com texto
+            const msgZap = encodeURIComponent(textoDaOferta);
+            window.open(`https://wa.me/?text=${msgZap}`, '_blank');
+        }
+        
+        setLoading(false);
+        enviando = false;
+    } catch (error) {
+        console.error("Erro no processo:", error);
+        alert("Ocorreu um erro. Tente novamente.");
+        setLoading(false);
+        enviando = false;
+    }
+}
+
+// Adicionar efeito de brilho no botão principal a cada 3 segundos
+setInterval(() => {
+    const btn = document.getElementById('btnEnviar');
+    if (btn && !btn.disabled) {
+        btn.classList.add('glow');
+        setTimeout(() => {
+            btn.classList.remove('glow');
+        }, 1000);
+    }
+}, 3000);
+</script>
+
+</body>
+</html>
