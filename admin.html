@@ -491,8 +491,30 @@
         // ============================================
         // CONFIGURAÇÕES
         // ============================================
-        const SENHA_ADMIN = "calvo";
+        const SENHA_ADMIN = "777";
         let ofertas = [];
+        
+        // ============================================
+        // INICIALIZAÇÃO
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarOfertasSalvas();
+        });
+        
+        function carregarOfertasSalvas() {
+            try {
+                const ofertasSalvas = localStorage.getItem('ofertasMartinello');
+                if (ofertasSalvas) {
+                    ofertas = JSON.parse(ofertasSalvas);
+                    console.log('✅ Ofertas carregadas:', ofertas.length);
+                } else {
+                    console.log('ℹ️ Nenhuma oferta salva');
+                }
+            } catch (e) {
+                console.error('❌ Erro ao carregar ofertas:', e);
+                ofertas = [];
+            }
+        }
         
         // ============================================
         // FUNÇÕES DE LOGIN
@@ -502,7 +524,7 @@
             if (senha === SENHA_ADMIN) {
                 document.getElementById('loginBox').style.display = 'none';
                 document.getElementById('painelAdmin').style.display = 'block';
-                carregarOfertas();
+                renderizarListaOfertas();
                 carregarConfigPadrao();
                 setupDragAndDrop();
             } else {
@@ -518,6 +540,8 @@
             const fileInput = document.getElementById('fileInput');
             const dropAreaPadrao = document.getElementById('dropAreaPadrao');
             const filePadrao = document.getElementById('filePadrao');
+            
+            if (!dropArea || !fileInput || !dropAreaPadrao || !filePadrao) return;
             
             // Função para prevenir comportamento padrão
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -545,8 +569,10 @@
             dropArea.addEventListener('drop', (e) => {
                 const dt = e.dataTransfer;
                 const files = dt.files;
-                fileInput.files = files;
-                previewImagem(fileInput);
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    previewImagem(fileInput);
+                }
             });
             
             dropArea.addEventListener('click', () => fileInput.click());
@@ -555,8 +581,10 @@
             dropAreaPadrao.addEventListener('drop', (e) => {
                 const dt = e.dataTransfer;
                 const files = dt.files;
-                filePadrao.files = files;
-                previewPadrao(filePadrao);
+                if (files.length > 0) {
+                    filePadrao.files = files;
+                    previewPadrao(filePadrao);
+                }
             });
             
             dropAreaPadrao.addEventListener('click', () => filePadrao.click());
@@ -585,10 +613,11 @@
         }
         
         function previewPadrao(input) {
+            const preview = document.getElementById('previewPadrao');
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    document.getElementById('previewPadrao').src = e.target.result;
+                    preview.src = e.target.result;
                 }
                 reader.readAsDataURL(input.files[0]);
             }
@@ -612,208 +641,269 @@
         // ============================================
         // GERENCIAMENTO DE OFERTAS
         // ============================================
-        function carregarOfertas() {
-            const ofertasSalvas = localStorage.getItem('ofertasMartinello');
-            if (ofertasSalvas) {
-                ofertas = JSON.parse(ofertasSalvas);
-            }
-            renderizarListaOfertas();
-        }
-        
         function renderizarListaOfertas() {
             const container = document.getElementById('listaOfertas');
+            if (!container) return;
             
             if (ofertas.length === 0) {
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-plus" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i><p>Nenhuma oferta cadastrada</p><p style="font-size: 14px;">Clique em "NOVA OFERTA" para começar</p></div>';
                 return;
             }
             
+            // Ordenar por data de início
             ofertas.sort((a, b) => new Date(a.dataInicio) - new Date(b.dataInicio));
             
             let html = '';
             const agora = new Date();
             
             ofertas.forEach((oferta, index) => {
-                const dataInicio = new Date(oferta.dataInicio);
-                const dataFim = new Date(oferta.dataFim);
-                
-                let status = '';
-                let statusClass = '';
-                
-                if (agora >= dataInicio && agora <= dataFim) {
-                    status = 'ATIVA';
-                    statusClass = 'status-ativa';
-                } else if (agora < dataInicio) {
-                    status = 'AGENDADA';
-                    statusClass = 'status-agendada';
-                } else {
-                    status = 'EXPIRADA';
-                    statusClass = 'status-expirada';
-                }
-                
-                html += `
-                    <div class="oferta-card ${status === 'ATIVA' ? 'ativa' : ''}">
-                        <div class="status-badge ${statusClass}">${status}</div>
-                        <div class="oferta-content">
-                            <img src="${oferta.urlImagem || 'produto.png'}" class="oferta-img">
-                            <div class="oferta-info">
-                                <strong>${oferta.tituloPagina || 'Sem título'}</strong><br>
-                                📅 ${formatarDataBrasilia(dataInicio)} até ${formatarDataBrasilia(dataFim)}<br>
-                                🔗 ${(oferta.linkProduto || '').substring(0, 40)}...
-                            </div>
-                            <div class="oferta-actions">
-                                <button class="btn-secondary" onclick="editarOferta(${index})" style="padding: 10px 15px; width: auto;">✏️</button>
-                                <button class="btn-danger" onclick="excluirOferta(${index})" style="padding: 10px 15px; width: auto;">🗑️</button>
+                try {
+                    const dataInicio = new Date(oferta.dataInicio);
+                    const dataFim = new Date(oferta.dataFim);
+                    
+                    let status = '';
+                    let statusClass = '';
+                    
+                    if (agora >= dataInicio && agora <= dataFim) {
+                        status = 'ATIVA';
+                        statusClass = 'status-ativa';
+                    } else if (agora < dataInicio) {
+                        status = 'AGENDADA';
+                        statusClass = 'status-agendada';
+                    } else {
+                        status = 'EXPIRADA';
+                        statusClass = 'status-expirada';
+                    }
+                    
+                    html += `
+                        <div class="oferta-card ${status === 'ATIVA' ? 'ativa' : ''}">
+                            <div class="status-badge ${statusClass}">${status}</div>
+                            <div class="oferta-content">
+                                <img src="${oferta.urlImagem || 'produto.png'}" class="oferta-img">
+                                <div class="oferta-info">
+                                    <strong>${oferta.tituloPagina || 'Sem título'}</strong><br>
+                                    📅 ${formatarDataBrasilia(dataInicio)} até ${formatarDataBrasilia(dataFim)}<br>
+                                    🔗 ${(oferta.linkProduto || '').substring(0, 40)}...
+                                </div>
+                                <div class="oferta-actions">
+                                    <button class="btn-secondary" onclick="editarOferta(${index})" style="padding: 10px 15px; width: auto;">✏️</button>
+                                    <button class="btn-danger" onclick="excluirOferta(${index})" style="padding: 10px 15px; width: auto;">🗑️</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                } catch (e) {
+                    console.error('Erro ao renderizar oferta:', e);
+                }
             });
             
             container.innerHTML = html;
         }
         
         function formatarDataBrasilia(data) {
-            return data.toLocaleString('pt-BR', {
-                timeZone: 'America/Sao_Paulo',
-                day: '2-digit',
-                month: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            try {
+                return data.toLocaleString('pt-BR', {
+                    timeZone: 'America/Sao_Paulo',
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return 'Data inválida';
+            }
         }
         
         // ============================================
         // VALIDAÇÃO DE CONFLITO
         // ============================================
         function verificarConflitoDatas(novaDataInicioUTC, novaDataFimUTC, ofertaIgnorarId = null) {
-            const novaInicio = new Date(novaDataInicioUTC);
-            const novaFim = new Date(novaDataFimUTC);
-            
-            if (novaFim <= novaInicio) {
-                return {
-                    conflito: true,
-                    mensagem: '❌ Data de fim deve ser posterior à data de início!'
-                };
+            try {
+                const novaInicio = new Date(novaDataInicioUTC);
+                const novaFim = new Date(novaDataFimUTC);
+                
+                if (novaFim <= novaInicio) {
+                    return {
+                        conflito: true,
+                        mensagem: '❌ Data de fim deve ser posterior à data de início!'
+                    };
+                }
+                
+                for (const oferta of ofertas) {
+                    if (ofertaIgnorarId && oferta.id === ofertaIgnorarId) continue;
+                    
+                    const ofertaInicio = new Date(oferta.dataInicio);
+                    const ofertaFim = new Date(oferta.dataFim);
+                    
+                    // Verificar sobreposição
+                    if (novaInicio >= ofertaInicio && novaInicio <= ofertaFim) {
+                        return {
+                            conflito: true,
+                            mensagem: `❌ Conflito! Já existe uma oferta de ${formatarDataBrasilia(ofertaInicio)} até ${formatarDataBrasilia(ofertaFim)}`
+                        };
+                    }
+                    
+                    if (novaFim >= ofertaInicio && novaFim <= ofertaFim) {
+                        return {
+                            conflito: true,
+                            mensagem: `❌ Conflito! Já existe uma oferta de ${formatarDataBrasilia(ofertaInicio)} até ${formatarDataBrasilia(ofertaFim)}`
+                        };
+                    }
+                    
+                    if (novaInicio <= ofertaInicio && novaFim >= ofertaFim) {
+                        return {
+                            conflito: true,
+                            mensagem: `❌ Conflito! Já existe uma oferta de ${formatarDataBrasilia(ofertaInicio)} até ${formatarDataBrasilia(ofertaFim)}`
+                        };
+                    }
+                }
+                
+                return { conflito: false };
+            } catch (e) {
+                console.error('Erro ao verificar conflito:', e);
+                return { conflito: true, mensagem: '❌ Erro ao verificar datas' };
             }
-            
-            for (const oferta of ofertas) {
-                if (ofertaIgnorarId && oferta.id === ofertaIgnorarId) continue;
-                
-                const ofertaInicio = new Date(oferta.dataInicio);
-                const ofertaFim = new Date(oferta.dataFim);
-                
-                if (novaInicio >= ofertaInicio && novaInicio <= ofertaFim) {
-                    return {
-                        conflito: true,
-                        mensagem: `❌ Conflito! Já existe uma oferta de ${formatarDataBrasilia(ofertaInicio)} até ${formatarDataBrasilia(ofertaFim)}`
-                    };
-                }
-                
-                if (novaFim >= ofertaInicio && novaFim <= ofertaFim) {
-                    return {
-                        conflito: true,
-                        mensagem: `❌ Conflito! Já existe uma oferta de ${formatarDataBrasilia(ofertaInicio)} até ${formatarDataBrasilia(ofertaFim)}`
-                    };
-                }
-                
-                if (novaInicio <= ofertaInicio && novaFim >= ofertaFim) {
-                    return {
-                        conflito: true,
-                        mensagem: `❌ Conflito! Já existe uma oferta de ${formatarDataBrasilia(ofertaInicio)} até ${formatarDataBrasilia(ofertaFim)}`
-                    };
-                }
-            }
-            
-            return { conflito: false };
         }
         
         // ============================================
-        // SALVAR NOVA OFERTA
+        // SALVAR NOVA OFERTA (CORRIGIDO!)
         // ============================================
         async function salvarNovaOferta() {
             try {
-                if (!document.getElementById('dataInicio').value) {
-                    alert('Selecione a data de início!');
+                console.log('🔄 Iniciando salvamento...');
+                
+                // VALIDAÇÕES BÁSICAS
+                const dataInicioInput = document.getElementById('dataInicio').value;
+                const dataFimInput = document.getElementById('dataFim').value;
+                const linkProduto = document.getElementById('linkProduto').value;
+                const textoOferta = document.getElementById('textoOferta').value;
+                const tituloPagina = document.getElementById('tituloPagina').value;
+                
+                if (!dataInicioInput) {
+                    alert('❌ Selecione a data de início!');
                     return;
                 }
                 
-                if (!document.getElementById('dataFim').value) {
-                    alert('Selecione a data de fim!');
+                if (!dataFimInput) {
+                    alert('❌ Selecione a data de fim!');
                     return;
                 }
                 
-                const dataInicioLocal = document.getElementById('dataInicio').value;
-                const dataFimLocal = document.getElementById('dataFim').value;
+                if (!linkProduto) {
+                    alert('❌ Digite o link do produto!');
+                    return;
+                }
                 
-                const dataInicioObj = new Date(dataInicioLocal + ' GMT-0300');
-                const dataFimObj = new Date(dataFimLocal + ' GMT-0300');
+                if (!textoOferta) {
+                    alert('❌ Digite o texto da oferta!');
+                    return;
+                }
+                
+                // CONVERTER DATAS (considerando horário de Brasília)
+                const dataInicioObj = new Date(dataInicioInput + ' GMT-0300');
+                const dataFimObj = new Date(dataFimInput + ' GMT-0300');
+                
+                if (isNaN(dataInicioObj.getTime()) || isNaN(dataFimObj.getTime())) {
+                    alert('❌ Datas inválidas!');
+                    return;
+                }
                 
                 const dataInicioUTC = dataInicioObj.toISOString();
                 const dataFimUTC = dataFimObj.toISOString();
                 
+                console.log('📅 Data início:', dataInicioUTC);
+                console.log('📅 Data fim:', dataFimUTC);
+                
+                // VERIFICAR CONFLITO
                 const conflito = verificarConflitoDatas(dataInicioUTC, dataFimUTC);
                 if (conflito.conflito) {
                     alert(conflito.mensagem);
                     return;
                 }
                 
+                // PROCESSAR IMAGEM (se houver)
                 const fileInput = document.getElementById('fileInput');
                 let imagemBase64 = '';
                 
                 if (fileInput.files && fileInput.files[0]) {
                     if (fileInput.files[0].size > 5 * 1024 * 1024) {
-                        alert('Imagem muito grande! Máximo 5MB.');
+                        alert('❌ Imagem muito grande! Máximo 5MB.');
                         return;
                     }
+                    console.log('🖼️ Convertendo imagem...');
                     imagemBase64 = await converterImagemParaBase64(fileInput.files[0]);
                 }
                 
+                // CRIAR OBJETO DA OFERTA
                 const novaOferta = {
                     id: Date.now(),
                     dataInicio: dataInicioUTC,
                     dataFim: dataFimUTC,
-                    linkProduto: document.getElementById('linkProduto').value,
+                    linkProduto: linkProduto,
                     urlImagem: imagemBase64,
-                    textoOferta: document.getElementById('textoOferta').value,
-                    tituloPagina: document.getElementById('tituloPagina').value,
+                    textoOferta: textoOferta,
+                    tituloPagina: tituloPagina || 'DISPARO EM ANDAMENTO!',
                     dataCriacao: new Date().toISOString()
                 };
                 
+                console.log('📦 Nova oferta:', novaOferta);
+                
+                // ADICIONAR À LISTA
                 ofertas.push(novaOferta);
+                
+                // SALVAR NO LOCALSTORAGE
                 localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
+                console.log('💾 Ofertas salvas no localStorage');
+                
+                // VERIFICAR OFERTA ATIVA
                 verificarOfertaAtiva();
                 
-                mostrarMensagem('✅ Oferta salva com sucesso!', 'sucesso');
-                document.getElementById('formNovaOferta').style.display = 'none';
+                // ATUALIZAR TELA
                 renderizarListaOfertas();
+                
+                // FECHAR FORMULÁRIO
+                document.getElementById('formNovaOferta').style.display = 'none';
+                
+                // LIMPAR PREVIEW
                 removerImagem();
                 
+                // MOSTRAR MENSAGEM DE SUCESSO
+                mostrarMensagem('✅ Oferta salva com sucesso!', 'sucesso');
+                
+                console.log('✅ Processo concluído!');
+                
             } catch (error) {
+                console.error('❌ Erro ao salvar:', error);
                 mostrarMensagem('❌ Erro ao salvar: ' + error.message, 'erro');
             }
         }
         
         function verificarOfertaAtiva() {
-            const agora = new Date();
-            let ofertaAtiva = null;
-            
-            for (const oferta of ofertas) {
-                const dataInicio = new Date(oferta.dataInicio);
-                const dataFim = new Date(oferta.dataFim);
+            try {
+                const agora = new Date();
+                let ofertaAtiva = null;
                 
-                if (agora >= dataInicio && agora <= dataFim) {
-                    ofertaAtiva = oferta;
-                    break;
+                for (const oferta of ofertas) {
+                    const dataInicio = new Date(oferta.dataInicio);
+                    const dataFim = new Date(oferta.dataFim);
+                    
+                    if (agora >= dataInicio && agora <= dataFim) {
+                        ofertaAtiva = oferta;
+                        break;
+                    }
                 }
-            }
-            
-            if (ofertaAtiva) {
-                localStorage.setItem('ofertaAtiva', JSON.stringify(ofertaAtiva));
-                localStorage.setItem('modoExpirado', 'false');
-            } else {
-                localStorage.setItem('modoExpirado', 'true');
-                localStorage.removeItem('ofertaAtiva');
+                
+                if (ofertaAtiva) {
+                    localStorage.setItem('ofertaAtiva', JSON.stringify(ofertaAtiva));
+                    localStorage.setItem('modoExpirado', 'false');
+                    console.log('✅ Oferta ativa:', ofertaAtiva.tituloPagina);
+                } else {
+                    localStorage.setItem('modoExpirado', 'true');
+                    localStorage.removeItem('ofertaAtiva');
+                    console.log('ℹ️ Nenhuma oferta ativa no momento');
+                }
+            } catch (e) {
+                console.error('Erro ao verificar oferta ativa:', e);
             }
         }
         
@@ -838,43 +928,52 @@
         // CONFIGURAÇÕES PADRÃO
         // ============================================
         async function salvarConfigPadrao() {
-            const filePadrao = document.getElementById('filePadrao');
-            let imagemBase64 = '';
-            
-            if (filePadrao.files && filePadrao.files[0]) {
-                if (filePadrao.files[0].size > 5 * 1024 * 1024) {
-                    alert('Imagem muito grande! Máximo 5MB.');
-                    return;
+            try {
+                const filePadrao = document.getElementById('filePadrao');
+                let imagemBase64 = '';
+                
+                if (filePadrao.files && filePadrao.files[0]) {
+                    if (filePadrao.files[0].size > 5 * 1024 * 1024) {
+                        alert('Imagem muito grande! Máximo 5MB.');
+                        return;
+                    }
+                    imagemBase64 = await converterImagemParaBase64(filePadrao.files[0]);
                 }
-                imagemBase64 = await converterImagemParaBase64(filePadrao.files[0]);
+                
+                const configTela = {
+                    imagem: imagemBase64 || 'produto.png',
+                    titulo: document.getElementById('tituloPadrao').value || 'EM BREVE',
+                    mensagem: document.getElementById('mensagemPadrao').value || ''
+                };
+                
+                localStorage.setItem('configTelaEmBreve', JSON.stringify(configTela));
+                mostrarMensagem('✅ Configurações da tela "EM BREVE" salvas!', 'sucesso');
+                
+            } catch (error) {
+                mostrarMensagem('❌ Erro ao salvar: ' + error.message, 'erro');
             }
-            
-            const configTela = {
-                imagem: imagemBase64 || 'produto.png',
-                titulo: document.getElementById('tituloPadrao').value || 'EM BREVE',
-                mensagem: document.getElementById('mensagemPadrao').value || ''
-            };
-            
-            localStorage.setItem('configTelaEmBreve', JSON.stringify(configTela));
-            mostrarMensagem('✅ Configurações da tela "EM BREVE" salvas!', 'sucesso');
         }
         
         function carregarConfigPadrao() {
-            const configSalva = localStorage.getItem('configTelaEmBreve');
-            if (configSalva) {
-                const config = JSON.parse(configSalva);
-                
-                if (config.imagem && config.imagem !== 'produto.png') {
-                    document.getElementById('previewPadrao').src = config.imagem;
+            try {
+                const configSalva = localStorage.getItem('configTelaEmBreve');
+                if (configSalva) {
+                    const config = JSON.parse(configSalva);
+                    
+                    if (config.imagem && config.imagem !== 'produto.png') {
+                        document.getElementById('previewPadrao').src = config.imagem;
+                    }
+                    
+                    if (config.titulo) {
+                        document.getElementById('tituloPadrao').value = config.titulo;
+                    }
+                    
+                    if (config.mensagem) {
+                        document.getElementById('mensagemPadrao').value = config.mensagem;
+                    }
                 }
-                
-                if (config.titulo) {
-                    document.getElementById('tituloPadrao').value = config.titulo;
-                }
-                
-                if (config.mensagem) {
-                    document.getElementById('mensagemPadrao').value = config.mensagem;
-                }
+            } catch (e) {
+                console.error('Erro ao carregar config padrão:', e);
             }
         }
         
@@ -883,6 +982,8 @@
         // ============================================
         function mostrarMensagem(texto, tipo) {
             const msgDiv = document.getElementById('msg' + (tipo === 'sucesso' ? 'Sucesso' : 'Erro'));
+            if (!msgDiv) return;
+            
             msgDiv.innerHTML = texto;
             msgDiv.style.display = 'block';
             
@@ -892,7 +993,7 @@
         }
         
         function editarOferta(index) {
-            alert('🚀 Edição será implementada em breve!');
+            alert('🚀 Edição será implementada em breve! Por enquanto, exclua e crie novamente.');
         }
         
         function excluirOferta(index) {
