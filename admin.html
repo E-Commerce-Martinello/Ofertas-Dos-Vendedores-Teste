@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Martinello</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .admin-container {
+            max-width: 700px;
+            width: 100%;
+        }
+        
+        .admin-card {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(208, 37, 42, 0.2);
+            border: 1px solid rgba(208, 37, 42, 0.1);
+        }
+        
+        h1 {
+            color: #d0252a;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-size: 28px;
+            border-bottom: 3px solid #d0252a;
+            padding-bottom: 15px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .login-box {
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .login-box input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            margin: 15px 0;
+        }
+        
+        .login-box button {
+            background: #d0252a;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus, .form-group textarea:focus {
+            border-color: #d0252a;
+            outline: none;
+        }
+        
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+        }
+        
+        .btn-save {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        
+        .btn-save:hover {
+            background: #218838;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .info-box strong {
+            color: #0066cc;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-card">
+            <h1>⚙️ PAINEL ADMIN</h1>
+            <p class="subtitle">Configure as ofertas do Portal do Vendedor</p>
+            
+            <!-- TELA DE LOGIN -->
+            <div id="loginBox" class="login-box">
+                <img src="logo.png" alt="Logo Martinello" style="max-width: 150px; margin-bottom: 20px;">
+                <h3>Acesso Restrito</h3>
+                <input type="password" id="senhaInput" placeholder="Digite a senha" onkeypress="if(event.key==='Enter') verificarSenha()">
+                <button onclick="verificarSenha()">ENTRAR</button>
+                <p style="margin-top: 15px; color: #666; font-size: 12px;">Senha padrão: martinello2026</p>
+            </div>
+            
+            <!-- PAINEL DE CONFIGURAÇÃO (inicia escondido) -->
+            <div id="configPanel" style="display: none;">
+                <div class="info-box">
+                    <strong>📢 Como funciona:</strong> Tudo que você salvar aqui será automaticamente usado no Portal do Vendedor (index.html)
+                </div>
+                
+                <!-- DATA DA OFERTA -->
+                <div class="form-group">
+                    <label>📅 Data de Início:</label>
+                    <input type="date" id="dataInicio" value="2026-03-10">
+                </div>
+                
+                <div class="form-group">
+                    <label>📅 Data de Fim:</label>
+                    <input type="date" id="dataFim" value="2026-03-16">
+                </div>
+                
+                <!-- LINK DO PRODUTO -->
+                <div class="form-group">
+                    <label>🔗 Link Base do Produto (sem o código):</label>
+                    <input type="url" id="linkProduto" value="https://www.martinello.com.br/tabloideoferta">
+                    <small style="color: #666;">O código do vendedor será adicionado automaticamente</small>
+                </div>
+                
+                <!-- IMAGEM DO PRODUTO -->
+                <div class="form-group">
+                    <label>🖼️ URL da Imagem (ou upload):</label>
+                    <input type="url" id="urlImagem" placeholder="https://... ou deixe vazio para imagem padrão">
+                    <div style="margin: 10px 0;">
+                        <strong>Preview:</strong><br>
+                        <img id="previewImagem" class="preview-image" src="produto.png" onerror="this.src='produto.png'">
+                    </div>
+                    <small>Cole o link direto da imagem. Se deixar vazio, usará produto.png</small>
+                </div>
+                
+                <!-- TEXTO DA OFERTA -->
+                <div class="form-group">
+                    <label>📝 Texto da Oferta:</label>
+                    <small>Use [LINK] para o link e [CODIGO] para a matrícula</small>
+                    <textarea id="textoOferta" rows="10">🎉🔥 FEIRÃO DE ANIVERSÁRIO MARTINELLO 🔥🎉
+📅 De 10/03/2026 a 16/03/2026!
+
+Chegou a hora de aproveitar!
+💥 Todo estoque em até 12x sem juros!
+
+É a chance perfeita pra você garantir aquele produto que estava esperando — com preço especial e condição facilitada.
+
+👉 Acesse pelo meu link exclusivo e aproveite:
+🔗 [LINK]
+
+Qualquer dúvida eu te ajudo aqui mesmo 😉
+Corre porque é só até dia 16!</textarea>
+                </div>
+                
+                <!-- TÍTULO DA PÁGINA (opcional) -->
+                <div class="form-group">
+                    <label>🏷️ Título da Página:</label>
+                    <input type="text" id="tituloPagina" value="DISPARO EM ANDAMENTO!">
+                </div>
+                
+                <button class="btn-save" onclick="salvarConfiguracao()">
+                    💾 SALVAR CONFIGURAÇÕES
+                </button>
+                
+                <div id="mensagemSucesso" class="success-message">
+                    ✅ Configurações salvas com sucesso!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // SENHA (você pode mudar aqui)
+        const SENHA_ADMIN = "martinello2026";
+        
+        // Verificar senha
+        function verificarSenha() {
+            const senhaDigitada = document.getElementById('senhaInput').value;
+            
+            if (senhaDigitada === SENHA_ADMIN) {
+                document.getElementById('loginBox').style.display = 'none';
+                document.getElementById('configPanel').style.display = 'block';
+                carregarConfiguracoesSalvas();
+            } else {
+                alert('❌ Senha incorreta!');
+            }
+        }
+        
+        // Carregar configurações salvas (se houver)
+        function carregarConfiguracoesSalvas() {
+            const configSalva = localStorage.getItem('configMartinello');
+            
+            if (configSalva) {
+                const config = JSON.parse(configSalva);
+                
+                document.getElementById('dataInicio').value = config.dataInicio || '2026-03-10';
+                document.getElementById('dataFim').value = config.dataFim || '2026-03-16';
+                document.getElementById('linkProduto').value = config.linkProduto || 'https://www.martinello.com.br/tabloideoferta';
+                document.getElementById('urlImagem').value = config.urlImagem || '';
+                document.getElementById('textoOferta').value = config.textoOferta || document.getElementById('textoOferta').value;
+                document.getElementById('tituloPagina').value = config.tituloPagina || 'DISPARO EM ANDAMENTO!';
+                
+                // Atualizar preview da imagem
+                if (config.urlImagem) {
+                    document.getElementById('previewImagem').src = config.urlImagem;
+                }
+            }
+        }
+        
+        // Preview da imagem ao digitar URL
+        document.getElementById('urlImagem').addEventListener('input', function() {
+            if (this.value) {
+                document.getElementById('previewImagem').src = this.value;
+            } else {
+                document.getElementById('previewImagem').src = 'produto.png';
+            }
+        });
+        
+        // Salvar configurações
+        function salvarConfiguracao() {
+            // Coletar todos os valores
+            const config = {
+                dataInicio: document.getElementById('dataInicio').value,
+                dataFim: document.getElementById('dataFim').value,
+                linkProduto: document.getElementById('linkProduto').value,
+                urlImagem: document.getElementById('urlImagem').value,
+                textoOferta: document.getElementById('textoOferta').value,
+                tituloPagina: document.getElementById('tituloPagina').value,
+                dataAtualizacao: new Date().toLocaleString()
+            };
+            
+            // Salvar no localStorage
+            localStorage.setItem('configMartinello', JSON.stringify(config));
+            
+            // Mostrar mensagem de sucesso
+            const msg = document.getElementById('mensagemSucesso');
+            msg.style.display = 'block';
+            msg.innerHTML = '✅ Configurações salvas! <br> <small>Agora abra o <strong>index.html</strong> para ver as mudanças</small>';
+            
+            // Esconder mensagem após 5 segundos
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 5000);
+            
+            console.log('Configuração salva:', config);
+        }
+        
+        // Permitir Enter no campo de senha
+        document.getElementById('senhaInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                verificarSenha();
+            }
+        });
+    </script>
+</body>
+</html>
