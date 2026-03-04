@@ -367,6 +367,15 @@
         .logout-button:hover {
             background: #5a6268;
         }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -378,14 +387,14 @@
                 <h2>Acesso Restrito</h2>
                 <input type="password" id="senhaInput" placeholder="Digite sua senha">
                 <button onclick="verificarSenha()">ENTRAR</button>
-                <p style="margin-top: 15px; font-size: 12px; color: #666;">✅ Sessão será salva - não precisa logar toda vez</p>
+                <p style="margin-top: 15px; font-size: 12px; color: #666;">✅ Sessão permanente</p>
             </div>
         </div>
         
         <!-- PAINEL ADMIN -->
         <div id="painelAdmin" style="display: none;">
             
-            <!-- CABEÇALHO COM LOGOUT -->
+            <!-- CABEÇALHO -->
             <div class="admin-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <div style="display: flex; align-items: center;">
@@ -396,7 +405,7 @@
                         <i class="fas fa-plus"></i> NOVA OFERTA
                     </button>
                 </div>
-                <p style="color: #666;">Apenas UMA oferta fica ativa por vez | Sessão permanente (F5 não desloga)</p>
+                <p style="color: #666;">Apenas UMA oferta fica ativa por vez</p>
             </div>
             
             <!-- LISTA DE OFERTAS -->
@@ -414,14 +423,19 @@
                 <h2 id="formTitulo">➕ NOVA OFERTA</h2>
                 <input type="hidden" id="editandoId" value="">
                 
+                <div class="info-box">
+                    <strong>🕒 Horário de Brasília (UTC-3)</strong><br>
+                    Use o horário de Brasília para cadastrar. Ex: 18:20
+                </div>
+                
                 <div class="row">
                     <div class="form-group">
-                        <label>📅 INÍCIO</label>
+                        <label>📅 INÍCIO (Brasília)</label>
                         <input type="datetime-local" id="dataInicio" required>
                     </div>
                     
                     <div class="form-group">
-                        <label>📅 FIM</label>
+                        <label>📅 FIM (Brasília)</label>
                         <input type="datetime-local" id="dataFim" required>
                     </div>
                 </div>
@@ -501,17 +515,61 @@
         // ============================================
         // CONFIGURAÇÕES
         // ============================================
-        const SENHA_ADMIN = "777";
+        const SENHA_ADMIN = "3617";
         const SESSION_KEY = 'adminLogado';
         let ofertas = [];
         
         // ============================================
-        // VERIFICAR SESSÃO AO CARREGAR
+        // FUNÇÕES DE CONVERSÃO DE DATA (APENAS BRASÍLIA!)
+        // ============================================
+        
+        // Converter data do input (Brasília) para UTC para salvar
+        function brasiliaParaUTC(dataBrasiliaStr) {
+            // dataBrasiliaStr vem no formato: "2026-03-04T18:20"
+            // Adicionar segundos e fuso -03:00 (Brasília)
+            const dataComFuso = dataBrasiliaStr + ':00-03:00';
+            return new Date(dataComFuso).toISOString();
+        }
+        
+        // Converter UTC para formato do input (Brasília)
+        function utcParaBrasiliaInput(utcStr) {
+            const data = new Date(utcStr);
+            
+            // Criar data no horário de Brasília
+            const brasilia = new Date(data.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+            
+            const ano = brasilia.getFullYear();
+            const mes = String(brasilia.getMonth() + 1).padStart(2, '0');
+            const dia = String(brasilia.getDate()).padStart(2, '0');
+            const hora = String(brasilia.getHours()).padStart(2, '0');
+            const minuto = String(brasilia.getMinutes()).padStart(2, '0');
+            
+            return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
+        }
+        
+        // Formatar data para exibição na lista (Brasília)
+        function formatarBrasilia(dataUTC) {
+            return new Date(dataUTC).toLocaleString('pt-BR', {
+                timeZone: 'America/Sao_Paulo',
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // Obter horário atual de Brasília
+        function getHorarioBrasilia() {
+            const agora = new Date();
+            return new Date(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+        }
+        
+        // ============================================
+        // INICIALIZAÇÃO
         // ============================================
         document.addEventListener('DOMContentLoaded', function() {
             carregarOfertasSalvas();
             
-            // Verificar se já estava logado
             const logado = localStorage.getItem(SESSION_KEY) === 'true';
             if (logado) {
                 document.getElementById('loginBox').style.display = 'none';
@@ -528,9 +586,7 @@
         function verificarSenha() {
             const senha = document.getElementById('senhaInput').value;
             if (senha === SENHA_ADMIN) {
-                // Salvar sessão
                 localStorage.setItem(SESSION_KEY, 'true');
-                
                 document.getElementById('loginBox').style.display = 'none';
                 document.getElementById('painelAdmin').style.display = 'block';
                 renderizarListaOfertas();
@@ -552,10 +608,9 @@
                 const ofertasSalvas = localStorage.getItem('ofertasMartinello');
                 if (ofertasSalvas) {
                     ofertas = JSON.parse(ofertasSalvas);
-                    console.log('✅ Ofertas carregadas:', ofertas.length);
                 }
             } catch (e) {
-                console.error('❌ Erro ao carregar ofertas:', e);
+                console.error('Erro ao carregar ofertas:', e);
                 ofertas = [];
             }
         }
@@ -662,41 +717,7 @@
         }
         
         // ============================================
-        // FUNÇÕES DE FORMATAÇÃO DE DATA
-        // ============================================
-        function formatarDataParaInput(dataISO) {
-            const data = new Date(dataISO);
-            const ano = data.getFullYear();
-            const mes = String(data.getMonth() + 1).padStart(2, '0');
-            const dia = String(data.getDate()).padStart(2, '0');
-            const hora = String(data.getHours()).padStart(2, '0');
-            const minuto = String(data.getMinutes()).padStart(2, '0');
-            
-            return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
-        }
-        
-        function formatarDataBrasilia(data) {
-            try {
-                return data.toLocaleString('pt-BR', {
-                    timeZone: 'America/Sao_Paulo',
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            } catch (e) {
-                return 'Data inválida';
-            }
-        }
-        
-        function getHorarioBrasilia() {
-            const agora = new Date();
-            const utc = agora.getTime() + (agora.getTimezoneOffset() * 60000);
-            return new Date(utc - (3 * 3600000));
-        }
-        
-        // ============================================
-        // GERENCIAMENTO DE OFERTAS
+        // RENDERIZAR LISTA
         // ============================================
         function renderizarListaOfertas() {
             const container = document.getElementById('listaOfertas');
@@ -738,7 +759,7 @@
                                 <img src="${oferta.urlImagem || 'produto.png'}" class="oferta-img">
                                 <div class="oferta-info">
                                     <strong>${oferta.tituloPagina || 'Sem título'}</strong><br>
-                                    📅 ${formatarDataBrasilia(dataInicio)} até ${formatarDataBrasilia(dataFim)}<br>
+                                    📅 ${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)}<br>
                                     🔗 ${(oferta.linkProduto || '').substring(0, 40)}...
                                 </div>
                                 <div class="oferta-actions">
@@ -757,7 +778,7 @@
         }
         
         // ============================================
-        // EDIÇÃO DE OFERTA
+        // EDIÇÃO DE OFERTA (CORRIGIDO!)
         // ============================================
         function editarOferta(index) {
             const oferta = ofertas[index];
@@ -765,17 +786,9 @@
             document.getElementById('formTitulo').innerHTML = '✏️ EDITAR OFERTA';
             document.getElementById('editandoId').value = index;
             
-            // Converter UTC para horário local para o input
-            const dataInicio = new Date(oferta.dataInicio);
-            const dataFim = new Date(oferta.dataFim);
-            
-            // Ajustar para o fuso do input (que espera hora local)
-            const offset = dataInicio.getTimezoneOffset() * 60000;
-            const dataInicioLocal = new Date(dataInicio.getTime() - offset);
-            const dataFimLocal = new Date(dataFim.getTime() - offset);
-            
-            document.getElementById('dataInicio').value = dataInicioLocal.toISOString().slice(0, 16);
-            document.getElementById('dataFim').value = dataFimLocal.toISOString().slice(0, 16);
+            // Converter UTC para o formato do input (Brasília)
+            document.getElementById('dataInicio').value = utcParaBrasiliaInput(oferta.dataInicio);
+            document.getElementById('dataFim').value = utcParaBrasiliaInput(oferta.dataFim);
             document.getElementById('linkProduto').value = oferta.linkProduto || '';
             document.getElementById('textoOferta').value = oferta.textoOferta || '';
             document.getElementById('tituloPagina').value = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
@@ -797,8 +810,6 @@
         // ============================================
         async function salvarOferta() {
             try {
-                console.log('🔄 Salvando oferta...');
-                
                 const dataInicioInput = document.getElementById('dataInicio').value;
                 const dataFimInput = document.getElementById('dataFim').value;
                 const linkProduto = document.getElementById('linkProduto').value;
@@ -811,24 +822,19 @@
                     return;
                 }
                 
-                // Converter para UTC
-                const dataInicioObj = new Date(dataInicioInput + ':00-03:00');
-                const dataFimObj = new Date(dataFimInput + ':00-03:00');
+                // Converter input (Brasília) para UTC
+                const dataInicioUTC = brasiliaParaUTC(dataInicioInput);
+                const dataFimUTC = brasiliaParaUTC(dataFimInput);
                 
-                if (isNaN(dataInicioObj.getTime()) || isNaN(dataFimObj.getTime())) {
-                    alert('❌ Datas inválidas!');
-                    return;
-                }
+                const dataInicioObj = new Date(dataInicioUTC);
+                const dataFimObj = new Date(dataFimUTC);
                 
                 if (dataFimObj <= dataInicioObj) {
                     alert('❌ Data de fim deve ser posterior à data de início!');
                     return;
                 }
                 
-                const dataInicioUTC = dataInicioObj.toISOString();
-                const dataFimUTC = dataFimObj.toISOString();
-                
-                // Verificar conflito (exceto com ela mesma se for edição)
+                // Verificar conflito
                 const conflito = verificarConflitoDatas(dataInicioUTC, dataFimUTC, editandoId ? parseInt(editandoId) : null);
                 if (conflito.conflito) {
                     alert(conflito.mensagem);
@@ -854,18 +860,13 @@
                     urlImagem: imagemBase64 || (editandoId ? ofertas[parseInt(editandoId)].urlImagem : ''),
                     textoOferta: textoOferta,
                     tituloPagina: tituloPagina || 'DISPARO EM ANDAMENTO!',
-                    dataCriacao: editandoId ? ofertas[parseInt(editandoId)].dataCriacao : new Date().toISOString(),
-                    dataAtualizacao: new Date().toISOString()
+                    dataCriacao: editandoId ? ofertas[parseInt(editandoId)].dataCriacao : new Date().toISOString()
                 };
                 
                 if (editandoId !== '') {
-                    // Edição
                     ofertas[parseInt(editandoId)] = ofertaDados;
-                    console.log('✏️ Oferta editada:', editandoId);
                 } else {
-                    // Nova oferta
                     ofertas.push(ofertaDados);
-                    console.log('➕ Nova oferta adicionada');
                 }
                 
                 localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
@@ -894,24 +895,15 @@
                     const ofertaFim = new Date(oferta.dataFim);
                     
                     if (novaInicio >= ofertaInicio && novaInicio <= ofertaFim) {
-                        return {
-                            conflito: true,
-                            mensagem: `❌ Conflito! Já existe uma oferta neste período`
-                        };
+                        return { conflito: true, mensagem: '❌ Conflito! Já existe uma oferta neste período' };
                     }
                     
                     if (novaFim >= ofertaInicio && novaFim <= ofertaFim) {
-                        return {
-                            conflito: true,
-                            mensagem: `❌ Conflito! Já existe uma oferta neste período`
-                        };
+                        return { conflito: true, mensagem: '❌ Conflito! Já existe uma oferta neste período' };
                     }
                     
                     if (novaInicio <= ofertaInicio && novaFim >= ofertaFim) {
-                        return {
-                            conflito: true,
-                            mensagem: `❌ Conflito! Já existe uma oferta neste período`
-                        };
+                        return { conflito: true, mensagem: '❌ Conflito! Já existe uma oferta neste período' };
                     }
                 }
                 
@@ -1000,10 +992,10 @@
                 };
                 
                 localStorage.setItem('configTelaEmBreve', JSON.stringify(configTela));
-                mostrarMensagem('✅ Configurações da tela "EM BREVE" salvas!', 'sucesso');
+                mostrarMensagem('✅ Configurações salvas!', 'sucesso');
                 
             } catch (error) {
-                mostrarMensagem('❌ Erro ao salvar: ' + error.message, 'erro');
+                mostrarMensagem('❌ Erro: ' + error.message, 'erro');
             }
         }
         
@@ -1030,9 +1022,6 @@
             }
         }
         
-        // ============================================
-        // UTILITÁRIOS
-        // ============================================
         function mostrarMensagem(texto, tipo) {
             const msgDiv = document.getElementById('msg' + (tipo === 'sucesso' ? 'Sucesso' : 'Erro'));
             if (!msgDiv) return;
@@ -1045,7 +1034,7 @@
             }, 3000);
         }
         
-        // Auto-atualizar status a cada 30 segundos
+        // Auto-atualizar
         setInterval(() => {
             verificarOfertaAtiva();
             renderizarListaOfertas();
