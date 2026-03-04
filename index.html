@@ -397,7 +397,7 @@
 <div class="main-container">
     <!-- Card principal -->
     <div class="card">
-        <h2>DISPARO EM ANDAMENTO!</h2>
+        <h2 id="tituloPagina">DISPARO EM ANDAMENTO!</h2>
         
         <img id="fotoProduto" class="product-image" src="produto.png" alt="Imagem do Produto">
         
@@ -423,25 +423,15 @@
 
 <script>
 // ============================================
-// CONFIGURAÇÕES - COLE SEU TEXTO AQUI
+// NOVO: CARREGAR CONFIGURAÇÕES DO PAINEL ADMIN
 // ============================================
 
-const CONFIG = {
-    // Google Forms (RASTREIO) - Não mexa aqui
-    googleFormUrl: "https://docs.google.com/forms/d/e/1FAIpQLSfdheHBbGMCLIXXAeM0b8rTbpextHznj6BDS6lKGLN9ZMjd4g/formResponse",
-    entryIdCodigo: "entry.200360405",
-    entryIdBrowser: "entry.2003110990",
-    
-    // ========================================
-    // ÁREA DE PERSONALIZAÇÃO - SÓ MEXER AQUI
-    // ========================================
-    
-    // 1. LINK DO PRODUTO (só trocar a URL)
-    urlProduto: "https://www.martinello.com.br/cafeteira-arno-dolce-gusto-genio-s-basic-grafite-110v-80083",
-    
-    // 2. TEXTO DA OFERTA - COLE AQUI EXATAMENTE COMO QUER QUE APAREÇA
-    // Use [LINK] no lugar onde o link do produto deve ir
-    // Use [CODIGO] no lugar onde o código do vendedor deve aparecer
+// Configurações padrão (caso não tenha nada salvo no admin)
+const CONFIG_PADRAO = {
+    dataInicio: "2026-03-10",
+    dataFim: "2026-03-16",
+    linkProduto: "https://www.martinello.com.br/cafeteira-arno-dolce-gusto-genio-s-basic-grafite-110v-80083",
+    urlImagem: "produto.png",
     textoOferta: `☕✨ Seu café favorito na sua casa todos os dias! ✨☕
 
 No FEIRÃO DE ANIVERSÁRIO MARTINELLO, chegou a oportunidade perfeita para você!
@@ -464,11 +454,67 @@ Agora é a hora de garantir a sua com condição especial!
 
 Qualquer dúvida me chama aqui que eu te ajudo 😉
 Mas corre que é por tempo limitado! 🚀`,
+    tituloPagina: "DISPARO EM ANDAMENTO!"
+};
+
+// Tentar carregar configurações salvas pelo admin
+let CONFIG_ADMIN = { ...CONFIG_PADRAO };
+
+try {
+    const configSalva = localStorage.getItem('configMartinello');
+    if (configSalva) {
+        CONFIG_ADMIN = { ...CONFIG_PADRAO, ...JSON.parse(configSalva) };
+        console.log('✅ Configurações carregadas do painel admin');
+    } else {
+        console.log('⚠️ Nenhuma configuração no admin. Usando padrão.');
+    }
+} catch (e) {
+    console.log('⚠️ Erro ao carregar config. Usando padrão.');
+}
+
+// ============================================
+// CONFIGURAÇÕES - AGORA USA OS VALORES DO ADMIN
+// ============================================
+
+const CONFIG = {
+    // Google Forms (RASTREIO) - Não mexa aqui
+    googleFormUrl: "https://docs.google.com/forms/d/e/1FAIpQLSfdheHBbGMCLIXXAeM0b8rTbpextHznj6BDS6lKGLN9ZMjd4g/formResponse",
+    entryIdCodigo: "entry.200360405",
+    entryIdBrowser: "entry.2003110990",
     
-    // 3. WHATSAPP DE SUPORTE (só trocar o número)
+    // ========================================
+    // ÁREA DE PERSONALIZAÇÃO - AGORA VEM DO ADMIN
+    // ========================================
+    
+    // 1. LINK DO PRODUTO (vem do admin)
+    urlProduto: CONFIG_ADMIN.linkProduto,
+    
+    // 2. TEXTO DA OFERTA (vem do admin)
+    textoOferta: CONFIG_ADMIN.textoOferta,
+    
+    // 3. WHATSAPP DE SUPORTE (mantém igual)
     suporteWhatsApp: "556598115091",
     mensagemSuporte: "Olá! Preciso de ajuda."
 };
+
+// ============================================
+// APLICAR CONFIGURAÇÕES VISUAIS
+// ============================================
+
+// Quando a página carregar, aplicar as configurações do admin
+document.addEventListener('DOMContentLoaded', function() {
+    // Mudar o título da página
+    const tituloElement = document.getElementById('tituloPagina');
+    if (tituloElement) {
+        tituloElement.innerText = CONFIG_ADMIN.tituloPagina;
+    }
+    
+    // Mudar a imagem do produto (se foi configurada no admin)
+    const imgElement = document.getElementById('fotoProduto');
+    if (imgElement && CONFIG_ADMIN.urlImagem) {
+        imgElement.src = CONFIG_ADMIN.urlImagem;
+    }
+});
 
 // ============================================
 // NOVA FUNÇÃO: VALIDAR E LIMPAR MATRÍCULA
