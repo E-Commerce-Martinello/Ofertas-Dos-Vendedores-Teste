@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Martinello</title>
+    <title>Admin Martinello - Agendador de Ofertas</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -16,15 +17,12 @@
         body {
             background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            padding: 30px 20px;
         }
         
         .admin-container {
-            max-width: 700px;
-            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
         }
         
         .admin-card {
@@ -32,63 +30,64 @@
             border-radius: 30px;
             padding: 40px;
             box-shadow: 0 20px 40px rgba(208, 37, 42, 0.2);
-            border: 1px solid rgba(208, 37, 42, 0.1);
+            margin-bottom: 30px;
         }
         
         h1 {
             color: #d0252a;
             font-weight: 800;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            font-size: 28px;
+            font-size: 32px;
             border-bottom: 3px solid #d0252a;
             padding-bottom: 15px;
+            margin-bottom: 30px;
         }
         
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
+        h2 {
+            color: #333;
+            margin: 30px 0 20px;
+            font-size: 24px;
         }
         
         .login-box {
             text-align: center;
-            padding: 30px;
+            padding: 40px;
         }
         
         .login-box input {
             width: 100%;
+            max-width: 300px;
             padding: 15px;
             border: 2px solid #ddd;
             border-radius: 10px;
             font-size: 16px;
-            margin: 15px 0;
+            margin: 15px auto;
         }
         
         .login-box button {
             background: #d0252a;
             color: white;
             border: none;
-            padding: 15px 30px;
+            padding: 15px 40px;
             border-radius: 10px;
             font-weight: bold;
             cursor: pointer;
-            width: 100%;
             font-size: 16px;
         }
         
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         
         .form-group label {
             display: block;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             color: #333;
         }
         
-        .form-group input, .form-group textarea {
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
@@ -96,226 +95,569 @@
             font-size: 14px;
         }
         
-        .form-group input:focus, .form-group textarea:focus {
+        .form-group input:focus,
+        .form-group textarea:focus {
             border-color: #d0252a;
             outline: none;
+        }
+        
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
         
         .preview-image {
             max-width: 200px;
             max-height: 200px;
-            margin: 10px 0;
+            margin: 15px 0;
             border-radius: 10px;
             border: 2px solid #ddd;
         }
         
-        .btn-save {
-            background: #28a745;
+        .upload-area {
+            border: 2px dashed #d0252a;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background: #fff5f5;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        
+        .upload-area:hover {
+            background: #ffe5e5;
+        }
+        
+        .upload-area i {
+            font-size: 48px;
+            color: #d0252a;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: #d0252a;
             color: white;
             border: none;
-            padding: 15px;
+            padding: 15px 30px;
             border-radius: 10px;
             font-weight: bold;
             cursor: pointer;
-            width: 100%;
             font-size: 16px;
-            margin-top: 20px;
+            width: 100%;
         }
         
-        .btn-save:hover {
-            background: #218838;
+        .btn-primary:hover {
+            background: #a01d21;
         }
         
-        .success-message {
-            background: #d4edda;
-            color: #155724;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 15px;
-            display: none;
+        .btn-secondary {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .oferta-card {
+            background: #f9f9f9;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .oferta-card.ativa {
+            border-color: #28a745;
+            background: #f0fff0;
+        }
+        
+        .status-badge {
+            position: absolute;
+            top: -10px;
+            right: 20px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .status-ativa {
+            background: #28a745;
+            color: white;
+        }
+        
+        .status-agendada {
+            background: #ffc107;
+            color: black;
+        }
+        
+        .status-expirada {
+            background: #6c757d;
+            color: white;
         }
         
         .info-box {
             background: #e7f3ff;
             border-left: 4px solid #0066cc;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
         }
         
-        .info-box strong {
-            color: #0066cc;
+        .hidden {
+            display: none;
+        }
+        
+        #msgSucesso {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        #msgErro {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="admin-container">
-        <div class="admin-card">
-            <h1>⚙️ PAINEL ADMIN</h1>
-            <p class="subtitle">Configure as ofertas do Portal do Vendedor</p>
-            
-            <!-- TELA DE LOGIN -->
-            <div id="loginBox" class="login-box">
-                <img src="logo.png" alt="Logo Martinello" style="max-width: 150px; margin-bottom: 20px;">
-                <h3>Acesso Restrito</h3>
-                <input type="password" id="senhaInput" placeholder="Digite a senha" onkeypress="if(event.key==='Enter') verificarSenha()">
+        <!-- LOGIN -->
+        <div class="admin-card" id="loginBox">
+            <div class="login-box">
+                <img src="logo.png" alt="Logo Martinello" style="max-width: 200px; margin-bottom: 30px;">
+                <h2>Acesso Restrito</h2>
+                <input type="password" id="senhaInput" placeholder="Digite sua senha">
                 <button onclick="verificarSenha()">ENTRAR</button>
-                <p style="margin-top: 15px; color: #666; font-size: 12px;">Senha padrão: martinello2026</p>
+            </div>
+        </div>
+        
+        <!-- PAINEL ADMIN (aparece após login) -->
+        <div id="painelAdmin" style="display: none;">
+            <!-- CABEÇALHO -->
+            <div class="admin-card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1>⚙️ AGENDADOR DE OFERTAS</h1>
+                    <button class="btn-secondary" onclick="mostrarNovaOferta()">
+                        <i class="fas fa-plus"></i> NOVA OFERTA
+                    </button>
+                </div>
+                <p>Configure as ofertas programadas. Apenas UMA fica ativa por vez.</p>
             </div>
             
-            <!-- PAINEL DE CONFIGURAÇÃO (inicia escondido) -->
-            <div id="configPanel" style="display: none;">
-                <div class="info-box">
-                    <strong>📢 Como funciona:</strong> Tudo que você salvar aqui será automaticamente usado no Portal do Vendedor (index.html)
+            <!-- LISTA DE OFERTAS -->
+            <div class="admin-card">
+                <h2>📋 OFERTAS PROGRAMADAS</h2>
+                <div id="listaOfertas">
+                    <!-- As ofertas aparecerão aqui via JavaScript -->
                 </div>
+            </div>
+            
+            <!-- FORMULÁRIO NOVA OFERTA (inicia oculto) -->
+            <div class="admin-card" id="formNovaOferta" style="display: none;">
+                <h2>➕ NOVA OFERTA</h2>
                 
-                <!-- DATA DA OFERTA -->
-                <div class="form-group">
-                    <label>📅 Data de Início:</label>
-                    <input type="date" id="dataInicio" value="2026-03-10">
-                </div>
-                
-                <div class="form-group">
-                    <label>📅 Data de Fim:</label>
-                    <input type="date" id="dataFim" value="2026-03-16">
-                </div>
-                
-                <!-- LINK DO PRODUTO -->
-                <div class="form-group">
-                    <label>🔗 Link Base do Produto (sem o código):</label>
-                    <input type="url" id="linkProduto" value="https://www.martinello.com.br/tabloideoferta">
-                    <small style="color: #666;">O código do vendedor será adicionado automaticamente</small>
-                </div>
-                
-                <!-- IMAGEM DO PRODUTO -->
-                <div class="form-group">
-                    <label>🖼️ URL da Imagem (ou upload):</label>
-                    <input type="url" id="urlImagem" placeholder="https://... ou deixe vazio para imagem padrão">
-                    <div style="margin: 10px 0;">
-                        <strong>Preview:</strong><br>
-                        <img id="previewImagem" class="preview-image" src="produto.png" onerror="this.src='produto.png'">
+                <div class="row">
+                    <div class="form-group">
+                        <label>📅 Data/Hora Início:</label>
+                        <input type="datetime-local" id="dataInicio">
                     </div>
-                    <small>Cole o link direto da imagem. Se deixar vazio, usará produto.png</small>
+                    
+                    <div class="form-group">
+                        <label>📅 Data/Hora Fim:</label>
+                        <input type="datetime-local" id="dataFim">
+                    </div>
                 </div>
                 
-                <!-- TEXTO DA OFERTA -->
+                <div class="form-group">
+                    <label>🔗 Link do Produto:</label>
+                    <input type="url" id="linkProduto" placeholder="https://www.martinello.com.br/...">
+                </div>
+                
+                <div class="form-group">
+                    <label>🖼️ Imagem da Oferta (upload):</label>
+                    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Clique para selecionar uma imagem</p>
+                        <p style="font-size: 12px; color: #666;">PNG, JPG ou GIF (máx 5MB)</p>
+                        <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="previewImagem(this)">
+                    </div>
+                    <div id="previewContainer" style="text-align: center;">
+                        <img id="preview" class="preview-image" src="#" style="display: none;">
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label>📝 Texto da Oferta:</label>
-                    <small>Use [LINK] para o link e [CODIGO] para a matrícula</small>
-                    <textarea id="textoOferta" rows="10">🎉🔥 FEIRÃO DE ANIVERSÁRIO MARTINELLO 🔥🎉
-📅 De 10/03/2026 a 16/03/2026!
-
-Chegou a hora de aproveitar!
-💥 Todo estoque em até 12x sem juros!
-
-É a chance perfeita pra você garantir aquele produto que estava esperando — com preço especial e condição facilitada.
-
-👉 Acesse pelo meu link exclusivo e aproveite:
-🔗 [LINK]
-
-Qualquer dúvida eu te ajudo aqui mesmo 😉
-Corre porque é só até dia 16!</textarea>
+                    <textarea id="textoOferta" rows="8" placeholder="Digite o texto da oferta... Use [LINK] e [CODIGO]"></textarea>
                 </div>
                 
-                <!-- TÍTULO DA PÁGINA (opcional) -->
                 <div class="form-group">
                     <label>🏷️ Título da Página:</label>
                     <input type="text" id="tituloPagina" value="DISPARO EM ANDAMENTO!">
                 </div>
                 
-                <button class="btn-save" onclick="salvarConfiguracao()">
-                    💾 SALVAR CONFIGURAÇÕES
-                </button>
-                
-                <div id="mensagemSucesso" class="success-message">
-                    ✅ Configurações salvas com sucesso!
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <button class="btn-primary" onclick="salvarNovaOferta()">SALVAR OFERTA</button>
+                    <button class="btn-danger" onclick="cancelarNovaOferta()">CANCELAR</button>
                 </div>
             </div>
+            
+            <!-- CONFIGURAÇÕES PADRÃO -->
+            <div class="admin-card">
+                <h2>⚙️ CONFIGURAÇÕES PADRÃO</h2>
+                <p>Estas configurações aparecem quando NÃO HÁ OFERTA ativa.</p>
+                
+                <div class="form-group">
+                    <label>🖼️ Imagem Padrão (quando sem oferta):</label>
+                    <div class="upload-area" onclick="document.getElementById('filePadrao').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Clique para selecionar imagem padrão</p>
+                        <input type="file" id="filePadrao" accept="image/*" style="display: none;" onchange="previewPadrao(this)">
+                    </div>
+                    <img id="previewPadrao" class="preview-image" src="aguarde.jpg" style="max-width: 150px;">
+                </div>
+                
+                <div class="form-group">
+                    <label>📝 Texto Padrão (quando sem oferta):</label>
+                    <textarea id="textoPadrao" rows="4">🔜 AGUARDE! Em breve teremos novidades para você!
+
+Nova oferta chegando em breve no Martinello.
+Fique ligado para não perder!</textarea>
+                </div>
+                
+                <button class="btn-primary" onclick="salvarConfigPadrao()">SALVAR CONFIGURAÇÕES PADRÃO</button>
+            </div>
+            
+            <!-- MENSAGENS -->
+            <div id="msgSucesso"></div>
+            <div id="msgErro"></div>
         </div>
     </div>
 
     <script>
-        // SENHA (você pode mudar aqui)
+        // ============================================
+        // CONFIGURAÇÕES
+        // ============================================
         const SENHA_ADMIN = "martinello2026";
         
-        // Verificar senha
+        // ============================================
+        // FUNÇÕES DE LOGIN
+        // ============================================
         function verificarSenha() {
-            const senhaDigitada = document.getElementById('senhaInput').value;
-            
-            if (senhaDigitada === SENHA_ADMIN) {
+            const senha = document.getElementById('senhaInput').value;
+            if (senha === SENHA_ADMIN) {
                 document.getElementById('loginBox').style.display = 'none';
-                document.getElementById('configPanel').style.display = 'block';
-                carregarConfiguracoesSalvas();
+                document.getElementById('painelAdmin').style.display = 'block';
+                carregarOfertas();
+                carregarConfigPadrao();
             } else {
-                alert('❌ Senha incorreta!');
+                alert('Senha incorreta!');
             }
         }
         
-        // Carregar configurações salvas (se houver)
-        function carregarConfiguracoesSalvas() {
-            const configSalva = localStorage.getItem('configMartinello');
+        // ============================================
+        // GERENCIAMENTO DE OFERTAS
+        // ============================================
+        let ofertas = [];
+        
+        function carregarOfertas() {
+            const ofertasSalvas = localStorage.getItem('ofertasMartinello');
+            if (ofertasSalvas) {
+                ofertas = JSON.parse(ofertasSalvas);
+            }
+            renderizarListaOfertas();
+        }
+        
+        function renderizarListaOfertas() {
+            const container = document.getElementById('listaOfertas');
             
-            if (configSalva) {
-                const config = JSON.parse(configSalva);
+            if (ofertas.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">Nenhuma oferta cadastrada. Clique em "NOVA OFERTA" para começar.</p>';
+                return;
+            }
+            
+            // Ordenar por data de início
+            ofertas.sort((a, b) => new Date(a.dataInicio) - new Date(b.dataInicio));
+            
+            let html = '';
+            const agora = new Date();
+            
+            ofertas.forEach((oferta, index) => {
+                const dataInicio = new Date(oferta.dataInicio);
+                const dataFim = new Date(oferta.dataFim);
                 
-                document.getElementById('dataInicio').value = config.dataInicio || '2026-03-10';
-                document.getElementById('dataFim').value = config.dataFim || '2026-03-16';
-                document.getElementById('linkProduto').value = config.linkProduto || 'https://www.martinello.com.br/tabloideoferta';
-                document.getElementById('urlImagem').value = config.urlImagem || '';
-                document.getElementById('textoOferta').value = config.textoOferta || document.getElementById('textoOferta').value;
-                document.getElementById('tituloPagina').value = config.tituloPagina || 'DISPARO EM ANDAMENTO!';
+                let status = '';
+                let statusClass = '';
                 
-                // Atualizar preview da imagem
-                if (config.urlImagem) {
-                    document.getElementById('previewImagem').src = config.urlImagem;
+                if (agora >= dataInicio && agora <= dataFim) {
+                    status = 'ATIVA';
+                    statusClass = 'status-ativa';
+                } else if (agora < dataInicio) {
+                    status = 'AGENDADA';
+                    statusClass = 'status-agendada';
+                } else {
+                    status = 'EXPIRADA';
+                    statusClass = 'status-expirada';
+                }
+                
+                html += `
+                    <div class="oferta-card ${status === 'ATIVA' ? 'ativa' : ''}">
+                        <div class="status-badge ${statusClass}">${status}</div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr auto; gap: 20px; align-items: center;">
+                            <img src="${oferta.urlImagem || 'aguarde.jpg'}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 10px;">
+                            <div>
+                                <strong>${oferta.titulo || 'Sem título'}</strong><br>
+                                📅 ${formatarData(dataInicio)} até ${formatarData(dataFim)}<br>
+                                🔗 ${oferta.linkProduto.substring(0, 50)}...
+                            </div>
+                            <div>
+                                <button class="btn-secondary" onclick="editarOferta(${index})" style="margin-right: 5px;">✏️</button>
+                                <button class="btn-danger" onclick="excluirOferta(${index})">🗑️</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function formatarData(data) {
+            return data.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        function mostrarNovaOferta() {
+            document.getElementById('formNovaOferta').style.display = 'block';
+            document.getElementById('dataInicio').value = '';
+            document.getElementById('dataFim').value = '';
+            document.getElementById('linkProduto').value = '';
+            document.getElementById('textoOferta').value = '';
+            document.getElementById('tituloPagina').value = 'DISPARO EM ANDAMENTO!';
+            document.getElementById('preview').style.display = 'none';
+        }
+        
+        function cancelarNovaOferta() {
+            document.getElementById('formNovaOferta').style.display = 'none';
+        }
+        
+        // ============================================
+        // UPLOAD DE IMAGEM (MAGIA AQUI!)
+        // ============================================
+        function previewImagem(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const preview = document.getElementById('preview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        
+        function previewPadrao(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    document.getElementById('previewPadrao').src = e.target.result;
+                }
+                
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        
+        // Função que converte imagem para Base64 (salva direto no JSON!)
+        function converterImagemParaBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // ============================================
+        // SALVAR NOVA OFERTA
+        // ============================================
+        async function salvarNovaOferta() {
+            try {
+                // Validações
+                if (!document.getElementById('dataInicio').value) {
+                    alert('Selecione a data de início!');
+                    return;
+                }
+                
+                if (!document.getElementById('dataFim').value) {
+                    alert('Selecione a data de fim!');
+                    return;
+                }
+                
+                const fileInput = document.getElementById('fileInput');
+                let imagemBase64 = '';
+                
+                // Se tem imagem, converte para Base64
+                if (fileInput.files && fileInput.files[0]) {
+                    if (fileInput.files[0].size > 5 * 1024 * 1024) {
+                        alert('Imagem muito grande! Máximo 5MB.');
+                        return;
+                    }
+                    imagemBase64 = await converterImagemParaBase64(fileInput.files[0]);
+                }
+                
+                // Criar nova oferta
+                const novaOferta = {
+                    id: Date.now(),
+                    dataInicio: document.getElementById('dataInicio').value,
+                    dataFim: document.getElementById('dataFim').value,
+                    linkProduto: document.getElementById('linkProduto').value,
+                    urlImagem: imagemBase64 || '', // Se não tiver imagem, fica vazio (usa padrão)
+                    textoOferta: document.getElementById('textoOferta').value,
+                    tituloPagina: document.getElementById('tituloPagina').value,
+                    dataCriacao: new Date().toISOString()
+                };
+                
+                // Adicionar à lista
+                ofertas.push(novaOferta);
+                
+                // Salvar no localStorage
+                localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
+                
+                // Verificar qual oferta deve estar ativa AGORA
+                verificarOfertaAtiva();
+                
+                // Feedback
+                mostrarMensagem('✅ Oferta salva com sucesso!', 'sucesso');
+                
+                // Esconder formulário e atualizar lista
+                document.getElementById('formNovaOferta').style.display = 'none';
+                renderizarListaOfertas();
+                
+            } catch (error) {
+                mostrarMensagem('❌ Erro ao salvar: ' + error.message, 'erro');
+            }
+        }
+        
+        // ============================================
+        // VERIFICAR QUAL OFERTA ESTÁ ATIVA
+        // ============================================
+        function verificarOfertaAtiva() {
+            const agora = new Date();
+            let ofertaAtiva = null;
+            
+            for (const oferta of ofertas) {
+                const dataInicio = new Date(oferta.dataInicio);
+                const dataFim = new Date(oferta.dataFim);
+                
+                if (agora >= dataInicio && agora <= dataFim) {
+                    ofertaAtiva = oferta;
+                    break;
+                }
+            }
+            
+            // Salvar no localStorage qual é a oferta ativa (para o index.html ler)
+            if (ofertaAtiva) {
+                localStorage.setItem('ofertaAtiva', JSON.stringify(ofertaAtiva));
+                localStorage.setItem('modoExpirado', 'false');
+            } else {
+                localStorage.setItem('modoExpirado', 'true');
+            }
+        }
+        
+        // ============================================
+        // CONFIGURAÇÕES PADRÃO
+        // ============================================
+        async function salvarConfigPadrao() {
+            const filePadrao = document.getElementById('filePadrao');
+            let imagemPadraoBase64 = '';
+            
+            if (filePadrao.files && filePadrao.files[0]) {
+                imagemPadraoBase64 = await converterImagemParaBase64(filePadrao.files[0]);
+            }
+            
+            const configPadrao = {
+                imagemPadrao: imagemPadraoBase64 || 'aguarde.jpg',
+                textoPadrao: document.getElementById('textoPadrao').value
+            };
+            
+            localStorage.setItem('configPadraoMartinello', JSON.stringify(configPadrao));
+            mostrarMensagem('✅ Configurações padrão salvas!', 'sucesso');
+        }
+        
+        function carregarConfigPadrao() {
+            const configPadrao = localStorage.getItem('configPadraoMartinello');
+            if (configPadrao) {
+                const config = JSON.parse(configPadrao);
+                if (config.imagemPadrao) {
+                    document.getElementById('previewPadrao').src = config.imagemPadrao;
+                }
+                if (config.textoPadrao) {
+                    document.getElementById('textoPadrao').value = config.textoPadrao;
                 }
             }
         }
         
-        // Preview da imagem ao digitar URL
-        document.getElementById('urlImagem').addEventListener('input', function() {
-            if (this.value) {
-                document.getElementById('previewImagem').src = this.value;
-            } else {
-                document.getElementById('previewImagem').src = 'produto.png';
-            }
-        });
-        
-        // Salvar configurações
-        function salvarConfiguracao() {
-            // Coletar todos os valores
-            const config = {
-                dataInicio: document.getElementById('dataInicio').value,
-                dataFim: document.getElementById('dataFim').value,
-                linkProduto: document.getElementById('linkProduto').value,
-                urlImagem: document.getElementById('urlImagem').value,
-                textoOferta: document.getElementById('textoOferta').value,
-                tituloPagina: document.getElementById('tituloPagina').value,
-                dataAtualizacao: new Date().toLocaleString()
-            };
+        // ============================================
+        // UTILITÁRIOS
+        // ============================================
+        function mostrarMensagem(texto, tipo) {
+            const msgDiv = document.getElementById('msg' + (tipo === 'sucesso' ? 'Sucesso' : 'Erro'));
+            msgDiv.innerHTML = texto;
+            msgDiv.style.display = 'block';
             
-            // Salvar no localStorage
-            localStorage.setItem('configMartinello', JSON.stringify(config));
-            
-            // Mostrar mensagem de sucesso
-            const msg = document.getElementById('mensagemSucesso');
-            msg.style.display = 'block';
-            msg.innerHTML = '✅ Configurações salvas! <br> <small>Agora abra o <strong>index.html</strong> para ver as mudanças</small>';
-            
-            // Esconder mensagem após 5 segundos
             setTimeout(() => {
-                msg.style.display = 'none';
-            }, 5000);
-            
-            console.log('Configuração salva:', config);
+                msgDiv.style.display = 'none';
+            }, 3000);
         }
         
-        // Permitir Enter no campo de senha
-        document.getElementById('senhaInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                verificarSenha();
+        function editarOferta(index) {
+            alert('Funcionalidade de edição será implementada em breve!');
+        }
+        
+        function excluirOferta(index) {
+            if (confirm('Tem certeza que deseja excluir esta oferta?')) {
+                ofertas.splice(index, 1);
+                localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
+                verificarOfertaAtiva();
+                renderizarListaOfertas();
+                mostrarMensagem('✅ Oferta excluída!', 'sucesso');
             }
-        });
+        }
+        
+        // Verificar oferta ativa a cada minuto
+        setInterval(verificarOfertaAtiva, 60000);
     </script>
 </body>
 </html>
