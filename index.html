@@ -430,9 +430,10 @@
         
         <!-- PAINEL DE DEBUG -->
         <div class="debug-panel" id="debugPanel">
-            <div>🕒 <strong>Horário Brasília (fixo):</strong> <span id="debugHoraBrasilia"></span></div>
+            <div>🕒 <strong>Horário Brasília (AGORA):</strong> <span id="debugHoraBrasilia"></span></div>
             <div>📅 <strong>Oferta:</strong> <span id="debugOfertaInfo"></span></div>
             <div>⏰ <strong>Status:</strong> <span id="debugStatus"></span></div>
+            <div>📊 <strong>Dados brutos:</strong> <span id="debugDados"></span></div>
         </div>
     </div>
 </div>
@@ -466,31 +467,25 @@ try {
 }
 
 // ============================================
-// FUNÇÃO PARA OBTER HORÁRIO DE BRASÍLIA (CORRIGIDA!)
+// FUNÇÃO PARA OBTER HORÁRIO DE BRASÍLIA (VERSÃO SIMPLIFICADA E CORRETA!)
 // ============================================
 function getHorarioBrasilia() {
     // Criar data atual em UTC
     const agora = new Date();
     
-    // Converter para o horário de Brasília (UTC-3)
-    // Brasilía = UTC-3 = UTC - 3 horas
-    const brasiliaOffset = -3; // UTC-3
-    
-    // Pegar o UTC atual
-    const utc = new Date(agora.getTime() + (agora.getTimezoneOffset() * 60000));
-    
-    // Aplicar offset de Brasília
-    const brasiliaTime = new Date(utc.getTime() + (brasiliaOffset * 3600000));
+    // Brasília é UTC-3 (sempre!)
+    // Converter para UTC e subtrair 3 horas
+    const utc = agora.getTime() + (agora.getTimezoneOffset() * 60000);
+    const brasiliaTime = new Date(utc - (3 * 3600000));
     
     return brasiliaTime;
 }
 
 // ============================================
-// VERIFICAR OFERTA ATIVA (COM HORÁRIO FIXO)
+// VERIFICAR OFERTA ATIVA
 // ============================================
 function verificarOfertaAtivaIndex() {
     const agoraBrasilia = getHorarioBrasilia();
-    console.log('🕒 Horário de Brasília (fixo):', agoraBrasilia.toLocaleString('pt-BR'));
     
     const ofertaAtiva = JSON.parse(localStorage.getItem('ofertaAtiva'));
     const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
@@ -505,26 +500,19 @@ function verificarOfertaAtivaIndex() {
         const dataInicio = new Date(ofertaAtiva.dataInicio);
         const dataFim = new Date(ofertaAtiva.dataFim);
         
-        console.log('📅 Início (UTC):', dataInicio.toISOString());
-        console.log('📅 Fim (UTC):', dataFim.toISOString());
-        console.log('📅 Agora (Brasília):', agoraBrasilia.toISOString());
+        // Log detalhado para debug
+        console.log('📅 Comparação:');
+        console.log('   - Agora (Brasília):', agoraBrasilia.toISOString());
+        console.log('   - Início (UTC):', dataInicio.toISOString());
+        console.log('   - Fim (UTC):', dataFim.toISOString());
+        console.log('   - Agora >= Início?', agoraBrasilia >= dataInicio);
+        console.log('   - Agora <= Fim?', agoraBrasilia <= dataFim);
         
-        // Comparar usando o horário de Brasília
         if (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim) {
             console.log('✅ Oferta ATIVA!');
             return ofertaAtiva;
         } else {
-            console.log('⏰ Oferta não está ativa neste momento');
-            
-            if (agoraBrasilia < dataInicio) {
-                const diffMs = dataInicio - agoraBrasilia;
-                const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-                const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                console.log(`⏳ Faltam ${diffHrs}h${diffMins}min para iniciar`);
-            } else {
-                console.log('⌛ Oferta já expirou');
-            }
-            
+            console.log('⏰ Oferta não está ativa');
             return null;
         }
     } catch (e) {
@@ -788,18 +776,30 @@ function atualizarDebug() {
     
     const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
     if (oferta) {
-        const inicio = new Date(oferta.dataInicio).toLocaleString('pt-BR');
-        const fim = new Date(oferta.dataFim).toLocaleString('pt-BR');
-        document.getElementById('debugOfertaInfo').innerHTML = `${oferta.tituloPagina} (${inicio} até ${fim})`;
+        const inicio = new Date(oferta.dataInicio);
+        const fim = new Date(oferta.dataFim);
         
-        if (agora >= new Date(oferta.dataInicio) && agora <= new Date(oferta.dataFim)) {
+        document.getElementById('debugOfertaInfo').innerHTML = `
+            ${oferta.tituloPagina}<br>
+            <small>Início: ${inicio.toLocaleString('pt-BR')}</small><br>
+            <small>Fim: ${fim.toLocaleString('pt-BR')}</small>
+        `;
+        
+        if (agora >= inicio && agora <= fim) {
             document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
         } else {
             document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
         }
+        
+        document.getElementById('debugDados').innerHTML = `
+            <small>Agora: ${agora.toISOString()}<br>
+            Início: ${inicio.toISOString()}<br>
+            Fim: ${fim.toISOString()}</small>
+        `;
     } else {
         document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
         document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ MODO ESPERA</span>';
+        document.getElementById('debugDados').innerHTML = '';
     }
 }
 
