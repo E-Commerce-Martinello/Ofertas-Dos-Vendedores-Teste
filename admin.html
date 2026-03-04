@@ -96,8 +96,6 @@
             border: 2px solid #ddd;
             border-radius: 12px;
             font-size: 16px;
-            -webkit-appearance: none;
-            appearance: none;
         }
         
         .form-group input:focus,
@@ -123,7 +121,6 @@
             .admin-card { padding: 35px; }
         }
         
-        /* ÁREA DE UPLOAD COM DRAG & DROP */
         .upload-area {
             border: 3px dashed #d0252a;
             border-radius: 20px;
@@ -158,11 +155,6 @@
             margin: 5px 0;
         }
         
-        .upload-area small {
-            font-size: 13px;
-            color: #666;
-        }
-        
         .preview-image {
             max-width: 100%;
             max-height: 200px;
@@ -188,11 +180,6 @@
         
         .btn-primary:hover {
             background: #a01d21;
-            transform: translateY(-2px);
-        }
-        
-        .btn-primary:active {
-            transform: translateY(0);
         }
         
         .btn-secondary {
@@ -332,15 +319,6 @@
             font-weight: bold;
         }
         
-        .info-box {
-            background: #e7f3ff;
-            border-left: 4px solid #0066cc;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            font-size: 14px;
-        }
-        
         .empty-state {
             text-align: center;
             color: #666;
@@ -371,12 +349,12 @@
             <div class="login-box">
                 <img src="logo.png" alt="Logo Martinello" style="max-width: 180px; margin-bottom: 25px;">
                 <h2>Acesso Restrito</h2>
-                <input type="password" id="senhaInput" placeholder="Digite sua senha" enterkeyhint="go">
+                <input type="password" id="senhaInput" placeholder="Digite sua senha">
                 <button onclick="verificarSenha()">ENTRAR</button>
             </div>
         </div>
         
-        <!-- PAINEL ADMIN (aparece após login) -->
+        <!-- PAINEL ADMIN -->
         <div id="painelAdmin" style="display: none;">
             
             <!-- CABEÇALHO -->
@@ -396,7 +374,7 @@
                 <div id="listaOfertas"></div>
             </div>
             
-            <!-- FORMULÁRIO NOVA OFERTA (inicia oculto) -->
+            <!-- FORMULÁRIO NOVA OFERTA -->
             <div class="admin-card" id="formNovaOferta" style="display: none;">
                 <button class="back-button" onclick="cancelarNovaOferta()">
                     <i class="fas fa-arrow-left"></i> VOLTAR
@@ -406,19 +384,19 @@
                 
                 <div class="row">
                     <div class="form-group">
-                        <label>📅 INÍCIO (Brasília)</label>
-                        <input type="datetime-local" id="dataInicio">
+                        <label>📅 INÍCIO</label>
+                        <input type="datetime-local" id="dataInicio" required>
                     </div>
                     
                     <div class="form-group">
-                        <label>📅 FIM (Brasília)</label>
-                        <input type="datetime-local" id="dataFim">
+                        <label>📅 FIM</label>
+                        <input type="datetime-local" id="dataFim" required>
                     </div>
                 </div>
                 
                 <div class="form-group">
                     <label>🔗 LINK DO PRODUTO</label>
-                    <input type="url" id="linkProduto" placeholder="https://www.martinello.com.br/...">
+                    <input type="url" id="linkProduto" placeholder="https://www.martinello.com.br/..." required>
                 </div>
                 
                 <div class="form-group">
@@ -438,12 +416,12 @@
                 <div class="form-group">
                     <label>📝 TEXTO DA OFERTA</label>
                     <small style="display: block; margin-bottom: 5px; color: #666;">Use [LINK] e [CODIGO]</small>
-                    <textarea id="textoOferta" rows="8" placeholder="Digite o texto da oferta..."></textarea>
+                    <textarea id="textoOferta" rows="8" placeholder="Digite o texto da oferta..." required></textarea>
                 </div>
                 
                 <div class="form-group">
                     <label>🏷️ TÍTULO DA PÁGINA</label>
-                    <input type="text" id="tituloPagina" value="DISPARO EM ANDAMENTO!">
+                    <input type="text" id="tituloPagina" value="DISPARO EM ANDAMENTO!" required>
                 </div>
                 
                 <div class="btn-group">
@@ -470,7 +448,7 @@
                 
                 <div class="form-group">
                     <label>📝 TÍTULO</label>
-                    <input type="text" id="tituloPadrao" value="EM BREVE" placeholder="Ex: EM BREVE, NOVIDADES EM BREVE">
+                    <input type="text" id="tituloPadrao" value="EM BREVE">
                 </div>
                 
                 <div class="form-group">
@@ -491,7 +469,7 @@
         // ============================================
         // CONFIGURAÇÕES
         // ============================================
-        const SENHA_ADMIN = "777";
+        const SENHA_ADMIN = "3617";
         let ofertas = [];
         
         // ============================================
@@ -507,8 +485,6 @@
                 if (ofertasSalvas) {
                     ofertas = JSON.parse(ofertasSalvas);
                     console.log('✅ Ofertas carregadas:', ofertas.length);
-                } else {
-                    console.log('ℹ️ Nenhuma oferta salva');
                 }
             } catch (e) {
                 console.error('❌ Erro ao carregar ofertas:', e);
@@ -543,7 +519,6 @@
             
             if (!dropArea || !fileInput || !dropAreaPadrao || !filePadrao) return;
             
-            // Função para prevenir comportamento padrão
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropArea.addEventListener(eventName, preventDefaults, false);
                 dropAreaPadrao.addEventListener(eventName, preventDefaults, false);
@@ -554,7 +529,6 @@
                 e.stopPropagation();
             }
             
-            // Highlight da área
             ['dragenter', 'dragover'].forEach(eventName => {
                 dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false);
                 dropAreaPadrao.addEventListener(eventName, () => dropAreaPadrao.classList.add('dragover'), false);
@@ -565,7 +539,6 @@
                 dropAreaPadrao.addEventListener(eventName, () => dropAreaPadrao.classList.remove('dragover'), false);
             });
             
-            // Área de nova oferta
             dropArea.addEventListener('drop', (e) => {
                 const dt = e.dataTransfer;
                 const files = dt.files;
@@ -577,7 +550,6 @@
             
             dropArea.addEventListener('click', () => fileInput.click());
             
-            // Área de imagem padrão
             dropAreaPadrao.addEventListener('drop', (e) => {
                 const dt = e.dataTransfer;
                 const files = dt.files;
@@ -589,7 +561,6 @@
             
             dropAreaPadrao.addEventListener('click', () => filePadrao.click());
             
-            // Input changes
             fileInput.addEventListener('change', () => previewImagem(fileInput));
             filePadrao.addEventListener('change', () => previewPadrao(filePadrao));
         }
@@ -650,7 +621,6 @@
                 return;
             }
             
-            // Ordenar por data de início
             ofertas.sort((a, b) => new Date(a.dataInicio) - new Date(b.dataInicio));
             
             let html = '';
@@ -735,7 +705,6 @@
                     const ofertaInicio = new Date(oferta.dataInicio);
                     const ofertaFim = new Date(oferta.dataFim);
                     
-                    // Verificar sobreposição
                     if (novaInicio >= ofertaInicio && novaInicio <= ofertaFim) {
                         return {
                             conflito: true,
@@ -772,13 +741,14 @@
             try {
                 console.log('🔄 Iniciando salvamento...');
                 
-                // VALIDAÇÕES BÁSICAS
+                // PEGAR VALORES DOS CAMPOS
                 const dataInicioInput = document.getElementById('dataInicio').value;
                 const dataFimInput = document.getElementById('dataFim').value;
                 const linkProduto = document.getElementById('linkProduto').value;
                 const textoOferta = document.getElementById('textoOferta').value;
                 const tituloPagina = document.getElementById('tituloPagina').value;
                 
+                // VALIDAÇÕES
                 if (!dataInicioInput) {
                     alert('❌ Selecione a data de início!');
                     return;
@@ -799,20 +769,42 @@
                     return;
                 }
                 
-                // CONVERTER DATAS (considerando horário de Brasília)
-                const dataInicioObj = new Date(dataInicioInput + ' GMT-0300');
-                const dataFimObj = new Date(dataFimInput + ' GMT-0300');
+                // CONVERTER DATAS - FORMA CORRETA!
+                // O input datetime-local retorna: "2026-03-10T16:30"
+                // Vamos adicionar o fuso de Brasília corretamente
                 
-                if (isNaN(dataInicioObj.getTime()) || isNaN(dataFimObj.getTime())) {
-                    alert('❌ Datas inválidas!');
+                const dataInicioStr = dataInicioInput + ':00-03:00'; // Adiciona segundos e fuso -03:00
+                const dataFimStr = dataFimInput + ':00-03:00';
+                
+                const dataInicioObj = new Date(dataInicioStr);
+                const dataFimObj = new Date(dataFimStr);
+                
+                // Verificar se as datas são válidas
+                if (isNaN(dataInicioObj.getTime())) {
+                    alert('❌ Data de início inválida!');
                     return;
                 }
                 
+                if (isNaN(dataFimObj.getTime())) {
+                    alert('❌ Data de fim inválida!');
+                    return;
+                }
+                
+                // Verificar se data fim é maior que data início
+                if (dataFimObj <= dataInicioObj) {
+                    alert('❌ Data de fim deve ser posterior à data de início!');
+                    return;
+                }
+                
+                console.log('📅 Data início (objeto):', dataInicioObj);
+                console.log('📅 Data fim (objeto):', dataFimObj);
+                
+                // Converter para ISO string (UTC)
                 const dataInicioUTC = dataInicioObj.toISOString();
                 const dataFimUTC = dataFimObj.toISOString();
                 
-                console.log('📅 Data início:', dataInicioUTC);
-                console.log('📅 Data fim:', dataFimUTC);
+                console.log('📅 Data início (UTC):', dataInicioUTC);
+                console.log('📅 Data fim (UTC):', dataFimUTC);
                 
                 // VERIFICAR CONFLITO
                 const conflito = verificarConflitoDatas(dataInicioUTC, dataFimUTC);
@@ -821,7 +813,7 @@
                     return;
                 }
                 
-                // PROCESSAR IMAGEM (se houver)
+                // PROCESSAR IMAGEM
                 const fileInput = document.getElementById('fileInput');
                 let imagemBase64 = '';
                 
@@ -834,7 +826,7 @@
                     imagemBase64 = await converterImagemParaBase64(fileInput.files[0]);
                 }
                 
-                // CRIAR OBJETO DA OFERTA
+                // CRIAR OFERTA
                 const novaOferta = {
                     id: Date.now(),
                     dataInicio: dataInicioUTC,
@@ -848,32 +840,27 @@
                 
                 console.log('📦 Nova oferta:', novaOferta);
                 
-                // ADICIONAR À LISTA
+                // SALVAR
                 ofertas.push(novaOferta);
-                
-                // SALVAR NO LOCALSTORAGE
                 localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
+                
                 console.log('💾 Ofertas salvas no localStorage');
                 
-                // VERIFICAR OFERTA ATIVA
+                // ATUALIZAR TUDO
                 verificarOfertaAtiva();
-                
-                // ATUALIZAR TELA
                 renderizarListaOfertas();
                 
                 // FECHAR FORMULÁRIO
                 document.getElementById('formNovaOferta').style.display = 'none';
-                
-                // LIMPAR PREVIEW
                 removerImagem();
                 
-                // MOSTRAR MENSAGEM DE SUCESSO
+                // MENSAGEM DE SUCESSO
                 mostrarMensagem('✅ Oferta salva com sucesso!', 'sucesso');
                 
                 console.log('✅ Processo concluído!');
                 
             } catch (error) {
-                console.error('❌ Erro ao salvar:', error);
+                console.error('❌ Erro detalhado:', error);
                 mostrarMensagem('❌ Erro ao salvar: ' + error.message, 'erro');
             }
         }
@@ -915,8 +902,6 @@
             document.getElementById('textoOferta').value = '';
             document.getElementById('tituloPagina').value = 'DISPARO EM ANDAMENTO!';
             removerImagem();
-            
-            // Rolar para o formulário
             document.getElementById('formNovaOferta').scrollIntoView({ behavior: 'smooth' });
         }
         
