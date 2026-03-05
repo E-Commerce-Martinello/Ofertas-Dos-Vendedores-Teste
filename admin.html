@@ -880,30 +880,56 @@
         }
         
         // ============================================
-        // EDIÇÃO DE OFERTA
-        // ============================================
-        function editarOferta(index) {
-            const oferta = ofertas[index];
-            
-            document.getElementById('formTitulo').innerHTML = '✏️ EDITAR OFERTA';
-            document.getElementById('editandoId').value = index;
-            
-            document.getElementById('dataInicio').value = utcParaBrasiliaInput(oferta.dataInicio);
-            document.getElementById('dataFim').value = utcParaBrasiliaInput(oferta.dataFim);
-            document.getElementById('linkProduto').value = oferta.linkProduto || '';
-            document.getElementById('textoOferta').value = oferta.textoOferta || '';
-            document.getElementById('tituloPagina').value = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
-            
-            if (oferta.urlImagem) {
-                const preview = document.getElementById('preview');
-                preview.src = oferta.urlImagem;
-                preview.style.display = 'block';
-                document.getElementById('btnRemoverImagem').style.display = 'inline-block';
-            }
-            
-            document.getElementById('formNovaOferta').style.display = 'block';
-            document.getElementById('formNovaOferta').scrollIntoView({ behavior: 'smooth' });
+// EDIÇÃO DE OFERTA (CORRIGIDA!)
+// ============================================
+function editarOferta(index) {
+    console.log('✏️ Editando oferta índice:', index);
+    const oferta = ofertas[index];
+    
+    if (!oferta) {
+        console.error('❌ Oferta não encontrada');
+        if (typeof NOTIFICACAO !== 'undefined') {
+            NOTIFICACAO.erro('Oferta não encontrada!');
         }
+        return;
+    }
+    
+    console.log('📦 Dados da oferta:', oferta);
+    
+    document.getElementById('formTitulo').innerHTML = '✏️ EDITAR OFERTA';
+    document.getElementById('editandoId').value = index;
+    
+    // Converter UTC para formato do input (Brasília)
+    const dataInicioInput = utcParaBrasiliaInput(oferta.dataInicio);
+    const dataFimInput = utcParaBrasiliaInput(oferta.dataFim);
+    
+    console.log('🔄 Datas convertidas:', {
+        originalInicio: oferta.dataInicio,
+        inputInicio: dataInicioInput,
+        originalFim: oferta.dataFim,
+        inputFim: dataFimInput
+    });
+    
+    document.getElementById('dataInicio').value = dataInicioInput;
+    document.getElementById('dataFim').value = dataFimInput;
+    document.getElementById('linkProduto').value = oferta.linkProduto || '';
+    document.getElementById('textoOferta').value = oferta.textoOferta || '';
+    document.getElementById('tituloPagina').value = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
+    
+    // Carregar imagem se existir
+    if (oferta.urlImagem) {
+        const preview = document.getElementById('preview');
+        preview.src = oferta.urlImagem;
+        preview.style.display = 'block';
+        document.getElementById('btnRemoverImagem').style.display = 'inline-block';
+    } else {
+        removerImagem();
+    }
+    
+    // Mostrar formulário e rolar até ele
+    document.getElementById('formNovaOferta').style.display = 'block';
+    document.getElementById('formNovaOferta').scrollIntoView({ behavior: 'smooth' });
+}
         
         // ============================================
         // SALVAR OFERTA
