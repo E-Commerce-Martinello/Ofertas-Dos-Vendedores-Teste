@@ -568,29 +568,27 @@ async function salvarOfertas(novasOfertas) {
 // ============================================
 // VERIFICAR STATUS DA OFERTA
 // ============================================
-function verificarStatus() {
+async function verificarStatus() {
     try {
-        // 1️⃣ PEGAR HORÁRIO ATUAL DE BRASÍLIA
         const agoraBrasilia = getHorarioBrasilia();
-        const horaFormatada = formatarBrasilia(agoraBrasilia);
-        document.getElementById('infoHoraBrasilia').innerText = horaFormatada;
+        document.getElementById('infoHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia);
         
-        // 2️⃣ CARREGAR OFERTAS
-        const ofertas = carregarOfertas();
+        // CORREÇÃO: Adicionamos o "await" para esperar o Firebase
+        const ofertas = await carregarOfertas(); 
         
-        // 3️⃣ ENCONTRAR OFERTA ATIVA
+        if (!Array.isArray(ofertas)) return;
+
         let ofertaAtiva = null;
-        
         for (const oferta of ofertas) {
             const inicio = new Date(oferta.dataInicio);
             const fim = new Date(oferta.dataFim);
-            
             if (agoraBrasilia >= inicio && agoraBrasilia <= fim) {
                 ofertaAtiva = oferta;
-                console.log('✅ Oferta ativa encontrada:', oferta.tituloPagina);
                 break;
             }
         }
+
+        // ... resto do código de atualização da interface (que já está bom)
         
         // Atualizar oferta ativa no localStorage
         if (ofertaAtiva) {
