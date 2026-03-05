@@ -4,7 +4,7 @@
 
 // Sua configuração do Firebase (colei aqui pra você!)
 const firebaseConfig = {
-  apiKey: "AIzaSyCxcM4BgmGk62qIC7KbM_7nrjrMKwS_TOc",
+  apiKey: "AIzaSyCxcM4BgmGk62qIC7KbM_7nrrjMKwS_TOc",
   authDomain: "ofertas-vendedores.firebaseapp.com",
   databaseURL: "https://ofertas-vendedores-default-rtdb.firebaseio.com",
   projectId: "ofertas-vendedores",
