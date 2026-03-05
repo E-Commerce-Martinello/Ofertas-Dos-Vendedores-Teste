@@ -880,103 +880,76 @@
             atualizarOfertaAtiva(ofertas);
         }
         
-        // ============================================
-// EDIÇÃO DE OFERTA (CORRIGIDA!)
+// ============================================
+// EDIÇÃO DE OFERTA (SEM CONVERSÕES!)
 // ============================================
 function editarOferta(index) {
-    console.log('✏️ Editando oferta índice:', index);
     const oferta = ofertas[index];
-    
-    if (!oferta) {
-        console.error('❌ Oferta não encontrada');
-        if (typeof NOTIFICACAO !== 'undefined') {
-            NOTIFICACAO.erro('Oferta não encontrada!');
-        }
-        return;
-    }
-    
-    console.log('📦 Dados da oferta:', oferta);
     
     document.getElementById('formTitulo').innerHTML = '✏️ EDITAR OFERTA';
     document.getElementById('editandoId').value = index;
     
-    // Converter UTC para formato do input (Brasília)
-    const dataInicioInput = utcParaBrasiliaInput(oferta.dataInicio);
-    const dataFimInput = utcParaBrasiliaInput(oferta.dataFim);
-    
-    console.log('🔄 Datas convertidas:', {
-        originalInicio: oferta.dataInicio,
-        inputInicio: dataInicioInput,
-        originalFim: oferta.dataFim,
-        inputFim: dataFimInput
-    });
-    
-    document.getElementById('dataInicio').value = dataInicioInput;
-    document.getElementById('dataFim').value = dataFimInput;
+    // As datas já estão no formato correto!
+    document.getElementById('dataInicio').value = oferta.dataInicio;  // ← "2026-03-05T10:00"
+    document.getElementById('dataFim').value = oferta.dataFim;        // ← "2026-03-05T11:00"
     document.getElementById('linkProduto').value = oferta.linkProduto || '';
     document.getElementById('textoOferta').value = oferta.textoOferta || '';
     document.getElementById('tituloPagina').value = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
     
-    // Carregar imagem se existir
+    // Carregar imagem...
     if (oferta.urlImagem) {
-        const preview = document.getElementById('preview');
-        preview.src = oferta.urlImagem;
-        preview.style.display = 'block';
+        document.getElementById('preview').src = oferta.urlImagem;
+        document.getElementById('preview').style.display = 'block';
         document.getElementById('btnRemoverImagem').style.display = 'inline-block';
-    } else {
-        removerImagem();
     }
     
-    // Mostrar formulário e rolar até ele
     document.getElementById('formNovaOferta').style.display = 'block';
-    document.getElementById('formNovaOferta').scrollIntoView({ behavior: 'smooth' });
 }
         
         // ============================================
-        // SALVAR OFERTA
-        // ============================================
-        async function salvarOferta() {
-            try {
-                const dataInicioInput = document.getElementById('dataInicio').value;
-                const dataFimInput = document.getElementById('dataFim').value;
-                const linkProduto = document.getElementById('linkProduto').value;
-                const textoOferta = document.getElementById('textoOferta').value;
-                const tituloPagina = document.getElementById('tituloPagina').value;
-                const editandoId = document.getElementById('editandoId').value;
-                
-                if (!dataInicioInput || !dataFimInput || !linkProduto || !textoOferta) {
-                    if (typeof NOTIFICACAO !== 'undefined') {
-                        NOTIFICACAO.erro('Preencha todos os campos!');
-                    } else {
-                        alert('❌ Preencha todos os campos obrigatórios!');
-                    }
-                    return;
-                }
-                
-                // Converter input (Brasília) para UTC
-                const dataInicioUTC = brasiliaParaUTC(dataInicioInput);
-                const dataFimUTC = brasiliaParaUTC(dataFimInput);
-                
-                if (!dataInicioUTC || !dataFimUTC) {
-                    if (typeof NOTIFICACAO !== 'undefined') {
-                        NOTIFICACAO.erro('Erro ao converter datas!');
-                    } else {
-                        alert('❌ Erro ao converter datas!');
-                    }
-                    return;
-                }
-                
-                const dataInicioObj = new Date(dataInicioUTC);
-                const dataFimObj = new Date(dataFimUTC);
-                
-                if (dataFimObj <= dataInicioObj) {
-                    if (typeof NOTIFICACAO !== 'undefined') {
-                        NOTIFICACAO.erro('Fim deve ser após início!');
-                    } else {
-                        alert('❌ Data de fim deve ser posterior à data de início!');
-                    }
-                    return;
-                }
+// SALVAR OFERTA (SEM CONVERSÕES!)
+// ============================================
+async function salvarOferta() {
+    try {
+        const dataInicioInput = document.getElementById('dataInicio').value; // "2026-03-05T10:00"
+        const dataFimInput = document.getElementById('dataFim').value;       // "2026-03-05T11:00"
+        
+        if (!dataInicioInput || !dataFimInput) {
+            NOTIFICACAO?.erro('Preencha as datas!');
+            return;
+        }
+        
+        // Validar se as datas são válidas (criando objeto Date)
+        const dataInicioObj = new Date(dataInicioInput);
+        const dataFimObj = new Date(dataFimInput);
+        
+        if (isNaN(dataInicioObj.getTime()) || isNaN(dataFimObj.getTime())) {
+            NOTIFICACAO?.erro('Datas inválidas!');
+            return;
+        }
+        
+        if (dataFimObj <= dataInicioObj) {
+            NOTIFICACAO?.erro('Fim deve ser após início!');
+            return;
+        }
+        
+        // GUARDAR DIRETO AS STRINGS (sem converter!)
+        const ofertaDados = {
+            id: editandoId ? ofertas[parseInt(editandoId)].id : Date.now(),
+            dataInicio: dataInicioInput,  // ← "2026-03-05T10:00" (Brasília)
+            dataFim: dataFimInput,        // ← "2026-03-05T11:00" (Brasília)
+            linkProduto: linkProduto,
+            urlImagem: imagemBase64,
+            textoOferta: textoOferta,
+            tituloPagina: tituloPagina
+        };
+        
+        // Resto do código...
+        
+    } catch (error) {
+        console.error('Erro:', error);
+    }
+}
                 
                 // Verificar conflito
                 const conflito = verificarConflitoDatas(dataInicioUTC, dataFimUTC, editandoId ? parseInt(editandoId) : null);
