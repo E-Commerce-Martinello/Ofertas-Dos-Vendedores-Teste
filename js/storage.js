@@ -1,35 +1,61 @@
 // ============================================
-// storage.js - GERENCIAMENTO DO LOCALSTORAGE
+// storage.js - VERSÃO UNIFICADA (FIREBASE + LOCAL)
 // ============================================
 
-// Salvar ofertas no localStorage
-function salvarOfertas(ofertas) {
+// 1. CARREGAR OFERTAS
+async function carregarOfertas() {
     try {
-        localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
-        console.log('✅ Ofertas salvas:', ofertas.length);
-        return true;
+        console.log('📡 Buscando ofertas no Firebase...');
+        // Verifica se o Firebase e a variável ofertasRef (do firebase-config.js) existem
+        if (typeof ofertasRef !== 'undefined') {
+            const snapshot = await ofertasRef.once('value');
+            const ofertas = snapshot.val() || [];
+            
+            // Sincroniza o local com o que veio da nuvem
+            localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
+            console.log('✅ Sincronizado com Firebase:', ofertas.length);
+            return ofertas;
+        } else {
+            throw new Error('ofertasRef não definida');
+        }
     } catch (e) {
-        console.error('❌ Erro ao salvar ofertas:', e);
+        console.warn('⚠️ Usando reserva local (Firebase offline):', e.message);
+        return JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
+    }
+}
+
+// 2. SALVAR OFERTAS
+async function salvarOfertas(novasOfertas) {
+    try {
+        // Salva no LocalStorage primeiro (garantia rápida)
+        localStorage.setItem('ofertasMartinello', JSON.stringify(novasOfertas));
+
+        // Envia para o Firebase
+        if (typeof ofertasRef !== 'undefined') {
+            await ofertasRef.set(novasOfertas);
+            console.log('🚀 Enviado para a nuvem com sucesso!');
+            
+            if (typeof NOTIFICACAO !== 'undefined') {
+                NOTIFICACAO.sucesso('Sincronizado na nuvem!');
+            }
+            return true;
+        } else {
+            throw new Error('Configuração do Firebase ausente');
+        }
+    } catch (e) {
+        console.error('❌ Erro ao salvar na nuvem:', e);
+        if (typeof NOTIFICACAO !== 'undefined') {
+            NOTIFICACAO.erro('Salvo apenas neste aparelho!');
+        }
         return false;
     }
 }
 
-// Carregar ofertas do localStorage
-function carregarOfertas() {
-    try {
-        const ofertas = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
-        console.log('✅ Ofertas carregadas:', ofertas.length);
-        return ofertas;
-    } catch (e) {
-        console.error('❌ Erro ao carregar ofertas:', e);
-        return [];
-    }
-}
-
-// Atualizar oferta ativa baseado no horário atual
+// 3. ATUALIZAR STATUS (OFERTA ATIVA)
+// Esta função roda no celular do vendedor para saber qual oferta mostrar agora
 function atualizarOfertaAtiva(ofertas) {
     try {
-        const agora = getHorarioBrasilia();
+        const agora = (typeof getHorarioBrasilia === 'function') ? getHorarioBrasilia() : new Date();
         let ofertaAtiva = null;
         
         for (const oferta of ofertas) {
@@ -45,28 +71,14 @@ function atualizarOfertaAtiva(ofertas) {
         if (ofertaAtiva) {
             localStorage.setItem('ofertaAtiva', JSON.stringify(ofertaAtiva));
             localStorage.setItem('modoExpirado', 'false');
-            console.log('✅ Oferta ativa:', ofertaAtiva.tituloPagina);
         } else {
             localStorage.removeItem('ofertaAtiva');
             localStorage.setItem('modoExpirado', 'true');
-            console.log('⏸️ Nenhuma oferta ativa no momento');
         }
         
         return ofertaAtiva;
     } catch (e) {
-        console.error('❌ Erro ao atualizar oferta ativa:', e);
+        console.error('❌ Erro no cálculo de horário:', e);
         return null;
-    }
-}
-
-// Limpar tudo (útil para testes)
-function limparStorage() {
-    if (confirm('Limpar todas as ofertas?')) {
-        localStorage.removeItem('ofertasMartinello');
-        localStorage.removeItem('ofertaAtiva');
-        localStorage.removeItem('modoExpirado');
-        localStorage.removeItem('configTelaEmBreve');
-        console.log('🧹 Storage limpo!');
-        location.reload();
     }
 }
