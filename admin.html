@@ -7,11 +7,27 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- ARQUIVOS JS (MESMOS DO INDEX) -->
-<script src="horario.js"></script>
-<script src="storage.js"></script>
-<script src="debug.js"></script>
-<script src="admin-fix.js"></script>  <!-- NOVO! -->
+    <!-- ARQUIVOS JS (MESMA ORDEM DO INDEX) -->
+    <!-- 1. Configurações e utilitários básicos -->
+    <script src="js/config.js"></script>
+    <script src="js/horario.js"></script>
+    <script src="js/utils.js"></script>
+    
+    <!-- 2. Funcionalidades principais -->
+    <script src="js/storage.js"></script>
+    <script src="js/validators.js"></script>
+    <script src="js/image.js"></script>
+    
+    <!-- 3. Serviços e API -->
+    <script src="js/api.js"></script>
+    <script src="js/cache.js"></script>
+    
+    <!-- 4. Interface -->
+    <script src="js/ui.js"></script>
+    
+    <!-- 5. Diagnóstico e correções -->
+    <script src="js/debug.js"></script>
+    <script src="js/admin-fix.js"></script>
     
     <style>
         * {
@@ -414,6 +430,54 @@
             background: #dc3545;
             color: white;
         }
+
+        /* Estilos para notificações */
+        .notificacao {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .notificacao.sucesso {
+            background: #28a745;
+        }
+
+        .notificacao.erro {
+            background: #dc3545;
+        }
+
+        .notificacao-saindo {
+            animation: slideOut 0.3s ease forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -421,7 +485,7 @@
         <!-- TELA DE LOGIN -->
         <div class="admin-card" id="loginBox">
             <div class="login-box">
-                <img src="logo.png" alt="Logo Martinello" style="max-width: 180px; margin-bottom: 25px;">
+                <img src="img/logo.png" alt="Logo Martinello" style="max-width: 180px; margin-bottom: 25px;">
                 <h2>Acesso Restrito</h2>
                 <input type="password" id="senhaInput" placeholder="Digite sua senha">
                 <button onclick="verificarSenha()">ENTRAR</button>
@@ -535,7 +599,7 @@
                         <p style="font-size: 14px;">PNG, JPG ou GIF (até 5MB)</p>
                         <input type="file" id="filePadrao" accept="image/*" style="display: none;">
                     </div>
-                    <img id="previewPadrao" class="preview-image" src="produto.png">
+                    <img id="previewPadrao" class="preview-image" src="img/produto.png">
                 </div>
                 
                 <div class="form-group">
@@ -561,7 +625,7 @@
         // ============================================
         // CONFIGURAÇÕES
         // ============================================
-        const SENHA_ADMIN = "martinello2026";
+        const SENHA_ADMIN = "777";
         const SESSION_KEY = 'adminLogado';
         let ofertas = [];
         
@@ -569,6 +633,11 @@
         // INICIALIZAÇÃO
         // ============================================
         document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar tema
+            if (typeof TEMA !== 'undefined') {
+                TEMA.init();
+            }
+            
             ofertas = carregarOfertas();
             
             const logado = localStorage.getItem(SESSION_KEY) === 'true';
@@ -597,9 +666,18 @@
                 setupDragAndDrop();
                 
                 // Diagnóstico automático
-                setTimeout(() => diagnosticarCompleto('ADMIN'), 1000);
+                setTimeout(() => {
+                    if (typeof diagnosticarCompleto !== 'undefined') {
+                        diagnosticarCompleto('ADMIN');
+                    }
+                }, 1000);
             } else {
-                alert('❌ Senha incorreta!');
+                // Usar notificação se disponível
+                if (typeof NOTIFICACAO !== 'undefined') {
+                    NOTIFICACAO.erro('Senha incorreta!');
+                } else {
+                    alert('❌ Senha incorreta!');
+                }
             }
         }
         
@@ -617,8 +695,16 @@
             ofertas = carregarOfertas();
             atualizarOfertaAtiva(ofertas);
             renderizarListaOfertas();
-            diagnosticarCompleto('APÓS CORREÇÃO');
-            mostrarMensagem('✅ Correção aplicada!', 'sucesso');
+            
+            if (typeof diagnosticarCompleto !== 'undefined') {
+                diagnosticarCompleto('APÓS CORREÇÃO');
+            }
+            
+            if (typeof NOTIFICACAO !== 'undefined') {
+                NOTIFICACAO.sucesso('Correção aplicada!');
+            } else {
+                mostrarMensagem('✅ Correção aplicada!', 'sucesso');
+            }
         }
         
         // ============================================
@@ -713,7 +799,13 @@
             document.getElementById('btnRemoverImagem').style.display = 'none';
         }
         
-        function converterImagemParaBase64(file) {
+        // Usar a função do image.js se disponível
+        async function converterImagemParaBase64(file) {
+            if (typeof IMAGEM !== 'undefined' && IMAGEM.paraBase64) {
+                return await IMAGEM.paraBase64(file);
+            }
+            
+            // Fallback
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
@@ -723,7 +815,7 @@
         }
         
         // ============================================
-        // RENDERIZAR LISTA DE OFERTAS (CORRIGIDA)
+        // RENDERIZAR LISTA DE OFERTAS
         // ============================================
         function renderizarListaOfertas() {
             const container = document.getElementById('listaOfertas');
@@ -763,7 +855,7 @@
                         <div class="oferta-card ${status === 'ATIVA' ? 'ativa' : ''}">
                             <div class="status-badge ${statusClass}">${status}</div>
                             <div class="oferta-content">
-                                <img src="${oferta.urlImagem || 'produto.png'}" class="oferta-img">
+                                <img src="${oferta.urlImagem || 'img/produto.png'}" class="oferta-img">
                                 <div class="oferta-info">
                                     <strong>${oferta.tituloPagina || 'Sem título'}</strong><br>
                                     📅 ${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)}<br>
@@ -826,7 +918,11 @@
                 const editandoId = document.getElementById('editandoId').value;
                 
                 if (!dataInicioInput || !dataFimInput || !linkProduto || !textoOferta) {
-                    alert('❌ Preencha todos os campos obrigatórios!');
+                    if (typeof NOTIFICACAO !== 'undefined') {
+                        NOTIFICACAO.erro('Preencha todos os campos!');
+                    } else {
+                        alert('❌ Preencha todos os campos obrigatórios!');
+                    }
                     return;
                 }
                 
@@ -835,7 +931,11 @@
                 const dataFimUTC = brasiliaParaUTC(dataFimInput);
                 
                 if (!dataInicioUTC || !dataFimUTC) {
-                    alert('❌ Erro ao converter datas!');
+                    if (typeof NOTIFICACAO !== 'undefined') {
+                        NOTIFICACAO.erro('Erro ao converter datas!');
+                    } else {
+                        alert('❌ Erro ao converter datas!');
+                    }
                     return;
                 }
                 
@@ -843,14 +943,22 @@
                 const dataFimObj = new Date(dataFimUTC);
                 
                 if (dataFimObj <= dataInicioObj) {
-                    alert('❌ Data de fim deve ser posterior à data de início!');
+                    if (typeof NOTIFICACAO !== 'undefined') {
+                        NOTIFICACAO.erro('Fim deve ser após início!');
+                    } else {
+                        alert('❌ Data de fim deve ser posterior à data de início!');
+                    }
                     return;
                 }
                 
                 // Verificar conflito
                 const conflito = verificarConflitoDatas(dataInicioUTC, dataFimUTC, editandoId ? parseInt(editandoId) : null);
                 if (conflito.conflito) {
-                    alert(conflito.mensagem);
+                    if (typeof NOTIFICACAO !== 'undefined') {
+                        NOTIFICACAO.erro(conflito.mensagem);
+                    } else {
+                        alert(conflito.mensagem);
+                    }
                     return;
                 }
                 
@@ -858,10 +966,19 @@
                 let imagemBase64 = '';
                 
                 if (fileInput.files && fileInput.files[0]) {
-                    if (fileInput.files[0].size > 5 * 1024 * 1024) {
-                        alert('❌ Imagem muito grande! Máximo 5MB.');
-                        return;
+                    // Validar imagem
+                    if (typeof validarImagem !== 'undefined') {
+                        const validacao = validarImagem(fileInput.files[0]);
+                        if (!validacao.valido) {
+                            if (typeof NOTIFICACAO !== 'undefined') {
+                                NOTIFICACAO.erro(validacao.erro);
+                            } else {
+                                alert('❌ ' + validacao.erro);
+                            }
+                            return;
+                        }
                     }
+                    
                     imagemBase64 = await converterImagemParaBase64(fileInput.files[0]);
                 }
                 
@@ -888,11 +1005,20 @@
                 renderizarListaOfertas();
                 
                 cancelarEdicao();
-                mostrarMensagem('✅ Oferta salva com sucesso!', 'sucesso');
+                
+                if (typeof NOTIFICACAO !== 'undefined') {
+                    NOTIFICACAO.sucesso('Oferta salva com sucesso!');
+                } else {
+                    mostrarMensagem('✅ Oferta salva com sucesso!', 'sucesso');
+                }
                 
             } catch (error) {
                 console.error('❌ Erro:', error);
-                mostrarMensagem('❌ Erro ao salvar: ' + error.message, 'erro');
+                if (typeof NOTIFICACAO !== 'undefined') {
+                    NOTIFICACAO.erro('Erro ao salvar: ' + error.message);
+                } else {
+                    mostrarMensagem('❌ Erro ao salvar: ' + error.message, 'erro');
+                }
             }
         }
         
@@ -952,7 +1078,12 @@
                 salvarOfertas(ofertas);
                 atualizarOfertaAtiva(ofertas);
                 renderizarListaOfertas();
-                mostrarMensagem('✅ Oferta excluída!', 'sucesso');
+                
+                if (typeof NOTIFICACAO !== 'undefined') {
+                    NOTIFICACAO.sucesso('Oferta excluída!');
+                } else {
+                    mostrarMensagem('✅ Oferta excluída!', 'sucesso');
+                }
             }
         }
         
@@ -966,23 +1097,36 @@
                 
                 if (filePadrao.files && filePadrao.files[0]) {
                     if (filePadrao.files[0].size > 5 * 1024 * 1024) {
-                        alert('Imagem muito grande! Máximo 5MB.');
+                        if (typeof NOTIFICACAO !== 'undefined') {
+                            NOTIFICACAO.erro('Imagem muito grande! Máximo 5MB.');
+                        } else {
+                            alert('Imagem muito grande! Máximo 5MB.');
+                        }
                         return;
                     }
                     imagemBase64 = await converterImagemParaBase64(filePadrao.files[0]);
                 }
                 
                 const configTela = {
-                    imagem: imagemBase64 || 'produto.png',
+                    imagem: imagemBase64 || 'img/produto.png',
                     titulo: document.getElementById('tituloPadrao').value || 'EM BREVE',
                     mensagem: document.getElementById('mensagemPadrao').value || ''
                 };
                 
                 localStorage.setItem('configTelaEmBreve', JSON.stringify(configTela));
-                mostrarMensagem('✅ Configurações salvas!', 'sucesso');
+                
+                if (typeof NOTIFICACAO !== 'undefined') {
+                    NOTIFICACAO.sucesso('Configurações salvas!');
+                } else {
+                    mostrarMensagem('✅ Configurações salvas!', 'sucesso');
+                }
                 
             } catch (error) {
-                mostrarMensagem('❌ Erro: ' + error.message, 'erro');
+                if (typeof NOTIFICACAO !== 'undefined') {
+                    NOTIFICACAO.erro('Erro: ' + error.message);
+                } else {
+                    mostrarMensagem('❌ Erro: ' + error.message, 'erro');
+                }
             }
         }
         
@@ -992,7 +1136,7 @@
                 if (configSalva) {
                     const config = JSON.parse(configSalva);
                     
-                    if (config.imagem && config.imagem !== 'produto.png') {
+                    if (config.imagem && config.imagem !== 'img/produto.png') {
                         document.getElementById('previewPadrao').src = config.imagem;
                     }
                     
