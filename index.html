@@ -11,21 +11,32 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- ARQUIVOS JS -->
-    <!-- FUNÇÕES DE HORÁRIO -->
+    <!-- ARQUIVOS JS (ORDEM CORRETA!) -->
+    <!-- 1. Configurações primeiro -->
+    <script src="js/config.js"></script>
+    
+    <!-- 2. Funções de horário -->
     <script src="js/horario-base.js"></script>
     <script src="js/horario-index.js"></script>
     
-    <script src="js/config.js"></script>
+    <!-- 3. Utilitários -->
     <script src="js/utils.js"></script>
-    <script src="js/storage.js"></script>
     <script src="js/validators.js"></script>
     <script src="js/image.js"></script>
+    
+    <!-- 4. Storage (primeiro localStorage, depois GitHub) -->
+    <script src="js/storage.js"></script>
+    <script src="js/github-storage.js"></script>
+    
+    <!-- 5. Serviços -->
     <script src="js/api.js"></script>
     <script src="js/cache.js"></script>
+    
+    <!-- 6. Interface -->
     <script src="js/ui.js"></script>
     
     <style>
+        /* Seu CSS existente (igual) */
         * {
             margin: 0;
             padding: 0;
@@ -489,7 +500,7 @@
             <span class="btn-text">GERAR E ENVIAR NO WHATSAPP</span>
         </button>
         
-        <!-- PAINEL DE INFORMAÇÕES (SEM BOTÃO DE DIAGNÓSTICO) -->
+        <!-- PAINEL DE INFORMAÇÕES -->
         <div class="info-panel">
             <div>
                 <i class="fas fa-clock"></i>
@@ -517,6 +528,61 @@
 
 <script>
 // ============================================
+// CONFIGURAÇÕES DO GITHUB (MESMAS DO ADMIN)
+// ============================================
+const GITHUB_CONFIG = {
+    owner: 'e-commerce-martinello',
+    repo: 'ofertas-dos-vendedores-teste',
+    path: 'ofertas.json',
+    token: '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' // ← COLE O MESMO TOKEN DO ADMIN!
+};
+
+// ============================================
+// FUNÇÕES DE INTEGRAÇÃO COM GITHUB
+// ============================================
+async function carregarOfertasCompartilhadas() {
+    try {
+        console.log('📥 Carregando ofertas do GitHub...');
+        
+        const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `token ${GITHUB_CONFIG.token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        
+        if (response.status === 404) {
+            console.log('ℹ️ Arquivo não existe ainda');
+            return [];
+        }
+        
+        if (!response.ok) {
+            throw new Error(`Erro GitHub: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const content = atob(data.content);
+        const ofertasCarregadas = JSON.parse(content);
+        
+        console.log(`✅ ${ofertasCarregadas.length} ofertas carregadas do GitHub`);
+        
+        // Salvar no localStorage como cache
+        localStorage.setItem('ofertasMartinello', JSON.stringify(ofertasCarregadas));
+        
+        return ofertasCarregadas;
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar do GitHub:', error);
+        console.log('ℹ️ Usando localStorage como fallback');
+        
+        // Fallback para localStorage
+        return JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
+    }
+}
+
+// ============================================
 // CONFIGURAÇÕES DA TELA "EM BREVE"
 // ============================================
 let configTelaEmBreve = {
@@ -534,20 +600,40 @@ try {
 } catch (e) {}
 
 // ============================================
+// VARIÁVEL GLOBAL DE OFERTAS
+// ============================================
+let ofertas = [];
+
+// ============================================
+// CARREGAR OFERTAS (função principal)
+// ============================================
+async function carregarOfertas() {
+    try {
+        // Tenta carregar do GitHub primeiro
+        const ofertasCarregadas = await carregarOfertasCompartilhadas();
+        ofertas = ofertasCarregadas;
+        return ofertasCarregadas;
+    } catch (e) {
+        // Fallback para localStorage
+        ofertas = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
+        return ofertas;
+    }
+}
+
+// ============================================
 // VERIFICAR STATUS DA OFERTA
 // ============================================
-function verificarStatus() {
+async function verificarStatus() {
     try {
-        // 1️⃣ PEGAR HORÁRIO ATUAL DE BRASÍLIA (sempre atualiza)
+        // 1️⃣ PEGAR HORÁRIO ATUAL DE BRASÍLIA
         const agoraBrasilia = getHorarioBrasilia();
-        const horaFormatada = formatarBrasilia(agoraBrasilia.toISOString());
+        const horaFormatada = formatarBrasilia(agoraBrasilia);
         document.getElementById('infoHoraBrasilia').innerText = horaFormatada;
         
-        // 2️⃣ CARREGAR OFERTAS
-        let ofertas = [];
-        try {
-            ofertas = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
-        } catch (e) {}
+        // 2️⃣ CARREGAR OFERTAS (se necessário)
+        if (ofertas.length === 0) {
+            await carregarOfertas();
+        }
         
         // 3️⃣ ENCONTRAR OFERTA ATIVA
         let ofertaAtiva = null;
@@ -563,10 +649,18 @@ function verificarStatus() {
             }
         }
         
+        // Atualizar oferta ativa no localStorage
+        if (ofertaAtiva) {
+            localStorage.setItem('ofertaAtiva', JSON.stringify(ofertaAtiva));
+            localStorage.setItem('modoExpirado', 'false');
+        } else {
+            localStorage.removeItem('ofertaAtiva');
+            localStorage.setItem('modoExpirado', 'true');
+        }
+        
         // 4️⃣ ATUALIZAR INTERFACE
         const statusElement = document.getElementById('infoStatus');
         const ofertaElement = document.getElementById('infoOferta');
-        const statusClass = statusElement.className;
         
         if (ofertaAtiva) {
             // ✅ MODO COM OFERTA ATIVA
@@ -580,7 +674,7 @@ function verificarStatus() {
             document.getElementById('mensagemEmBreve').style.display = 'none';
             
             // Atualizar painel de informações
-            ofertaElement.innerHTML = `${ofertaAtiva.tituloPagina} (${formatarBrasilia(ofertaAtiva.dataInicio)} - ${formatarBrasilia(ofertaAtiva.dataFim)})`;
+            ofertaElement.innerHTML = `${ofertaAtiva.tituloPagina} (${formatarBrasilia(new Date(ofertaAtiva.dataInicio))} - ${formatarBrasilia(new Date(ofertaAtiva.dataFim))})`;
             statusElement.innerHTML = '✅ OFERTA ATIVA';
             statusElement.className = 'status-text status-ativo';
             
@@ -621,7 +715,11 @@ async function enviar() {
     // Verificar se há oferta ativa
     const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
     if (!oferta) {
-        NOTIFICACAO.erro('Nenhuma oferta ativa no momento');
+        if (typeof NOTIFICACAO !== 'undefined') {
+            NOTIFICACAO.erro('Nenhuma oferta ativa no momento');
+        } else {
+            alert('Nenhuma oferta ativa no momento');
+        }
         return;
     }
     
@@ -630,7 +728,11 @@ async function enviar() {
     try {
         const codInput = document.getElementById('cod').value.trim();
         if(!codInput) { 
-            NOTIFICACAO.erro('Digite sua matrícula');
+            if (typeof NOTIFICACAO !== 'undefined') {
+                NOTIFICACAO.erro('Digite sua matrícula');
+            } else {
+                alert('Digite sua matrícula');
+            }
             return; 
         }
 
@@ -643,18 +745,26 @@ async function enviar() {
         btn.disabled = true;
         btnText.innerHTML = '<span class="spinner"></span>Processando...';
 
-        const navegador = getBrowserName();
+        const navegador = typeof getBrowserName !== 'undefined' ? getBrowserName() : 'Desconhecido';
         const linkFinal = `https://www.martinello.com.br/parceiros/${codInput}?redir=${encodeURIComponent(oferta.linkProduto)}`;
-        const textoDaOferta = formatarTexto(oferta.textoOferta, linkFinal, codInput);
+        const textoDaOferta = typeof formatarTexto !== 'undefined' 
+            ? formatarTexto(oferta.textoOferta, linkFinal, codInput)
+            : oferta.textoOferta.replace('[LINK]', linkFinal).replace('[CODIGO]', codInput);
 
-        // Rastreio
-        await API.rastrear(codInput, navegador);
+        // Rastreio (se API existir)
+        if (typeof API !== 'undefined' && API.rastrear) {
+            await API.rastrear(codInput, navegador);
+        }
 
-        // Compartilhamento
-        const resultado = await API.compartilhar(textoDaOferta, document.getElementById('fotoProduto').src);
-        
-        if (resultado.sucesso) {
-            NOTIFICACAO.sucesso('Compartilhado com sucesso!');
+        // Compartilhamento (se API existir)
+        if (typeof API !== 'undefined' && API.compartilhar) {
+            const resultado = await API.compartilhar(textoDaOferta, document.getElementById('fotoProduto').src);
+            if (resultado.sucesso && typeof NOTIFICACAO !== 'undefined') {
+                NOTIFICACAO.sucesso('Compartilhado com sucesso!');
+            }
+        } else {
+            // Fallback
+            window.open(`https://wa.me/?text=${encodeURIComponent(textoDaOferta)}`, '_blank');
         }
         
         // Restaurar botão
@@ -664,7 +774,11 @@ async function enviar() {
         
     } catch (error) {
         console.error("Erro:", error);
-        NOTIFICACAO.erro('Erro ao compartilhar');
+        if (typeof NOTIFICACAO !== 'undefined') {
+            NOTIFICACAO.erro('Erro ao compartilhar');
+        } else {
+            alert('Erro ao compartilhar');
+        }
         
         const btn = document.getElementById('btnEnviar');
         btn.disabled = false;
@@ -676,18 +790,25 @@ async function enviar() {
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
-function iniciar() {
+async function iniciar() {
     try {
         // Inicializar tema
-        TEMA.init();
+        if (typeof TEMA !== 'undefined') {
+            TEMA.init();
+        }
         
         // Verificar imagem
         const img = document.getElementById('fotoProduto');
-        IMAGEM.verificarCarregamento(img, configTelaEmBreve.imagem);
+        if (typeof IMAGEM !== 'undefined' && IMAGEM.verificarCarregamento) {
+            IMAGEM.verificarCarregamento(img, configTelaEmBreve.imagem);
+        }
+        
+        // Carregar ofertas
+        await carregarOfertas();
         
         // Iniciar verificação de status
-        verificarStatus();
-        setInterval(verificarStatus, 1000);
+        await verificarStatus();
+        setInterval(verificarStatus, 5000); // A cada 5 segundos
         
         console.log('✅ Portal do Vendedor iniciado');
         
