@@ -487,19 +487,18 @@ function verificarStatus() {
         const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
         const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
         
-        // Atualizar horário no debug
-        const agoraBrasilia = getHorarioBrasilia();
+        // Atualizar horário no debug - COM VALIDAÇÃO
+try {
+    const agoraBrasilia = getHorarioBrasilia();
+    if (agoraBrasilia && !isNaN(agoraBrasilia.getTime())) {
         document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
-        
-        console.log('🕒 Horário Brasília agora:', formatarBrasilia(agoraBrasilia.toISOString()));
-        
-        if (!oferta || modoExpirado) {
-            console.log('ℹ️ Nenhuma oferta ativa');
-            aplicarModoEmBreve();
-            document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
-            document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
-            return;
-        }
+    } else {
+        document.getElementById('debugHoraBrasilia').innerText = 'Erro ao obter horário';
+    }
+} catch (error) {
+    console.error('❌ Erro ao atualizar horário:', error);
+    document.getElementById('debugHoraBrasilia').innerText = 'Erro';
+}
         
         console.log('📦 Oferta carregada:', oferta);
         console.log('📅 Início (UTC):', oferta.dataInicio);
