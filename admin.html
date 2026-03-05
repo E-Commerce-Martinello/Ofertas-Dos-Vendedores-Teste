@@ -6,6 +6,10 @@
     <title>Admin Martinello - Agendador de Ofertas</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- ARQUIVO DE HORÁRIO (MESMO DO INDEX) -->
+    <script src="horario.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -520,75 +524,6 @@
         let ofertas = [];
         
         // ============================================
-// FUNÇÕES DE DATA - VERSÃO SIMPLIFICADA
-// ============================================
-
-// Converter data do input para UTC (sem mistérios!)
-function brasiliaParaUTC(dataBrasiliaStr) {
-    // dataBrasiliaStr = "2026-03-05T10:00"
-    // Criar data manualmente para evitar interpretação errada
-    const [data, hora] = dataBrasiliaStr.split('T');
-    const [ano, mes, dia] = data.split('-');
-    const [h, m] = hora.split(':');
-    
-    // Criar data em UTC (Brasília = UTC-3, então adicionamos 3 horas)
-    // Ex: 10:00 Brasília = 13:00 UTC
-    const dataUTC = new Date(Date.UTC(
-        parseInt(ano),
-        parseInt(mes) - 1,
-        parseInt(dia),
-        parseInt(h) + 3, // +3 para converter para UTC
-        parseInt(m),
-        0
-    ));
-    
-    return dataUTC.toISOString();
-}
-
-// Converter UTC de volta para input (Brasília)
-function utcParaBrasiliaInput(utcStr) {
-    const data = new Date(utcStr);
-    
-    // UTC -> Brasília = subtrair 3 horas
-    const ano = data.getUTCFullYear();
-    const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
-    const dia = String(data.getUTCDate()).padStart(2, '0');
-    const hora = String(data.getUTCHours() - 3).padStart(2, '0'); // -3 para voltar para Brasília
-    const minuto = String(data.getUTCMinutes()).padStart(2, '0');
-    
-    return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
-}
-
-// Obter horário atual de Brasília
-function getHorarioBrasilia() {
-    const agora = new Date();
-    
-    // Usar UTC e subtrair 3 horas
-    return new Date(Date.UTC(
-        agora.getUTCFullYear(),
-        agora.getUTCMonth(),
-        agora.getUTCDate(),
-        agora.getUTCHours() - 3,
-        agora.getUTCMinutes(),
-        agora.getUTCSeconds()
-    ));
-}
-
-// Formatar para exibição
-function formatarBrasilia(dataUTC) {
-    const data = new Date(dataUTC);
-    
-    // Converter UTC para Brasília (subtrair 3 horas)
-    const ano = data.getUTCFullYear();
-    const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
-    const dia = String(data.getUTCDate()).padStart(2, '0');
-    const hora = String(data.getUTCHours() - 3).padStart(2, '0');
-    const minuto = String(data.getUTCMinutes()).padStart(2, '0');
-    
-    return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
-}
-        
-        // ============================================
         // INICIALIZAÇÃO
         // ============================================
         document.addEventListener('DOMContentLoaded', function() {
@@ -742,7 +677,7 @@ function formatarBrasilia(dataUTC) {
         }
         
         // ============================================
-        // RENDERIZAR LISTA DE OFERTAS (CORRIGIDO!)
+        // RENDERIZAR LISTA DE OFERTAS (USANDO horario.js)
         // ============================================
         function renderizarListaOfertas() {
             const container = document.getElementById('listaOfertas');
@@ -759,24 +694,16 @@ function formatarBrasilia(dataUTC) {
             let html = '';
             const agoraBrasilia = getHorarioBrasilia();
             
-            console.log('🕒 Agora em Brasília:', agoraBrasilia.toISOString());
-            
             ofertas.forEach((oferta, index) => {
                 try {
                     const dataInicio = new Date(oferta.dataInicio);
                     const dataFim = new Date(oferta.dataFim);
                     
-                    console.log(`📅 Oferta ${index}:`, {
-                        inicio: dataInicio.toISOString(),
-                        fim: dataFim.toISOString(),
-                        agora: agoraBrasilia.toISOString(),
-                        ativa: agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim
-                    });
-                    
                     let status = '';
                     let statusClass = '';
                     
-                    if (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim) {
+                    // USAR MESMA FUNÇÃO DO INDEX!
+                    if (isOfertaAtiva(oferta)) {
                         status = 'ATIVA';
                         statusClass = 'status-ativa';
                     } else if (agoraBrasilia < dataInicio) {
@@ -813,7 +740,7 @@ function formatarBrasilia(dataUTC) {
         }
         
         // ============================================
-        // EDIÇÃO DE OFERTA
+        // EDIÇÃO DE OFERTA (USANDO horario.js)
         // ============================================
         function editarOferta(index) {
             const oferta = ofertas[index];
@@ -821,6 +748,7 @@ function formatarBrasilia(dataUTC) {
             document.getElementById('formTitulo').innerHTML = '✏️ EDITAR OFERTA';
             document.getElementById('editandoId').value = index;
             
+            // USAR FUNÇÃO DO horario.js
             document.getElementById('dataInicio').value = utcParaBrasiliaInput(oferta.dataInicio);
             document.getElementById('dataFim').value = utcParaBrasiliaInput(oferta.dataFim);
             document.getElementById('linkProduto').value = oferta.linkProduto || '';
@@ -839,7 +767,7 @@ function formatarBrasilia(dataUTC) {
         }
         
         // ============================================
-        // SALVAR OFERTA
+        // SALVAR OFERTA (USANDO horario.js)
         // ============================================
         async function salvarOferta() {
             try {
@@ -855,7 +783,7 @@ function formatarBrasilia(dataUTC) {
                     return;
                 }
                 
-                // Converter input (Brasília) para UTC
+                // USAR FUNÇÃO DO horario.js PARA CONVERTER
                 const dataInicioUTC = brasiliaParaUTC(dataInicioInput);
                 const dataFimUTC = brasiliaParaUTC(dataFimInput);
                 
@@ -948,14 +876,11 @@ function formatarBrasilia(dataUTC) {
         
         function verificarOfertaAtiva() {
             try {
-                const agoraBrasilia = getHorarioBrasilia();
                 let ofertaAtiva = null;
                 
                 for (const oferta of ofertas) {
-                    const dataInicio = new Date(oferta.dataInicio);
-                    const dataFim = new Date(oferta.dataFim);
-                    
-                    if (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim) {
+                    // USAR MESMA FUNÇÃO DO INDEX!
+                    if (isOfertaAtiva(oferta)) {
                         ofertaAtiva = oferta;
                         break;
                     }
