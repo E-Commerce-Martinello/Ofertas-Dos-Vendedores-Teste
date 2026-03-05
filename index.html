@@ -543,14 +543,17 @@ try {
 } catch (e) {}
 
 // ============================================
-// FUNÇÕES DE STORAGE
+// FUNÇÕES DE STORAGE (AGORA USANDO FIREBASE!)
 // ============================================
-function carregarOfertas() {
-    try {
-        return JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
-    } catch (e) {
-        return [];
-    }
+
+// Carregar ofertas do Firebase
+async function carregarOfertas() {
+    return await carregarOfertasFirebase();
+}
+
+// Salvar ofertas no Firebase
+async function salvarOfertas(novasOfertas) {
+    return await salvarOfertasFirebase(novasOfertas);
 }
 
 // ============================================
