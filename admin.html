@@ -7,8 +7,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- ARQUIVO DE HORÁRIO (MESMO DO INDEX) -->
-    <script src="horario.js"></script>
+    <!-- ARQUIVOS JS (MESMOS DO INDEX) -->
+<script src="horario.js"></script>
+<script src="storage.js"></script>
+<script src="debug.js"></script>
+<script src="admin-fix.js"></script>  <!-- NOVO! -->
     
     <style>
         * {
@@ -380,6 +383,37 @@
             margin-bottom: 15px;
             font-size: 13px;
         }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .btn-diagnostico {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-corrigir {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-limpar {
+            background: #dc3545;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -398,16 +432,24 @@
         <!-- PAINEL ADMIN -->
         <div id="painelAdmin" style="display: none;">
             
-            <!-- CABEÇALHO -->
+            <!-- CABEÇALHO COM FERRAMENTAS -->
             <div class="admin-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <div style="display: flex; align-items: center;">
                         <h1>⚙️ AGENDADOR</h1>
                         <button class="logout-button" onclick="logout()">SAIR</button>
                     </div>
-                    <button class="btn-secondary" onclick="mostrarNovaOferta()" style="width: auto; padding: 12px 25px;">
-                        <i class="fas fa-plus"></i> NOVA OFERTA
-                    </button>
+                    <div class="toolbar">
+                        <button class="btn-diagnostico" onclick="diagnosticarCompleto('ADMIN')">
+                            <i class="fas fa-stethoscope"></i> DIAGNÓSTICO
+                        </button>
+                        <button class="btn-corrigir" onclick="corrigirAgora()">
+                            <i class="fas fa-tools"></i> CORRIGIR
+                        </button>
+                        <button class="btn-secondary" onclick="mostrarNovaOferta()">
+                            <i class="fas fa-plus"></i> NOVA
+                        </button>
+                    </div>
                 </div>
                 <p style="color: #666;">Apenas UMA oferta fica ativa por vez</p>
             </div>
@@ -517,49 +559,9 @@
 
     <script>
         // ============================================
-// DIAGNÓSTICO DO LOCALSTORAGE
-// ============================================
-function diagnosticarStorage() {
-    console.log('=== DIAGNÓSTICO DO ADMIN ===');
-    console.log('Itens no localStorage:');
-    for (let i = 0; i < localStorage.length; i++) {
-        const chave = localStorage.key(i);
-        const valor = localStorage.getItem(chave);
-        console.log(`- ${chave}:`, valor ? valor.substring(0, 100) + '...' : 'vazio');
-    }
-    
-    // Verificar ofertas
-    try {
-        const ofertas = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
-        console.log('📦 Ofertas cadastradas:', ofertas.length);
-        
-        const agora = getHorarioBrasilia();
-        console.log('🕒 Agora (Brasília):', formatarBrasilia(agora.toISOString()));
-        
-        ofertas.forEach((ofertas, index) => {
-            console.log(`Oferta ${index}:`, {
-                titulo: ofertas.tituloPagina,
-                inicio: ofertas.dataInicio,
-                fim: ofertas.dataFim,
-                inicioBrasilia: formatarBrasilia(ofertas.dataInicio),
-                fimBrasilia: formatarBrasilia(ofertas.dataFim),
-                ativa: isOfertaAtiva(ofertas)
-            });
-        });
-    } catch (e) {
-        console.error('Erro ao analisar ofertas:', e);
-    }
-}
-
-// Chamar diagnóstico após login
-// Na função verificarSenha(), adicione esta linha:
-// diagnosticarStorage();
-
-        
-        // ============================================
         // CONFIGURAÇÕES
         // ============================================
-        const SENHA_ADMIN = "777";
+        const SENHA_ADMIN = "martinello2026";
         const SESSION_KEY = 'adminLogado';
         let ofertas = [];
         
@@ -567,7 +569,7 @@ function diagnosticarStorage() {
         // INICIALIZAÇÃO
         // ============================================
         document.addEventListener('DOMContentLoaded', function() {
-            carregarOfertasSalvas();
+            ofertas = carregarOfertas();
             
             const logado = localStorage.getItem(SESSION_KEY) === 'true';
             if (logado) {
@@ -582,22 +584,24 @@ function diagnosticarStorage() {
         // ============================================
         // FUNÇÕES DE LOGIN
         // ============================================
-       function verificarSenha() {
-    const senha = document.getElementById('senhaInput').value;
-    if (senha === SENHA_ADMIN) {
-        localStorage.setItem(SESSION_KEY, 'true');
-        document.getElementById('loginBox').style.display = 'none';
-        document.getElementById('painelAdmin').style.display = 'block';
-        renderizarListaOfertas();
-        carregarConfigPadrao();
-        setupDragAndDrop();
-        
-        // 🔍 DIAGNÓSTICO
-        diagnosticarStorage();
-    } else {
-        alert('❌ Senha incorreta!');
-    }
-}
+        function verificarSenha() {
+            const senha = document.getElementById('senhaInput').value;
+            if (senha === SENHA_ADMIN) {
+                localStorage.setItem(SESSION_KEY, 'true');
+                document.getElementById('loginBox').style.display = 'none';
+                document.getElementById('painelAdmin').style.display = 'block';
+                
+                ofertas = carregarOfertas();
+                renderizarListaOfertas();
+                carregarConfigPadrao();
+                setupDragAndDrop();
+                
+                // Diagnóstico automático
+                setTimeout(() => diagnosticarCompleto('ADMIN'), 1000);
+            } else {
+                alert('❌ Senha incorreta!');
+            }
+        }
         
         function logout() {
             localStorage.removeItem(SESSION_KEY);
@@ -605,17 +609,16 @@ function diagnosticarStorage() {
             document.getElementById('painelAdmin').style.display = 'none';
         }
         
-        function carregarOfertasSalvas() {
-            try {
-                const ofertasSalvas = localStorage.getItem('ofertasMartinello');
-                if (ofertasSalvas) {
-                    ofertas = JSON.parse(ofertasSalvas);
-                    console.log('✅ Ofertas carregadas:', ofertas.length);
-                }
-            } catch (e) {
-                console.error('Erro ao carregar ofertas:', e);
-                ofertas = [];
-            }
+        // ============================================
+        // FUNÇÃO DE CORREÇÃO
+        // ============================================
+        function corrigirAgora() {
+            console.log('🛠️ Aplicando correção...');
+            ofertas = carregarOfertas();
+            atualizarOfertaAtiva(ofertas);
+            renderizarListaOfertas();
+            diagnosticarCompleto('APÓS CORREÇÃO');
+            mostrarMensagem('✅ Correção aplicada!', 'sucesso');
         }
         
         // ============================================
@@ -720,7 +723,7 @@ function diagnosticarStorage() {
         }
         
         // ============================================
-        // RENDERIZAR LISTA DE OFERTAS (USANDO horario.js)
+        // RENDERIZAR LISTA DE OFERTAS (CORRIGIDA)
         // ============================================
         function renderizarListaOfertas() {
             const container = document.getElementById('listaOfertas');
@@ -745,8 +748,7 @@ function diagnosticarStorage() {
                     let status = '';
                     let statusClass = '';
                     
-                    // USAR MESMA FUNÇÃO DO INDEX!
-                    if (isOfertaAtiva(oferta)) {
+                    if (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim) {
                         status = 'ATIVA';
                         statusClass = 'status-ativa';
                     } else if (agoraBrasilia < dataInicio) {
@@ -780,10 +782,13 @@ function diagnosticarStorage() {
             });
             
             container.innerHTML = html;
+            
+            // ATUALIZAR OFERTA ATIVA DEPOIS DE RENDERIZAR
+            atualizarOfertaAtiva(ofertas);
         }
         
         // ============================================
-        // EDIÇÃO DE OFERTA (USANDO horario.js)
+        // EDIÇÃO DE OFERTA
         // ============================================
         function editarOferta(index) {
             const oferta = ofertas[index];
@@ -791,7 +796,6 @@ function diagnosticarStorage() {
             document.getElementById('formTitulo').innerHTML = '✏️ EDITAR OFERTA';
             document.getElementById('editandoId').value = index;
             
-            // USAR FUNÇÃO DO horario.js
             document.getElementById('dataInicio').value = utcParaBrasiliaInput(oferta.dataInicio);
             document.getElementById('dataFim').value = utcParaBrasiliaInput(oferta.dataFim);
             document.getElementById('linkProduto').value = oferta.linkProduto || '';
@@ -810,7 +814,7 @@ function diagnosticarStorage() {
         }
         
         // ============================================
-        // SALVAR OFERTA (USANDO horario.js)
+        // SALVAR OFERTA
         // ============================================
         async function salvarOferta() {
             try {
@@ -826,9 +830,14 @@ function diagnosticarStorage() {
                     return;
                 }
                 
-                // USAR FUNÇÃO DO horario.js PARA CONVERTER
+                // Converter input (Brasília) para UTC
                 const dataInicioUTC = brasiliaParaUTC(dataInicioInput);
                 const dataFimUTC = brasiliaParaUTC(dataFimInput);
+                
+                if (!dataInicioUTC || !dataFimUTC) {
+                    alert('❌ Erro ao converter datas!');
+                    return;
+                }
                 
                 const dataInicioObj = new Date(dataInicioUTC);
                 const dataFimObj = new Date(dataFimUTC);
@@ -873,8 +882,9 @@ function diagnosticarStorage() {
                     ofertas.push(ofertaDados);
                 }
                 
-                localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
-                verificarOfertaAtiva();
+                // Usar storage.js para salvar
+                salvarOfertas(ofertas);
+                atualizarOfertaAtiva(ofertas);
                 renderizarListaOfertas();
                 
                 cancelarEdicao();
@@ -917,30 +927,6 @@ function diagnosticarStorage() {
             }
         }
         
-        function verificarOfertaAtiva() {
-            try {
-                let ofertaAtiva = null;
-                
-                for (const oferta of ofertas) {
-                    // USAR MESMA FUNÇÃO DO INDEX!
-                    if (isOfertaAtiva(oferta)) {
-                        ofertaAtiva = oferta;
-                        break;
-                    }
-                }
-                
-                if (ofertaAtiva) {
-                    localStorage.setItem('ofertaAtiva', JSON.stringify(ofertaAtiva));
-                    localStorage.setItem('modoExpirado', 'false');
-                } else {
-                    localStorage.setItem('modoExpirado', 'true');
-                    localStorage.removeItem('ofertaAtiva');
-                }
-            } catch (e) {
-                console.error('Erro ao verificar oferta ativa:', e);
-            }
-        }
-        
         function mostrarNovaOferta() {
             document.getElementById('formTitulo').innerHTML = '➕ NOVA OFERTA';
             document.getElementById('editandoId').value = '';
@@ -963,8 +949,8 @@ function diagnosticarStorage() {
         function excluirOferta(index) {
             if (confirm('Tem certeza que deseja excluir esta oferta?')) {
                 ofertas.splice(index, 1);
-                localStorage.setItem('ofertasMartinello', JSON.stringify(ofertas));
-                verificarOfertaAtiva();
+                salvarOfertas(ofertas);
+                atualizarOfertaAtiva(ofertas);
                 renderizarListaOfertas();
                 mostrarMensagem('✅ Oferta excluída!', 'sucesso');
             }
@@ -1037,7 +1023,8 @@ function diagnosticarStorage() {
         
         // Auto-atualizar
         setInterval(() => {
-            verificarOfertaAtiva();
+            ofertas = carregarOfertas();
+            atualizarOfertaAtiva(ofertas);
             renderizarListaOfertas();
         }, 5000);
     </script>
