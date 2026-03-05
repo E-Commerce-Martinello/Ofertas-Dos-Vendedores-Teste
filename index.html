@@ -11,7 +11,11 @@
     <!-- Font Awesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- ARQUIVO DE HORÁRIO (MESMO PARA ADMIN E INDEX) -->
+    <script src="horario.js"></script>
+    
     <style>
+        /* Seu CSS existente - manter igual */
         * {
             margin: 0;
             padding: 0;
@@ -429,7 +433,7 @@
             <span class="btn-text">GERAR E ENVIAR NO WHATSAPP</span>
         </button>
         
-        <!-- PAINEL DE DEBUG SIMPLES -->
+        <!-- PAINEL DE DEBUG -->
         <div class="debug-panel">
             <div>🕒 <strong>Horário Brasília:</strong> <span id="debugHoraBrasilia"></span></div>
             <div>📅 <strong>Oferta:</strong> <span id="debugOfertaInfo"></span></div>
@@ -448,7 +452,7 @@
 
 <script>
 // ============================================
-// CONFIGURAÇÕES DA TELA "EM BREVE" (do admin)
+// CONFIGURAÇÕES DA TELA "EM BREVE"
 // ============================================
 let configTelaEmBreve = {
     imagem: 'produto.png',
@@ -460,66 +464,22 @@ try {
     const configSalva = localStorage.getItem('configTelaEmBreve');
     if (configSalva) {
         configTelaEmBreve = { ...configTelaEmBreve, ...JSON.parse(configSalva) };
-        console.log('✅ Configurações "EM BREVE" carregadas');
     }
-} catch (e) {
-    console.log('Usando configurações padrão');
-}
+} catch (e) {}
 
 // ============================================
-// FUNÇÕES DE DATA - VERSÃO CORRIGIDA
-// ============================================
-
-// Obter horário atual de Brasília (para COMPARAÇÃO)
-function getHorarioBrasiliaComparacao() {
-    const agora = new Date();
-    
-    // Criar data UTC atual
-    const utcAtual = Date.UTC(
-        agora.getUTCFullYear(),
-        agora.getUTCMonth(),
-        agora.getUTCDate(),
-        agora.getUTCHours(),
-        agora.getUTCMinutes(),
-        agora.getUTCSeconds()
-    );
-    
-    // Converter para Brasília (UTC-3)
-    return new Date(utcAtual - (3 * 60 * 60 * 1000));
-}
-
-// Formatar data para exibição (sempre Brasília)
-function formatarBrasilia(dataUTC) {
-    const data = new Date(dataUTC);
-    
-    // Converter UTC para Brasília (subtrair 3 horas)
-    const ano = data.getUTCFullYear();
-    const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
-    const dia = String(data.getUTCDate()).padStart(2, '0');
-    const hora = String(data.getUTCHours() - 3).padStart(2, '0');
-    const minuto = String(data.getUTCMinutes()).padStart(2, '0');
-    const segundo = String(data.getUTCSeconds()).padStart(2, '0');
-    
-    return `${dia}/${mes}/${ano} ${hora}:${minuto}:${segundo}`;
-}
-
-// ============================================
-// VERIFICAR STATUS DA OFERTA (CORRIGIDO!)
+// VERIFICAR STATUS DA OFERTA (USANDO horario.js)
 // ============================================
 function verificarStatus() {
-    const agoraBrasilia = getHorarioBrasiliaComparacao();
     const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
     const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
     
-    // LOG PARA DEBUG
-    console.log('=== VERIFICAÇÃO DE OFERTA ===');
-    console.log('1️⃣ Agora (Brasília):', agoraBrasilia.toISOString());
-    console.log('2️⃣ Agora (formatado):', formatarBrasilia(agoraBrasilia.toISOString()));
+    // DEBUG
+    debugOferta(oferta);
     
     // Atualizar horário no debug
-    document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
+    document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(getHorarioBrasilia().toISOString());
     
-    // Se não tem oferta ativa
     if (!oferta || modoExpirado) {
         aplicarModoEmBreve();
         document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
@@ -527,27 +487,13 @@ function verificarStatus() {
         return;
     }
     
-    // Dados da oferta (já estão em UTC)
-    const dataInicio = new Date(oferta.dataInicio);
-    const dataFim = new Date(oferta.dataFim);
+    // USAR FUNÇÃO DO horario.js PARA VERIFICAR
+    const ativa = isOfertaAtiva(oferta);
     
-    console.log('3️⃣ Início (UTC):', dataInicio.toISOString());
-    console.log('4️⃣ Fim (UTC):', dataFim.toISOString());
-    console.log('5️⃣ Início (Brasília):', formatarBrasilia(oferta.dataInicio));
-    console.log('6️⃣ Fim (Brasília):', formatarBrasilia(oferta.dataFim));
+    document.getElementById('debugOfertaInfo').innerHTML = 
+        `${oferta.tituloPagina} (${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)})`;
     
-    // COMPARAÇÃO CORRETA: comparar UTC com UTC
-    // IMPORTANTE: agoraBrasilia já está em UTC (pois foi criado com Date.UTC)
-    const isAtiva = agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim;
-    
-    console.log('7️⃣ Agora (UTC):', agoraBrasilia.toISOString());
-    console.log('8️⃣ Início (UTC):', dataInicio.toISOString());
-    console.log('9️⃣ Fim (UTC):', dataFim.toISOString());
-    console.log('🔟 Agora >= Início?', agoraBrasilia >= dataInicio);
-    console.log('1️⃣1️⃣ Agora <= Fim?', agoraBrasilia <= dataFim);
-    console.log('1️⃣2️⃣ RESULTADO:', isAtiva ? '✅ ATIVA' : '❌ INATIVA');
-    
-    if (isAtiva) {
+    if (ativa) {
         // OFERTA ATIVA
         document.querySelector('h2').innerText = oferta.tituloPagina;
         if (oferta.urlImagem) {
@@ -557,18 +503,9 @@ function verificarStatus() {
         document.getElementById('btnEnviar').disabled = false;
         document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
         document.getElementById('mensagemEmBreve').style.display = 'none';
-        
-        document.getElementById('debugOfertaInfo').innerHTML = `${oferta.tituloPagina} (${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)})`;
         document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
     } else {
-        // OFERTA NÃO ATIVA (expirada ou agendada)
         aplicarModoEmBreve();
-        
-        if (agoraBrasilia < dataInicio) {
-            document.getElementById('debugOfertaInfo').innerHTML = `⏳ AGENDADA para ${formatarBrasilia(oferta.dataInicio)}`;
-        } else {
-            document.getElementById('debugOfertaInfo').innerHTML = `⌛ EXPIRADA em ${formatarBrasilia(oferta.dataFim)}`;
-        }
         document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
     }
 }
@@ -588,11 +525,6 @@ function aplicarModoEmBreve() {
     }
 }
 
-// ============================================
-// INICIALIZAÇÃO
-// ============================================
-setInterval(verificarStatus, 1000);
-verificarStatus();
 // ============================================
 // DEMAIS FUNÇÕES (mantidas iguais)
 // ============================================
