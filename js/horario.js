@@ -30,7 +30,7 @@ function getHorarioBrasilia() {
 }
 
 // ============================================
-// FUNÇÃO 2: Formatar data UTC para exibição (Brasília)
+// FUNÇÃO 2: Formatar data UTC para exibição (Brasília) - CORRIGIDA!
 // ============================================
 function formatarBrasilia(utcStr) {
     if (!utcStr) return 'Data inválida';
@@ -39,17 +39,21 @@ function formatarBrasilia(utcStr) {
         const data = new Date(utcStr);
         if (isNaN(data.getTime())) return 'Data inválida';
         
-        // Formatar direto, sem conversões adicionais
-        return data.toLocaleString('pt-BR', {
-            timeZone: 'America/Sao_Paulo',
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        });
+        // IMPORTANTE: A data que chega aqui JÁ É BRASÍLIA em UTC
+        // Exemplo: "2026-03-05T10:14:19.000Z" já representa 10:14 em Brasília
+        
+        // Para formatar CORRETAMENTE, precisamos:
+        // 1. Manter o valor UTC (não converter de novo)
+        // 2. Só mudar a apresentação
+        
+        const ano = data.getUTCFullYear();
+        const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
+        const dia = String(data.getUTCDate()).padStart(2, '0');
+        const hora = String(data.getUTCHours()).padStart(2, '0');
+        const minuto = String(data.getUTCMinutes()).padStart(2, '0');
+        const segundo = String(data.getUTCSeconds()).padStart(2, '0');
+        
+        return `${dia}/${mes}/${ano} ${hora}:${minuto}:${segundo}`;
     } catch (e) {
         return 'Data inválida';
     }
