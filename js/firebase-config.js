@@ -14,10 +14,12 @@ const firebaseConfig = {
 };
 
 // Inicializar Firebase
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 
 // Conectar ao banco de dados
 const database = firebase.database();
 
-// Referência para nossas ofertas
-const ofertasRef = database.ref('ofertas');
+// Referência única para as ofertas (Certifique-se que este nome é o mesmo em todos os arquivos)
+const ofertasRef = database.ref('ofertasMartinello');
