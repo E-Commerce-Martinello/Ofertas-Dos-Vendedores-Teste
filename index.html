@@ -467,77 +467,87 @@ try {
 }
 
 // ============================================
-// FUNÇÃO SIMPLES: HORÁRIO BRASÍLIA FIXO
+// FUNÇÕES DE DATA - VERSÃO CORRIGIDA
 // ============================================
-function getHorarioBrasilia() {
+
+// Obter horário atual de Brasília (para COMPARAÇÃO)
+function getHorarioBrasiliaComparacao() {
     const agora = new Date();
     
-    // Criar data no formato ISO e ajustar para Brasília (UTC-3)
-    const ano = agora.getUTCFullYear();
-    const mes = agora.getUTCMonth();
-    const dia = agora.getUTCDate();
-    const hora = agora.getUTCHours() - 3; // Subtrai 3 horas (Brasília)
-    const minuto = agora.getUTCMinutes();
-    const segundo = agora.getUTCSeconds();
+    // Criar data UTC atual
+    const utcAtual = Date.UTC(
+        agora.getUTCFullYear(),
+        agora.getUTCMonth(),
+        agora.getUTCDate(),
+        agora.getUTCHours(),
+        agora.getUTCMinutes(),
+        agora.getUTCSeconds()
+    );
     
-    return new Date(Date.UTC(ano, mes, dia, hora, minuto, segundo));
+    // Converter para Brasília (UTC-3)
+    return new Date(utcAtual - (3 * 60 * 60 * 1000));
+}
+
+// Formatar data para exibição (sempre Brasília)
+function formatarBrasilia(dataUTC) {
+    const data = new Date(dataUTC);
+    
+    // Converter UTC para Brasília (subtrair 3 horas)
+    const ano = data.getUTCFullYear();
+    const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
+    const dia = String(data.getUTCDate()).padStart(2, '0');
+    const hora = String(data.getUTCHours() - 3).padStart(2, '0');
+    const minuto = String(data.getUTCMinutes()).padStart(2, '0');
+    const segundo = String(data.getUTCSeconds()).padStart(2, '0');
+    
+    return `${dia}/${mes}/${ano} ${hora}:${minuto}:${segundo}`;
 }
 
 // ============================================
-// FORMATAR DATA (sempre Brasília)
-// ============================================
-function formatarDataBrasilia(data) {
-    return data.toLocaleString('pt-BR', {
-        timeZone: 'UTC', // Importante: usar UTC porque nossa data já está em Brasília
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-    });
-}
-
-// ============================================
-// VERIFICAR STATUS DA OFERTA
+// VERIFICAR STATUS DA OFERTA (CORRIGIDO!)
 // ============================================
 function verificarStatus() {
-    const agoraBrasilia = getHorarioBrasilia();
+    const agoraBrasilia = getHorarioBrasiliaComparacao();
     const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
     const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
     
-    // Atualizar horário no debug
-    document.getElementById('debugHoraBrasilia').innerText = formatarDataBrasilia(agoraBrasilia);
+    // LOG PARA DEBUG
+    console.log('=== VERIFICAÇÃO DE OFERTA ===');
+    console.log('1️⃣ Agora (Brasília):', agoraBrasilia.toISOString());
+    console.log('2️⃣ Agora (formatado):', formatarBrasilia(agoraBrasilia.toISOString()));
     
-    // Se não tem oferta ativa ou está expirado
+    // Atualizar horário no debug
+    document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
+    
+    // Se não tem oferta ativa
     if (!oferta || modoExpirado) {
-        // APLICAR CONFIGURAÇÕES DA TELA "EM BREVE"
-        document.querySelector('h2').innerText = configTelaEmBreve.titulo;
-        document.getElementById('fotoProduto').src = configTelaEmBreve.imagem;
-        document.getElementById('cod').disabled = true;
-        document.getElementById('btnEnviar').disabled = true;
-        document.querySelector('.btn-text').textContent = 'EM BREVE';
-        
-        // Mostrar mensagem se existir
-        const msgElement = document.getElementById('mensagemEmBreve');
-        if (configTelaEmBreve.mensagem) {
-            msgElement.innerText = configTelaEmBreve.mensagem;
-            msgElement.style.display = 'block';
-        } else {
-            msgElement.style.display = 'none';
-        }
-        
+        aplicarModoEmBreve();
         document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
         document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
         return;
     }
     
-    // Verificar se a oferta está ativa
+    // Dados da oferta (já estão em UTC)
     const dataInicio = new Date(oferta.dataInicio);
     const dataFim = new Date(oferta.dataFim);
     
-    if (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim) {
+    console.log('3️⃣ Início (UTC):', dataInicio.toISOString());
+    console.log('4️⃣ Fim (UTC):', dataFim.toISOString());
+    console.log('5️⃣ Início (Brasília):', formatarBrasilia(oferta.dataInicio));
+    console.log('6️⃣ Fim (Brasília):', formatarBrasilia(oferta.dataFim));
+    
+    // COMPARAÇÃO CORRETA: comparar UTC com UTC
+    // IMPORTANTE: agoraBrasilia já está em UTC (pois foi criado com Date.UTC)
+    const isAtiva = agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim;
+    
+    console.log('7️⃣ Agora (UTC):', agoraBrasilia.toISOString());
+    console.log('8️⃣ Início (UTC):', dataInicio.toISOString());
+    console.log('9️⃣ Fim (UTC):', dataFim.toISOString());
+    console.log('🔟 Agora >= Início?', agoraBrasilia >= dataInicio);
+    console.log('1️⃣1️⃣ Agora <= Fim?', agoraBrasilia <= dataFim);
+    console.log('1️⃣2️⃣ RESULTADO:', isAtiva ? '✅ ATIVA' : '❌ INATIVA');
+    
+    if (isAtiva) {
         // OFERTA ATIVA
         document.querySelector('h2').innerText = oferta.tituloPagina;
         if (oferta.urlImagem) {
@@ -548,26 +558,41 @@ function verificarStatus() {
         document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
         document.getElementById('mensagemEmBreve').style.display = 'none';
         
-        document.getElementById('debugOfertaInfo').innerHTML = `${oferta.tituloPagina} (${formatarDataBrasilia(dataInicio)} até ${formatarDataBrasilia(dataFim)})`;
+        document.getElementById('debugOfertaInfo').innerHTML = `${oferta.tituloPagina} (${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)})`;
         document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
     } else {
-        // OFERTA EXPIRADA OU AGENDADA - Voltar para EM BREVE
-        document.querySelector('h2').innerText = configTelaEmBreve.titulo;
-        document.getElementById('fotoProduto').src = configTelaEmBreve.imagem;
-        document.getElementById('cod').disabled = true;
-        document.getElementById('btnEnviar').disabled = true;
-        document.querySelector('.btn-text').textContent = 'EM BREVE';
+        // OFERTA NÃO ATIVA (expirada ou agendada)
+        aplicarModoEmBreve();
         
-        if (configTelaEmBreve.mensagem) {
-            document.getElementById('mensagemEmBreve').innerText = configTelaEmBreve.mensagem;
-            document.getElementById('mensagemEmBreve').style.display = 'block';
+        if (agoraBrasilia < dataInicio) {
+            document.getElementById('debugOfertaInfo').innerHTML = `⏳ AGENDADA para ${formatarBrasilia(oferta.dataInicio)}`;
+        } else {
+            document.getElementById('debugOfertaInfo').innerHTML = `⌛ EXPIRADA em ${formatarBrasilia(oferta.dataFim)}`;
         }
-        
-        document.getElementById('debugOfertaInfo').innerHTML = `Oferta expirada (era ${formatarDataBrasilia(dataInicio)} até ${formatarDataBrasilia(dataFim)})`;
-        document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ EXPIRADA</span>';
+        document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
     }
 }
 
+function aplicarModoEmBreve() {
+    document.querySelector('h2').innerText = configTelaEmBreve.titulo;
+    document.getElementById('fotoProduto').src = configTelaEmBreve.imagem;
+    document.getElementById('cod').disabled = true;
+    document.getElementById('btnEnviar').disabled = true;
+    document.querySelector('.btn-text').textContent = 'EM BREVE';
+    
+    if (configTelaEmBreve.mensagem) {
+        document.getElementById('mensagemEmBreve').innerText = configTelaEmBreve.mensagem;
+        document.getElementById('mensagemEmBreve').style.display = 'block';
+    } else {
+        document.getElementById('mensagemEmBreve').style.display = 'none';
+    }
+}
+
+// ============================================
+// INICIALIZAÇÃO
+// ============================================
+setInterval(verificarStatus, 1000);
+verificarStatus();
 // ============================================
 // DEMAIS FUNÇÕES (mantidas iguais)
 // ============================================
