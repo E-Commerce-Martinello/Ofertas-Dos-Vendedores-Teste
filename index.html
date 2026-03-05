@@ -569,60 +569,24 @@ async function salvarOfertas(novasOfertas) {
 // VERIFICAR STATUS DA OFERTA
 // ============================================
 async function verificarStatus() {
-    const fotoProduto = document.getElementById('fotoProduto');
-    const statusElement = document.getElementById('infoStatus');
-    const btn = document.getElementById('btnEnviar');
-    const titulo = document.getElementById('tituloPagina');
-    const msgEmBreve = document.getElementById('mensagemEmBreve');
-
     try {
-        // Busca as ofertas do Firebase
-        const ofertas = await carregarOfertas(); 
-        const agoraBrasilia = new Date(); // Certifique-se que getHorarioBrasilia() está disponível
+        const agoraBrasilia = getHorarioBrasilia();
+        document.getElementById('infoHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia);
         
+        // CORREÇÃO: Adicionamos o "await" para esperar o Firebase
+        const ofertas = await carregarOfertas(); 
+        
+        if (!Array.isArray(ofertas)) return;
+
         let ofertaAtiva = null;
-        if (Array.isArray(ofertas)) {
-            ofertaAtiva = ofertas.find(o => {
-                const inicio = new Date(o.dataInicio);
-                const fim = new Date(o.dataFim);
-                return agoraBrasilia >= inicio && agoraBrasilia <= fim;
-            });
-        }
-
-        // --- ATUALIZAÇÃO DA INTERFACE COM EFEITO SUAVE ---
-        if (ofertaAtiva) {
-            localStorage.setItem('ofertaAtiva', JSON.stringify(ofertaAtiva));
-            
-            // Só muda a imagem se for diferente da que já está lá (evita piscar)
-            if (fotoProduto.src !== ofertaAtiva.urlImagem) {
-                fotoProduto.style.opacity = '0'; // Esconde para o efeito
-                fotoProduto.src = ofertaAtiva.urlImagem;
-                fotoProduto.onload = () => fotoProduto.style.opacity = '1'; // Mostra quando carregar
+        for (const oferta of ofertas) {
+            const inicio = new Date(oferta.dataInicio);
+            const fim = new Date(oferta.dataFim);
+            if (agoraBrasilia >= inicio && agoraBrasilia <= fim) {
+                ofertaAtiva = oferta;
+                break;
             }
-
-            titulo.innerText = ofertaAtiva.tituloPagina;
-            btn.disabled = false;
-            document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
-            msgEmBreve.style.display = 'none';
-            
-            statusElement.innerHTML = '✅ OFERTA ATIVA';
-            statusElement.className = 'status-text status-ativo';
-        } else {
-            // MODO SEM OFERTA
-            titulo.innerText = configTelaEmBreve.titulo;
-            fotoProduto.src = configTelaEmBreve.imagem;
-            btn.disabled = true;
-            document.querySelector('.btn-text').textContent = 'EM BREVE';
-            msgEmBreve.innerText = configTelaEmBreve.mensagem;
-            msgEmBreve.style.display = 'block';
-            
-            statusElement.innerHTML = '⏸️ SEM OFERTAS';
-            statusElement.className = 'status-text status-embreve';
         }
-    } catch (error) {
-        console.error('Erro na sincronização:', error);
-    }
-}
 
         // ... resto do código de atualização da interface (que já está bom)
         
