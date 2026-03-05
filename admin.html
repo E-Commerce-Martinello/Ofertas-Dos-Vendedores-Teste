@@ -520,52 +520,73 @@
         let ofertas = [];
         
         // ============================================
-        // FUNÇÕES DE DATA (APENAS BRASÍLIA!)
-        // ============================================
-        
-        // Obter horário atual de Brasília (UTC-3)
-        function getHorarioBrasilia() {
-            const agora = new Date();
-            // Pega UTC e subtrai 3 horas
-            return new Date(Date.UTC(
-                agora.getUTCFullYear(),
-                agora.getUTCMonth(),
-                agora.getUTCDate(),
-                agora.getUTCHours() - 3,
-                agora.getUTCMinutes(),
-                agora.getUTCSeconds()
-            ));
-        }
-        
-        // Converter input do usuário (Brasília) para UTC para salvar
-        function brasiliaParaUTC(dataBrasiliaStr) {
-            // dataBrasiliaStr: "2026-03-04T18:30"
-            // Adicionar segundos e fuso -03:00
-            const dataComFuso = dataBrasiliaStr + ':00-03:00';
-            return new Date(dataComFuso).toISOString();
-        }
-        
-        // Converter UTC para formato do input (Brasília)
-        function utcParaBrasiliaInput(utcStr) {
-            const data = new Date(utcStr);
-            
-            // Ajustar para Brasília (somar 3 horas)
-            const brasilia = new Date(data.getTime());
-            
-            const ano = brasilia.getUTCFullYear();
-            const mes = String(brasilia.getUTCMonth() + 1).padStart(2, '0');
-            const dia = String(brasilia.getUTCDate()).padStart(2, '0');
-            const hora = String(brasilia.getUTCHours()).padStart(2, '0');
-            const minuto = String(brasilia.getUTCMinutes()).padStart(2, '0');
-            
-            return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
-        }
-        
-        // Formatar data para exibição (Brasília)
-        function formatarBrasilia(dataUTC) {
-            const data = new Date(dataUTC);
-            return data.toLocaleString('pt-BR', { timeZone: 'UTC' });
-        }
+// FUNÇÕES DE DATA - VERSÃO SIMPLIFICADA
+// ============================================
+
+// Converter data do input para UTC (sem mistérios!)
+function brasiliaParaUTC(dataBrasiliaStr) {
+    // dataBrasiliaStr = "2026-03-05T10:00"
+    // Criar data manualmente para evitar interpretação errada
+    const [data, hora] = dataBrasiliaStr.split('T');
+    const [ano, mes, dia] = data.split('-');
+    const [h, m] = hora.split(':');
+    
+    // Criar data em UTC (Brasília = UTC-3, então adicionamos 3 horas)
+    // Ex: 10:00 Brasília = 13:00 UTC
+    const dataUTC = new Date(Date.UTC(
+        parseInt(ano),
+        parseInt(mes) - 1,
+        parseInt(dia),
+        parseInt(h) + 3, // +3 para converter para UTC
+        parseInt(m),
+        0
+    ));
+    
+    return dataUTC.toISOString();
+}
+
+// Converter UTC de volta para input (Brasília)
+function utcParaBrasiliaInput(utcStr) {
+    const data = new Date(utcStr);
+    
+    // UTC -> Brasília = subtrair 3 horas
+    const ano = data.getUTCFullYear();
+    const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
+    const dia = String(data.getUTCDate()).padStart(2, '0');
+    const hora = String(data.getUTCHours() - 3).padStart(2, '0'); // -3 para voltar para Brasília
+    const minuto = String(data.getUTCMinutes()).padStart(2, '0');
+    
+    return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
+}
+
+// Obter horário atual de Brasília
+function getHorarioBrasilia() {
+    const agora = new Date();
+    
+    // Usar UTC e subtrair 3 horas
+    return new Date(Date.UTC(
+        agora.getUTCFullYear(),
+        agora.getUTCMonth(),
+        agora.getUTCDate(),
+        agora.getUTCHours() - 3,
+        agora.getUTCMinutes(),
+        agora.getUTCSeconds()
+    ));
+}
+
+// Formatar para exibição
+function formatarBrasilia(dataUTC) {
+    const data = new Date(dataUTC);
+    
+    // Converter UTC para Brasília (subtrair 3 horas)
+    const ano = data.getUTCFullYear();
+    const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
+    const dia = String(data.getUTCDate()).padStart(2, '0');
+    const hora = String(data.getUTCHours() - 3).padStart(2, '0');
+    const minuto = String(data.getUTCMinutes()).padStart(2, '0');
+    
+    return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+}
         
         // ============================================
         // INICIALIZAÇÃO
