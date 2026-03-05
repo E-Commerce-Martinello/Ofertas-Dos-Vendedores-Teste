@@ -480,65 +480,63 @@ try {
 }
 
 // ============================================
-// VERIFICAR STATUS DA OFERTA (SEM ERROS)
+// VERIFICAR STATUS DA OFERTA (SEM ERROS!)
 // ============================================
 function verificarStatus() {
+    // Sempre atualizar o horário (isso nunca falha)
+    const agoraBrasilia = getHorarioBrasilia();
+    document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
+    
+    // Tentar pegar a oferta de forma segura
+    let oferta = null;
     try {
-        // Atualizar horário no debug (sempre funciona)
-        const agoraBrasilia = getHorarioBrasilia();
-        document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
-        
-        // Tentar carregar oferta
-        let oferta = null;
-        try {
-            oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
-        } catch (e) {
-            oferta = null;
+        const ofertaStr = localStorage.getItem('ofertaAtiva');
+        if (ofertaStr) {
+            oferta = JSON.parse(ofertaStr);
         }
-        
-        const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
-        
-        // Se não tem oferta ou está expirado
-        if (!oferta || modoExpirado) {
-            aplicarModoEmBreve();
-            document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
-            document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
-            return;
-        }
-        
-        // Verificar se a oferta tem as propriedades necessárias
-        if (!oferta.dataInicio || !oferta.dataFim) {
-            aplicarModoEmBreve();
-            document.getElementById('debugOfertaInfo').innerText = 'Oferta inválida';
-            document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
-            return;
-        }
-        
-        // Verificar se está ativa
-        const ativa = isOfertaAtiva(oferta);
-        
-        document.getElementById('debugOfertaInfo').innerHTML = 
-            `${oferta.tituloPagina || 'Oferta'} (${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)})`;
-        
-        if (ativa) {
-            // OFERTA ATIVA
-            document.querySelector('h2').innerText = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
-            if (oferta.urlImagem) {
-                document.getElementById('fotoProduto').src = oferta.urlImagem;
-            }
-            document.getElementById('cod').disabled = false;
-            document.getElementById('btnEnviar').disabled = false;
-            document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
-            document.getElementById('mensagemEmBreve').style.display = 'none';
-            document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
-        } else {
-            aplicarModoEmBreve();
-            document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
-        }
-    } catch (error) {
-        // Silenciosamente ignorar erros para não poluir o console
-        // Mas manter o sistema funcionando
+    } catch (e) {
+        oferta = null;
+    }
+    
+    const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
+    
+    // Se não tem oferta ou está expirado
+    if (!oferta || modoExpirado) {
         aplicarModoEmBreve();
+        document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
+        document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
+        return;
+    }
+    
+    // Verificar se a oferta tem as datas
+    if (!oferta.dataInicio || !oferta.dataFim) {
+        aplicarModoEmBreve();
+        document.getElementById('debugOfertaInfo').innerText = 'Oferta inválida';
+        document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
+        return;
+    }
+    
+    // Verificar se está ativa
+    const ativa = isOfertaAtiva(oferta);
+    
+    // Mostrar informações da oferta
+    document.getElementById('debugOfertaInfo').innerHTML = 
+        `${oferta.tituloPagina || 'Oferta'} (${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)})`;
+    
+    if (ativa) {
+        // OFERTA ATIVA
+        document.querySelector('h2').innerText = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
+        if (oferta.urlImagem) {
+            document.getElementById('fotoProduto').src = oferta.urlImagem;
+        }
+        document.getElementById('cod').disabled = false;
+        document.getElementById('btnEnviar').disabled = false;
+        document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
+        document.getElementById('mensagemEmBreve').style.display = 'none';
+        document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
+    } else {
+        aplicarModoEmBreve();
+        document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
     }
 }
 
@@ -709,37 +707,28 @@ async function enviar() {
 }
 
 // ============================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO (SEM ERROS)
 // ============================================
-function verificarImagem(img) {
-    if (img.complete && img.naturalHeight > 0) return;
-    
-    let tentativas = 0;
-    const intervalo = setInterval(() => {
-        tentativas++;
-        if (img.complete && img.naturalHeight > 0) {
-            clearInterval(intervalo);
-        } else if (tentativas > 10) {
-            img.src = configTelaEmBreve.imagem;
-            clearInterval(intervalo);
-        }
-    }, 500);
+function iniciar() {
+    try {
+        verificarImagem(document.getElementById('fotoProduto'));
+        verificarStatus();
+        setInterval(verificarStatus, 1000);
+        
+        setInterval(() => {
+            const btn = document.getElementById('btnEnviar');
+            if (btn && !btn.disabled) {
+                btn.classList.add('glow');
+                setTimeout(() => btn.classList.remove('glow'), 1000);
+            }
+        }, 3000);
+    } catch (e) {
+        // Silenciosamente ignorar erros de inicialização
+    }
 }
 
-// Iniciar tudo
-setTimeout(() => {
-    verificarImagem(document.getElementById('fotoProduto'));
-    setInterval(verificarStatus, 1000);
-    verificarStatus();
-}, 100);
-
-setInterval(() => {
-    const btn = document.getElementById('btnEnviar');
-    if (btn && !btn.disabled) {
-        btn.classList.add('glow');
-        setTimeout(() => btn.classList.remove('glow'), 1000);
-    }
-}, 3000);
+// Aguardar um pouco para garantir que tudo carregou
+setTimeout(iniciar, 100);
 </script>
 
 </body>
