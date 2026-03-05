@@ -11,7 +11,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- ARQUIVOS JS (ORDEM CORRETA!) -->
+    <!-- ARQUIVOS JS (ORDEM CORRETA) -->
     <!-- 1. Configurações primeiro -->
     <script src="js/config.js"></script>
     
@@ -24,9 +24,8 @@
     <script src="js/validators.js"></script>
     <script src="js/image.js"></script>
     
-    <!-- 4. Storage (primeiro localStorage, depois GitHub) -->
+    <!-- 4. Storage -->
     <script src="js/storage.js"></script>
-    <script src="js/github-storage.js"></script>
     
     <!-- 5. Serviços -->
     <script src="js/api.js"></script>
@@ -36,7 +35,6 @@
     <script src="js/ui.js"></script>
     
     <style>
-        /* Seu CSS existente (igual) */
         * {
             margin: 0;
             padding: 0;
@@ -528,61 +526,6 @@
 
 <script>
 // ============================================
-// CONFIGURAÇÕES DO GITHUB (MESMAS DO ADMIN)
-// ============================================
-const GITHUB_CONFIG = {
-    owner: 'e-commerce-martinello',
-    repo: 'ofertas-dos-vendedores-teste',
-    path: 'ofertas.json',
-    token: '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' // ← COLE O MESMO TOKEN DO ADMIN!
-};
-
-// ============================================
-// FUNÇÕES DE INTEGRAÇÃO COM GITHUB
-// ============================================
-async function carregarOfertasCompartilhadas() {
-    try {
-        console.log('📥 Carregando ofertas do GitHub...');
-        
-        const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-        
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': `token ${GITHUB_CONFIG.token}`,
-                'Accept': 'application/vnd.github.v3+json'
-            }
-        });
-        
-        if (response.status === 404) {
-            console.log('ℹ️ Arquivo não existe ainda');
-            return [];
-        }
-        
-        if (!response.ok) {
-            throw new Error(`Erro GitHub: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        const content = atob(data.content);
-        const ofertasCarregadas = JSON.parse(content);
-        
-        console.log(`✅ ${ofertasCarregadas.length} ofertas carregadas do GitHub`);
-        
-        // Salvar no localStorage como cache
-        localStorage.setItem('ofertasMartinello', JSON.stringify(ofertasCarregadas));
-        
-        return ofertasCarregadas;
-        
-    } catch (error) {
-        console.error('❌ Erro ao carregar do GitHub:', error);
-        console.log('ℹ️ Usando localStorage como fallback');
-        
-        // Fallback para localStorage
-        return JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
-    }
-}
-
-// ============================================
 // CONFIGURAÇÕES DA TELA "EM BREVE"
 // ============================================
 let configTelaEmBreve = {
@@ -600,40 +543,28 @@ try {
 } catch (e) {}
 
 // ============================================
-// VARIÁVEL GLOBAL DE OFERTAS
+// FUNÇÕES DE STORAGE
 // ============================================
-let ofertas = [];
-
-// ============================================
-// CARREGAR OFERTAS (função principal)
-// ============================================
-async function carregarOfertas() {
+function carregarOfertas() {
     try {
-        // Tenta carregar do GitHub primeiro
-        const ofertasCarregadas = await carregarOfertasCompartilhadas();
-        ofertas = ofertasCarregadas;
-        return ofertasCarregadas;
+        return JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
     } catch (e) {
-        // Fallback para localStorage
-        ofertas = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
-        return ofertas;
+        return [];
     }
 }
 
 // ============================================
 // VERIFICAR STATUS DA OFERTA
 // ============================================
-async function verificarStatus() {
+function verificarStatus() {
     try {
         // 1️⃣ PEGAR HORÁRIO ATUAL DE BRASÍLIA
         const agoraBrasilia = getHorarioBrasilia();
         const horaFormatada = formatarBrasilia(agoraBrasilia);
         document.getElementById('infoHoraBrasilia').innerText = horaFormatada;
         
-        // 2️⃣ CARREGAR OFERTAS (se necessário)
-        if (ofertas.length === 0) {
-            await carregarOfertas();
-        }
+        // 2️⃣ CARREGAR OFERTAS
+        const ofertas = carregarOfertas();
         
         // 3️⃣ ENCONTRAR OFERTA ATIVA
         let ofertaAtiva = null;
@@ -790,7 +721,7 @@ async function enviar() {
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
-async function iniciar() {
+function iniciar() {
     try {
         // Inicializar tema
         if (typeof TEMA !== 'undefined') {
@@ -803,12 +734,9 @@ async function iniciar() {
             IMAGEM.verificarCarregamento(img, configTelaEmBreve.imagem);
         }
         
-        // Carregar ofertas
-        await carregarOfertas();
-        
         // Iniciar verificação de status
-        await verificarStatus();
-        setInterval(verificarStatus, 5000); // A cada 5 segundos
+        verificarStatus();
+        setInterval(verificarStatus, 1000);
         
         console.log('✅ Portal do Vendedor iniciado');
         
