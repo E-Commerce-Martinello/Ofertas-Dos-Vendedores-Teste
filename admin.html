@@ -425,7 +425,7 @@
                 
                 <div class="info-box">
                     <strong>🕒 Horário de Brasília (UTC-3)</strong><br>
-                    Use o horário de Brasília para cadastrar. Ex: 18:20
+                    Use o horário de Brasília para cadastrar.
                 </div>
                 
                 <div class="row">
@@ -515,18 +515,32 @@
         // ============================================
         // CONFIGURAÇÕES
         // ============================================
-        const SENHA_ADMIN = "3617";
+        const SENHA_ADMIN = "777";
         const SESSION_KEY = 'adminLogado';
         let ofertas = [];
         
         // ============================================
-        // FUNÇÕES DE CONVERSÃO DE DATA (APENAS BRASÍLIA!)
+        // FUNÇÕES DE DATA (APENAS BRASÍLIA!)
         // ============================================
         
-        // Converter data do input (Brasília) para UTC para salvar
+        // Obter horário atual de Brasília (UTC-3)
+        function getHorarioBrasilia() {
+            const agora = new Date();
+            // Pega UTC e subtrai 3 horas
+            return new Date(Date.UTC(
+                agora.getUTCFullYear(),
+                agora.getUTCMonth(),
+                agora.getUTCDate(),
+                agora.getUTCHours() - 3,
+                agora.getUTCMinutes(),
+                agora.getUTCSeconds()
+            ));
+        }
+        
+        // Converter input do usuário (Brasília) para UTC para salvar
         function brasiliaParaUTC(dataBrasiliaStr) {
-            // dataBrasiliaStr vem no formato: "2026-03-04T18:20"
-            // Adicionar segundos e fuso -03:00 (Brasília)
+            // dataBrasiliaStr: "2026-03-04T18:30"
+            // Adicionar segundos e fuso -03:00
             const dataComFuso = dataBrasiliaStr + ':00-03:00';
             return new Date(dataComFuso).toISOString();
         }
@@ -535,33 +549,22 @@
         function utcParaBrasiliaInput(utcStr) {
             const data = new Date(utcStr);
             
-            // Criar data no horário de Brasília
-            const brasilia = new Date(data.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+            // Ajustar para Brasília (somar 3 horas)
+            const brasilia = new Date(data.getTime());
             
-            const ano = brasilia.getFullYear();
-            const mes = String(brasilia.getMonth() + 1).padStart(2, '0');
-            const dia = String(brasilia.getDate()).padStart(2, '0');
-            const hora = String(brasilia.getHours()).padStart(2, '0');
-            const minuto = String(brasilia.getMinutes()).padStart(2, '0');
+            const ano = brasilia.getUTCFullYear();
+            const mes = String(brasilia.getUTCMonth() + 1).padStart(2, '0');
+            const dia = String(brasilia.getUTCDate()).padStart(2, '0');
+            const hora = String(brasilia.getUTCHours()).padStart(2, '0');
+            const minuto = String(brasilia.getUTCMinutes()).padStart(2, '0');
             
             return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
         }
         
-        // Formatar data para exibição na lista (Brasília)
+        // Formatar data para exibição (Brasília)
         function formatarBrasilia(dataUTC) {
-            return new Date(dataUTC).toLocaleString('pt-BR', {
-                timeZone: 'America/Sao_Paulo',
-                day: '2-digit',
-                month: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-        
-        // Obter horário atual de Brasília
-        function getHorarioBrasilia() {
-            const agora = new Date();
-            return new Date(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+            const data = new Date(dataUTC);
+            return data.toLocaleString('pt-BR', { timeZone: 'UTC' });
         }
         
         // ============================================
@@ -608,6 +611,7 @@
                 const ofertasSalvas = localStorage.getItem('ofertasMartinello');
                 if (ofertasSalvas) {
                     ofertas = JSON.parse(ofertasSalvas);
+                    console.log('✅ Ofertas carregadas:', ofertas.length);
                 }
             } catch (e) {
                 console.error('Erro ao carregar ofertas:', e);
@@ -717,7 +721,7 @@
         }
         
         // ============================================
-        // RENDERIZAR LISTA
+        // RENDERIZAR LISTA DE OFERTAS (CORRIGIDO!)
         // ============================================
         function renderizarListaOfertas() {
             const container = document.getElementById('listaOfertas');
@@ -728,15 +732,25 @@
                 return;
             }
             
+            // Ordenar por data de início
             ofertas.sort((a, b) => new Date(a.dataInicio) - new Date(b.dataInicio));
             
             let html = '';
             const agoraBrasilia = getHorarioBrasilia();
             
+            console.log('🕒 Agora em Brasília:', agoraBrasilia.toISOString());
+            
             ofertas.forEach((oferta, index) => {
                 try {
                     const dataInicio = new Date(oferta.dataInicio);
                     const dataFim = new Date(oferta.dataFim);
+                    
+                    console.log(`📅 Oferta ${index}:`, {
+                        inicio: dataInicio.toISOString(),
+                        fim: dataFim.toISOString(),
+                        agora: agoraBrasilia.toISOString(),
+                        ativa: agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim
+                    });
                     
                     let status = '';
                     let statusClass = '';
@@ -778,7 +792,7 @@
         }
         
         // ============================================
-        // EDIÇÃO DE OFERTA (CORRIGIDO!)
+        // EDIÇÃO DE OFERTA
         // ============================================
         function editarOferta(index) {
             const oferta = ofertas[index];
@@ -786,14 +800,12 @@
             document.getElementById('formTitulo').innerHTML = '✏️ EDITAR OFERTA';
             document.getElementById('editandoId').value = index;
             
-            // Converter UTC para o formato do input (Brasília)
             document.getElementById('dataInicio').value = utcParaBrasiliaInput(oferta.dataInicio);
             document.getElementById('dataFim').value = utcParaBrasiliaInput(oferta.dataFim);
             document.getElementById('linkProduto').value = oferta.linkProduto || '';
             document.getElementById('textoOferta').value = oferta.textoOferta || '';
             document.getElementById('tituloPagina').value = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
             
-            // Mostrar preview da imagem se existir
             if (oferta.urlImagem) {
                 const preview = document.getElementById('preview');
                 preview.src = oferta.urlImagem;
@@ -806,7 +818,7 @@
         }
         
         // ============================================
-        // SALVAR OFERTA (NOVA OU EDITADA)
+        // SALVAR OFERTA
         // ============================================
         async function salvarOferta() {
             try {
@@ -1038,7 +1050,7 @@
         setInterval(() => {
             verificarOfertaAtiva();
             renderizarListaOfertas();
-        }, 30000);
+        }, 5000);
     </script>
 </body>
 </html>
