@@ -11,7 +11,7 @@
     <!-- Font Awesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- ARQUIVO DE HORÁRIO (MESMO PARA ADMIN E INDEX) -->
+    <!-- ARQUIVO DE HORÁRIO -->
     <script src="horario.js"></script>
     
     <style>
@@ -451,6 +451,16 @@
 
 <script>
 // ============================================
+// VERIFICAR SE O HORARIO.JS CARREGOU
+// ============================================
+if (typeof getHorarioBrasilia !== 'function') {
+    console.error('❌ ERRO: horario.js não carregou corretamente!');
+    alert('Erro ao carregar sistema de horário. Recarregue a página.');
+} else {
+    console.log('✅ horario.js carregado com sucesso!');
+}
+
+// ============================================
 // CONFIGURAÇÕES DA TELA "EM BREVE"
 // ============================================
 let configTelaEmBreve = {
@@ -463,64 +473,64 @@ try {
     const configSalva = localStorage.getItem('configTelaEmBreve');
     if (configSalva) {
         configTelaEmBreve = { ...configTelaEmBreve, ...JSON.parse(configSalva) };
+        console.log('✅ Configurações "EM BREVE" carregadas:', configTelaEmBreve);
     }
-} catch (e) {}
-
-// ============================================
-// DEBUG INICIAL (mostra tudo no console)
-// ============================================
-const ofertaInicial = JSON.parse(localStorage.getItem('ofertaAtiva'));
-console.log('=== DEBUG INICIAL DO INDEX ===');
-console.log('Horário atual do computador:', new Date().toString());
-console.log('Horário UTC:', new Date().toISOString());
-console.log('Horário Brasília calculado:', getHorarioBrasilia().toISOString());
-console.log('Horário Brasília formatado:', formatarBrasilia(getHorarioBrasilia().toISOString()));
-if (ofertaInicial) {
-    console.log('Oferta início (UTC):', ofertaInicial.dataInicio);
-    console.log('Oferta fim (UTC):', ofertaInicial.dataFim);
-    console.log('Oferta início (Brasília):', formatarBrasilia(ofertaInicial.dataInicio));
-    console.log('Oferta fim (Brasília):', formatarBrasilia(ofertaInicial.dataFim));
-    console.log('Oferta ativa?', isOfertaAtiva(ofertaInicial));
+} catch (e) {
+    console.error('Erro ao carregar config:', e);
 }
 
 // ============================================
-// VERIFICAR STATUS DA OFERTA (CORRIGIDO)
+// VERIFICAR STATUS DA OFERTA
 // ============================================
 function verificarStatus() {
-    const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
-    const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
-    
-    // Atualizar horário no debug
-    const agoraBrasilia = getHorarioBrasilia();
-    document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
-    
-    if (!oferta || modoExpirado) {
-        aplicarModoEmBreve();
-        document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
-        document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
-        return;
-    }
-    
-    // USAR FUNÇÃO DO horario.js PARA VERIFICAR
-    const ativa = isOfertaAtiva(oferta);
-    
-    document.getElementById('debugOfertaInfo').innerHTML = 
-        `${oferta.tituloPagina} (${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)})`;
-    
-    if (ativa) {
-        // OFERTA ATIVA
-        document.querySelector('h2').innerText = oferta.tituloPagina;
-        if (oferta.urlImagem) {
-            document.getElementById('fotoProduto').src = oferta.urlImagem;
+    try {
+        const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
+        const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
+        
+        // Atualizar horário no debug
+        const agoraBrasilia = getHorarioBrasilia();
+        document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
+        
+        console.log('🕒 Horário Brasília agora:', formatarBrasilia(agoraBrasilia.toISOString()));
+        
+        if (!oferta || modoExpirado) {
+            console.log('ℹ️ Nenhuma oferta ativa');
+            aplicarModoEmBreve();
+            document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
+            document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
+            return;
         }
-        document.getElementById('cod').disabled = false;
-        document.getElementById('btnEnviar').disabled = false;
-        document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
-        document.getElementById('mensagemEmBreve').style.display = 'none';
-        document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
-    } else {
-        aplicarModoEmBreve();
-        document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
+        
+        console.log('📦 Oferta carregada:', oferta);
+        console.log('📅 Início (UTC):', oferta.dataInicio);
+        console.log('📅 Fim (UTC):', oferta.dataFim);
+        console.log('📅 Início (Brasília):', formatarBrasilia(oferta.dataInicio));
+        console.log('📅 Fim (Brasília):', formatarBrasilia(oferta.dataFim));
+        
+        // USAR FUNÇÃO DO horario.js PARA VERIFICAR
+        const ativa = isOfertaAtiva(oferta);
+        console.log('🔍 Oferta ativa?', ativa);
+        
+        document.getElementById('debugOfertaInfo').innerHTML = 
+            `${oferta.tituloPagina} (${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)})`;
+        
+        if (ativa) {
+            // OFERTA ATIVA
+            document.querySelector('h2').innerText = oferta.tituloPagina;
+            if (oferta.urlImagem) {
+                document.getElementById('fotoProduto').src = oferta.urlImagem;
+            }
+            document.getElementById('cod').disabled = false;
+            document.getElementById('btnEnviar').disabled = false;
+            document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
+            document.getElementById('mensagemEmBreve').style.display = 'none';
+            document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
+        } else {
+            aplicarModoEmBreve();
+            document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
+        }
+    } catch (error) {
+        console.error('❌ Erro em verificarStatus:', error);
     }
 }
 
@@ -723,9 +733,12 @@ function verificarImagem(img) {
     }, 500);
 }
 
-verificarImagem(document.getElementById('fotoProduto'));
-setInterval(verificarStatus, 1000);
-verificarStatus();
+// Iniciar tudo
+setTimeout(() => {
+    verificarImagem(document.getElementById('fotoProduto'));
+    setInterval(verificarStatus, 1000);
+    verificarStatus();
+}, 100);
 
 setInterval(() => {
     const btn = document.getElementById('btnEnviar');
