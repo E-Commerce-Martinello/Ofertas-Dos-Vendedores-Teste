@@ -731,49 +731,41 @@ async function enviar() {
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
-// ============================================
-// INICIALIZAÇÃO OTIMIZADA (700 VENDEDORES)
-// ============================================
 function iniciar() {
     try {
-        // 1. Inicializar tema
-        if (typeof TEMA !== 'undefined') TEMA.init();
-
-        // 2. RELÓGIO LOCAL (Roda a cada 1s - Sem usar internet)
-        // Isso garante que o horário na tela nunca pare de mexer
-        setInterval(() => {
-            const elHora = document.getElementById('infoHoraBrasilia');
-            if (elHora) {
-                // Se a função getHorarioBrasilia falhar, usa a hora do sistema
-                try {
-                    const agora = typeof getHorarioBrasilia === 'function' ? getHorarioBrasilia() : new Date();
-                    elHora.innerText = typeof formatarBrasilia === 'function' ? formatarBrasilia(agora) : agora.toLocaleTimeString('pt-BR');
-                } catch(e) {
-                    elHora.innerText = new Date().toLocaleTimeString('pt-BR');
-                }
-            }
-        }, 1000);
-
-        // 3. PERSISTÊNCIA DA MATRÍCULA (Praticidade para o vendedor)
-        const campoCod = document.getElementById('cod');
-        campoCod.value = localStorage.getItem('martinello_matricula') || '';
-        campoCod.addEventListener('input', (e) => {
-            localStorage.setItem('martinello_matricula', e.target.value);
-        });
-
-        // 4. VERIFICAÇÃO DO FIREBASE (Roda a cada 1 minuto)
-        // Chamamos uma vez ao carregar e depois agendamos
-        verificarStatus(); 
+        // Inicializar tema
+        if (typeof TEMA !== 'undefined') {
+            TEMA.init();
+        }
         
-        // 60000ms = 1 minuto. Isso protege sua cota gratuita do Firebase.
-        setInterval(verificarStatus, 60000); 
-
-        console.log('✅ Portal iniciado: Relógio (1s) | Banco de Dados (1min)');
+        // Verificar imagem
+        const img = document.getElementById('fotoProduto');
+        if (typeof IMAGEM !== 'undefined' && IMAGEM.verificarCarregamento) {
+            IMAGEM.verificarCarregamento(img, configTelaEmBreve.imagem);
+        }
+        
+        // Iniciar verificação de status
+        verificarStatus();
+        setInterval(verificarStatus, 1000);
+        
+        console.log('✅ Portal do Vendedor iniciado');
         
     } catch (error) {
         console.error('❌ Erro na inicialização:', error);
     }
 }
+
+// Iniciar quando a página carregar
+document.addEventListener('DOMContentLoaded', iniciar);
+
+// Efeito de brilho no botão
+setInterval(() => {
+    const btn = document.getElementById('btnEnviar');
+    if (btn && !btn.disabled) {
+        btn.classList.add('glow');
+        setTimeout(() => btn.classList.remove('glow'), 1000);
+    }
+}, 3000);
 </script>
 
 </body>
