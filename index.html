@@ -539,20 +539,59 @@ try {
 } catch (e) {}
 
 // ============================================
-// VERIFICAR STATUS DA OFERTA
+// VERIFICAR STATUS DA OFERTA (VERSÃO CORRIGIDA)
 // ============================================
 function verificarStatus() {
     try {
-        // Atualizar horário
+        // 1️⃣ PEGAR HORÁRIO ATUAL DE BRASÍLIA
         const agoraBrasilia = getHorarioBrasilia();
-        document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
+        const horaFormatada = formatarBrasilia(agoraBrasilia.toISOString());
+        document.getElementById('debugHoraBrasilia').innerText = horaFormatada;
         
-        // Carregar ofertas
-        const ofertas = carregarOfertas();
+        console.log('🕒 Horário Brasília agora:', horaFormatada);
+        console.log('🕒 UTC agora:', agoraBrasilia.toISOString());
         
-        // Atualizar oferta ativa
-        const ofertaAtiva = atualizarOfertaAtiva(ofertas);
+        // 2️⃣ CARREGAR OFERTAS DO STORAGE
+        let ofertas = [];
+        try {
+            ofertas = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
+        } catch (e) {
+            console.error('Erro ao carregar ofertas:', e);
+        }
         
+        // 3️⃣ ENCONTRAR OFERTA ATIVA (SEM USAR atualizarOfertaAtiva)
+        let ofertaAtiva = null;
+        
+        for (const oferta of ofertas) {
+            const inicio = new Date(oferta.dataInicio);
+            const fim = new Date(oferta.dataFim);
+            
+            // COMPARAÇÃO DIRETA
+            if (agoraBrasilia >= inicio && agoraBrasilia <= fim) {
+                ofertaAtiva = oferta;
+                console.log('✅ Oferta ativa encontrada:', oferta.tituloPagina);
+                break;
+            }
+        }
+        
+        // 4️⃣ SE NÃO ENCONTROU, TENTAR PELA CHAVE 'ofertaAtiva' (legado)
+        if (!ofertaAtiva) {
+            try {
+                const ofertaSalva = localStorage.getItem('ofertaAtiva');
+                if (ofertaSalva) {
+                    const oferta = JSON.parse(ofertaSalva);
+                    const inicio = new Date(oferta.dataInicio);
+                    const fim = new Date(oferta.dataFim);
+                    
+                    if (agoraBrasilia >= inicio && agoraBrasilia <= fim) {
+                        ofertaAtiva = oferta;
+                        console.log('✅ Oferta ativa (legado):', oferta.tituloPagina);
+                    }
+                }
+            } catch (e) {}
+        }
+        
+        // 5️⃣ ATUALIZAR INTERFACE
         if (!ofertaAtiva) {
             aplicarModoEmBreve();
             document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
@@ -560,12 +599,13 @@ function verificarStatus() {
             return;
         }
         
-        // Mostrar oferta ativa
+        // Mostrar informações da oferta
         document.getElementById('debugOfertaInfo').innerHTML = 
             `${ofertaAtiva.tituloPagina} (${formatarBrasilia(ofertaAtiva.dataInicio)} até ${formatarBrasilia(ofertaAtiva.dataFim)})`;
         
-        // Verificar se está ativa
-        const ativa = isOfertaAtiva(ofertaAtiva);
+        // Verificar se está ativa (redundante, mas seguro)
+        const ativa = (agoraBrasilia >= new Date(ofertaAtiva.dataInicio) && 
+                      agoraBrasilia <= new Date(ofertaAtiva.dataFim));
         
         if (ativa) {
             document.querySelector('h2').innerText = ofertaAtiva.tituloPagina;
@@ -581,24 +621,10 @@ function verificarStatus() {
             aplicarModoEmBreve();
             document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
         }
+        
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro crítico:', error);
         aplicarModoEmBreve();
-    }
-}
-
-function aplicarModoEmBreve() {
-    document.querySelector('h2').innerText = configTelaEmBreve.titulo;
-    document.getElementById('fotoProduto').src = configTelaEmBreve.imagem;
-    document.getElementById('cod').disabled = true;
-    document.getElementById('btnEnviar').disabled = true;
-    document.querySelector('.btn-text').textContent = 'EM BREVE';
-    
-    if (configTelaEmBreve.mensagem) {
-        document.getElementById('mensagemEmBreve').innerText = configTelaEmBreve.mensagem;
-        document.getElementById('mensagemEmBreve').style.display = 'block';
-    } else {
-        document.getElementById('mensagemEmBreve').style.display = 'none';
     }
 }
 
