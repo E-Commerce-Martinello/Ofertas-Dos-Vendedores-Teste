@@ -1,52 +1,54 @@
 // ============================================
-// horario-base.js - FUNÇÕES BASE DE HORÁRIO
-// (usado tanto pelo admin quanto pelo index)
+// horario-base.js - FUNÇÕES BASE (SEM CONVERSÕES!)
+// Todas as datas são tratadas como Brasília
 // ============================================
 
-// Converter data do INPUT (Brasília) para UTC (para salvar)
-function brasiliaParaUTC(dataBrasiliaStr) {
-    if (!dataBrasiliaStr) return null;
+// ============================================
+// FUNÇÃO: Salvar data (já está em Brasília, só validar)
+// ============================================
+function salvarDataBrasilia(dataStr) {
+    if (!dataStr) return null;
     
     try {
-        const [dataParte, horaParte] = dataBrasiliaStr.split('T');
-        const [ano, mes, dia] = dataParte.split('-').map(Number);
-        const [hora, minuto] = horaParte.split(':').map(Number);
+        // Apenas validar se é uma data válida
+        const data = new Date(dataStr);
+        if (isNaN(data.getTime())) return null;
         
-        // Brasília → UTC: +3 horas
-        return new Date(Date.UTC(ano, mes-1, dia, hora + 3, minuto, 0)).toISOString();
+        // Retornar a string original (já em Brasília)
+        return dataStr;
     } catch (e) {
         return null;
     }
 }
 
-// Converter UTC para formato do INPUT (Brasília) (para editar)
-function utcParaBrasiliaInput(utcStr) {
-    if (!utcStr) return '';
+// ============================================
+// FUNÇÃO: Carregar data (já está em Brasília)
+// ============================================
+function carregarDataBrasilia(dataStr) {
+    if (!dataStr) return null;
     
     try {
-        const data = new Date(utcStr);
-        if (isNaN(data.getTime())) return '';
+        // Se já for um objeto Date, retorna
+        if (dataStr instanceof Date) return dataStr;
         
-        // UTC → Brasília: -3 horas
-        const ano = data.getUTCFullYear();
-        const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
-        const dia = String(data.getUTCDate()).padStart(2, '0');
-        const hora = String(data.getUTCHours() - 3).padStart(2, '0');
-        const minuto = String(data.getUTCMinutes()).padStart(2, '0');
-        
-        return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
+        // Converte string para Date (interpreta como horário local)
+        return new Date(dataStr);
     } catch (e) {
-        return '';
+        return null;
     }
 }
 
-// Verificar se oferta está ativa (usado pelos dois)
+// ============================================
+// FUNÇÃO: Verificar se oferta está ativa
+// ============================================
 function isOfertaAtiva(oferta, agoraBrasilia) {
     if (!oferta || !oferta.dataInicio || !oferta.dataFim) return false;
     
     try {
         const inicio = new Date(oferta.dataInicio);
         const fim = new Date(oferta.dataFim);
+        
+        if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) return false;
         
         return (agoraBrasilia >= inicio && agoraBrasilia <= fim);
     } catch (e) {
