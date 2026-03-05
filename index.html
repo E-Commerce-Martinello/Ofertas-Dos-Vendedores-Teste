@@ -15,7 +15,6 @@
     <script src="horario.js"></script>
     
     <style>
-        /* Seu CSS existente - manter igual */
         * {
             margin: 0;
             padding: 0;
@@ -468,17 +467,32 @@ try {
 } catch (e) {}
 
 // ============================================
-// VERIFICAR STATUS DA OFERTA (USANDO horario.js)
+// DEBUG INICIAL (mostra tudo no console)
+// ============================================
+const ofertaInicial = JSON.parse(localStorage.getItem('ofertaAtiva'));
+console.log('=== DEBUG INICIAL DO INDEX ===');
+console.log('Horário atual do computador:', new Date().toString());
+console.log('Horário UTC:', new Date().toISOString());
+console.log('Horário Brasília calculado:', getHorarioBrasilia().toISOString());
+console.log('Horário Brasília formatado:', formatarBrasilia(getHorarioBrasilia().toISOString()));
+if (ofertaInicial) {
+    console.log('Oferta início (UTC):', ofertaInicial.dataInicio);
+    console.log('Oferta fim (UTC):', ofertaInicial.dataFim);
+    console.log('Oferta início (Brasília):', formatarBrasilia(ofertaInicial.dataInicio));
+    console.log('Oferta fim (Brasília):', formatarBrasilia(ofertaInicial.dataFim));
+    console.log('Oferta ativa?', isOfertaAtiva(ofertaInicial));
+}
+
+// ============================================
+// VERIFICAR STATUS DA OFERTA (CORRIGIDO)
 // ============================================
 function verificarStatus() {
     const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
     const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
     
-    // DEBUG
-    debugOferta(oferta);
-    
     // Atualizar horário no debug
-    document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(getHorarioBrasilia().toISOString());
+    const agoraBrasilia = getHorarioBrasilia();
+    document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
     
     if (!oferta || modoExpirado) {
         aplicarModoEmBreve();
@@ -526,7 +540,7 @@ function aplicarModoEmBreve() {
 }
 
 // ============================================
-// DEMAIS FUNÇÕES (mantidas iguais)
+// DEMAIS FUNÇÕES
 // ============================================
 function validarMatricula(input) {
     let valor = input.value.replace(/\D/g, '').replace(/^0+/, '');
