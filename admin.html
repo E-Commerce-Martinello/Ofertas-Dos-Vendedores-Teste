@@ -7,13 +7,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- ARQUIVOS JS (MESMA ORDEM DO INDEX) -->
+    <!-- ARQUIVOS JS (ORDEM CORRETA) -->
     <!-- 1. Configurações e utilitários básicos -->
     <script src="js/config.js"></script>
-    <script src="js/utils.js"></script>
-    <!-- FUNÇÕES DE HORÁRIO -->
     <script src="js/horario-base.js"></script>
     <script src="js/horario-admin.js"></script>
+    <script src="js/utils.js"></script>
+    
     <!-- 2. Funcionalidades principais -->
     <script src="js/storage.js"></script>
     <script src="js/validators.js"></script>
@@ -31,6 +31,7 @@
     <script src="js/admin-fix.js"></script>
     
     <style>
+        /* Seu CSS existente (igual) */
         * {
             margin: 0;
             padding: 0;
@@ -432,7 +433,6 @@
             color: white;
         }
 
-        /* Estilos para notificações */
         .notificacao {
             position: fixed;
             top: 20px;
@@ -535,7 +535,7 @@
                 <input type="hidden" id="editandoId" value="">
                 
                 <div class="info-box">
-                    <strong>🕒 Horário de Brasília (UTC-3)</strong><br>
+                    <strong>🕒 Horário de Brasília</strong><br>
                     Use o horário de Brasília para cadastrar.
                 </div>
                 
@@ -673,7 +673,6 @@
                     }
                 }, 1000);
             } else {
-                // Usar notificação se disponível
                 if (typeof NOTIFICACAO !== 'undefined') {
                     NOTIFICACAO.erro('Senha incorreta!');
                 } else {
@@ -800,13 +799,11 @@
             document.getElementById('btnRemoverImagem').style.display = 'none';
         }
         
-        // Usar a função do image.js se disponível
         async function converterImagemParaBase64(file) {
             if (typeof IMAGEM !== 'undefined' && IMAGEM.paraBase64) {
                 return await IMAGEM.paraBase64(file);
             }
             
-            // Fallback
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
@@ -816,7 +813,7 @@
         }
         
         // ============================================
-        // RENDERIZAR LISTA DE OFERTAS
+        // RENDERIZAR LISTA DE OFERTAS (SEM CONVERSÕES!)
         // ============================================
         function renderizarListaOfertas() {
             const container = document.getElementById('listaOfertas');
@@ -827,14 +824,15 @@
                 return;
             }
             
-            // Ordenar por data de início
-            ofertas.sort((a, b) => new Date(a.dataInicio) - new Date(b.dataInicio));
+            // Ordenar por data de início (comparação direta de strings)
+            ofertas.sort((a, b) => a.dataInicio.localeCompare(b.dataInicio));
             
             let html = '';
             const agoraBrasilia = getHorarioBrasilia();
             
             ofertas.forEach((oferta, index) => {
                 try {
+                    // Converter strings para objetos Date (interpreta como horário local)
                     const dataInicio = new Date(oferta.dataInicio);
                     const dataFim = new Date(oferta.dataFim);
                     
@@ -859,7 +857,7 @@
                                 <img src="${oferta.urlImagem || 'img/produto.png'}" class="oferta-img">
                                 <div class="oferta-info">
                                     <strong>${oferta.tituloPagina || 'Sem título'}</strong><br>
-                                    📅 ${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)}<br>
+                                    📅 ${formatarBrasilia(dataInicio)} até ${formatarBrasilia(dataFim)}<br>
                                     🔗 ${(oferta.linkProduto || '').substring(0, 40)}...
                                 </div>
                                 <div class="oferta-actions">
@@ -876,83 +874,97 @@
             
             container.innerHTML = html;
             
-            // ATUALIZAR OFERTA ATIVA DEPOIS DE RENDERIZAR
+            // ATUALIZAR OFERTA ATIVA
             atualizarOfertaAtiva(ofertas);
         }
         
-// ============================================
-// EDIÇÃO DE OFERTA (SEM CONVERSÕES!)
-// ============================================
-function editarOferta(index) {
-    const oferta = ofertas[index];
-    
-    document.getElementById('formTitulo').innerHTML = '✏️ EDITAR OFERTA';
-    document.getElementById('editandoId').value = index;
-    
-    // As datas já estão no formato correto!
-    document.getElementById('dataInicio').value = oferta.dataInicio;  // ← "2026-03-05T10:00"
-    document.getElementById('dataFim').value = oferta.dataFim;        // ← "2026-03-05T11:00"
-    document.getElementById('linkProduto').value = oferta.linkProduto || '';
-    document.getElementById('textoOferta').value = oferta.textoOferta || '';
-    document.getElementById('tituloPagina').value = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
-    
-    // Carregar imagem...
-    if (oferta.urlImagem) {
-        document.getElementById('preview').src = oferta.urlImagem;
-        document.getElementById('preview').style.display = 'block';
-        document.getElementById('btnRemoverImagem').style.display = 'inline-block';
-    }
-    
-    document.getElementById('formNovaOferta').style.display = 'block';
-}
+        // ============================================
+        // EDIÇÃO DE OFERTA (SEM CONVERSÕES!)
+        // ============================================
+        function editarOferta(index) {
+            console.log('✏️ Editando oferta índice:', index);
+            const oferta = ofertas[index];
+            
+            if (!oferta) {
+                console.error('❌ Oferta não encontrada');
+                if (typeof NOTIFICACAO !== 'undefined') {
+                    NOTIFICACAO.erro('Oferta não encontrada!');
+                }
+                return;
+            }
+            
+            console.log('📦 Dados da oferta:', oferta);
+            
+            document.getElementById('formTitulo').innerHTML = '✏️ EDITAR OFERTA';
+            document.getElementById('editandoId').value = index;
+            
+            // Usar as strings diretamente (já estão em Brasília!)
+            document.getElementById('dataInicio').value = oferta.dataInicio;
+            document.getElementById('dataFim').value = oferta.dataFim;
+            document.getElementById('linkProduto').value = oferta.linkProduto || '';
+            document.getElementById('textoOferta').value = oferta.textoOferta || '';
+            document.getElementById('tituloPagina').value = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
+            
+            // Carregar imagem se existir
+            if (oferta.urlImagem) {
+                const preview = document.getElementById('preview');
+                preview.src = oferta.urlImagem;
+                preview.style.display = 'block';
+                document.getElementById('btnRemoverImagem').style.display = 'inline-block';
+            } else {
+                removerImagem();
+            }
+            
+            // Mostrar formulário e rolar até ele
+            document.getElementById('formNovaOferta').style.display = 'block';
+            document.getElementById('formNovaOferta').scrollIntoView({ behavior: 'smooth' });
+        }
         
         // ============================================
-// SALVAR OFERTA (SEM CONVERSÕES!)
-// ============================================
-async function salvarOferta() {
-    try {
-        const dataInicioInput = document.getElementById('dataInicio').value; // "2026-03-05T10:00"
-        const dataFimInput = document.getElementById('dataFim').value;       // "2026-03-05T11:00"
-        
-        if (!dataInicioInput || !dataFimInput) {
-            NOTIFICACAO?.erro('Preencha as datas!');
-            return;
-        }
-        
-        // Validar se as datas são válidas (criando objeto Date)
-        const dataInicioObj = new Date(dataInicioInput);
-        const dataFimObj = new Date(dataFimInput);
-        
-        if (isNaN(dataInicioObj.getTime()) || isNaN(dataFimObj.getTime())) {
-            NOTIFICACAO?.erro('Datas inválidas!');
-            return;
-        }
-        
-        if (dataFimObj <= dataInicioObj) {
-            NOTIFICACAO?.erro('Fim deve ser após início!');
-            return;
-        }
-        
-        // GUARDAR DIRETO AS STRINGS (sem converter!)
-        const ofertaDados = {
-            id: editandoId ? ofertas[parseInt(editandoId)].id : Date.now(),
-            dataInicio: dataInicioInput,  // ← "2026-03-05T10:00" (Brasília)
-            dataFim: dataFimInput,        // ← "2026-03-05T11:00" (Brasília)
-            linkProduto: linkProduto,
-            urlImagem: imagemBase64,
-            textoOferta: textoOferta,
-            tituloPagina: tituloPagina
-        };
-        
-        // Resto do código...
-        
-    } catch (error) {
-        console.error('Erro:', error);
-    }
-}
+        // SALVAR OFERTA (SEM CONVERSÕES!)
+        // ============================================
+        async function salvarOferta() {
+            try {
+                const dataInicioInput = document.getElementById('dataInicio').value; // "2026-03-05T10:00"
+                const dataFimInput = document.getElementById('dataFim').value;       // "2026-03-05T11:00"
+                const linkProduto = document.getElementById('linkProduto').value;
+                const textoOferta = document.getElementById('textoOferta').value;
+                const tituloPagina = document.getElementById('tituloPagina').value;
+                const editandoId = document.getElementById('editandoId').value;
                 
-                // Verificar conflito
-                const conflito = verificarConflitoDatas(dataInicioUTC, dataFimUTC, editandoId ? parseInt(editandoId) : null);
+                if (!dataInicioInput || !dataFimInput || !linkProduto || !textoOferta) {
+                    if (typeof NOTIFICACAO !== 'undefined') {
+                        NOTIFICACAO.erro('Preencha todos os campos!');
+                    } else {
+                        alert('❌ Preencha todos os campos obrigatórios!');
+                    }
+                    return;
+                }
+                
+                // Validar se as datas são válidas (criando objeto Date)
+                const dataInicioObj = new Date(dataInicioInput);
+                const dataFimObj = new Date(dataFimInput);
+                
+                if (isNaN(dataInicioObj.getTime()) || isNaN(dataFimObj.getTime())) {
+                    if (typeof NOTIFICACAO !== 'undefined') {
+                        NOTIFICACAO.erro('Datas inválidas!');
+                    } else {
+                        alert('❌ Datas inválidas!');
+                    }
+                    return;
+                }
+                
+                if (dataFimObj <= dataInicioObj) {
+                    if (typeof NOTIFICACAO !== 'undefined') {
+                        NOTIFICACAO.erro('Fim deve ser após início!');
+                    } else {
+                        alert('❌ Data de fim deve ser posterior à data de início!');
+                    }
+                    return;
+                }
+                
+                // Verificar conflito (comparando as strings diretamente)
+                const conflito = verificarConflitoDatas(dataInicioInput, dataFimInput, editandoId ? parseInt(editandoId) : null);
                 if (conflito.conflito) {
                     if (typeof NOTIFICACAO !== 'undefined') {
                         NOTIFICACAO.erro(conflito.mensagem);
@@ -966,7 +978,6 @@ async function salvarOferta() {
                 let imagemBase64 = '';
                 
                 if (fileInput.files && fileInput.files[0]) {
-                    // Validar imagem
                     if (typeof validarImagem !== 'undefined') {
                         const validacao = validarImagem(fileInput.files[0]);
                         if (!validacao.valido) {
@@ -984,13 +995,13 @@ async function salvarOferta() {
                 
                 const ofertaDados = {
                     id: editandoId ? ofertas[parseInt(editandoId)].id : Date.now(),
-                    dataInicio: dataInicioUTC,
-                    dataFim: dataFimUTC,
+                    dataInicio: dataInicioInput,  // ← Guarda "2026-03-05T10:00"
+                    dataFim: dataFimInput,        // ← Guarda "2026-03-05T11:00"
                     linkProduto: linkProduto,
                     urlImagem: imagemBase64 || (editandoId ? ofertas[parseInt(editandoId)].urlImagem : ''),
                     textoOferta: textoOferta,
                     tituloPagina: tituloPagina || 'DISPARO EM ANDAMENTO!',
-                    dataCriacao: editandoId ? ofertas[parseInt(editandoId)].dataCriacao : new Date().toISOString()
+                    dataCriacao: new Date().toISOString()
                 };
                 
                 if (editandoId !== '') {
@@ -1022,10 +1033,13 @@ async function salvarOferta() {
             }
         }
         
-        function verificarConflitoDatas(novaDataInicioUTC, novaDataFimUTC, ofertaIgnorarId = null) {
+        // ============================================
+        // VERIFICAR CONFLITO DE DATAS (comparando strings)
+        // ============================================
+        function verificarConflitoDatas(novaInicioStr, novaFimStr, ofertaIgnorarId = null) {
             try {
-                const novaInicio = new Date(novaDataInicioUTC);
-                const novaFim = new Date(novaDataFimUTC);
+                const novaInicio = new Date(novaInicioStr);
+                const novaFim = new Date(novaFimStr);
                 
                 for (let i = 0; i < ofertas.length; i++) {
                     if (ofertaIgnorarId !== null && i === ofertaIgnorarId) continue;
