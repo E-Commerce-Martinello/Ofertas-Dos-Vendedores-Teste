@@ -1,18 +1,18 @@
 // ============================================
 // horario.js - GERENCIAMENTO DE HORÁRIO BRASÍLIA
+// CORREÇÃO: Brasília é UTC-3 (subtrair 3 horas do UTC)
 // ============================================
 
-// Configuração: Brasília é UTC-3
-const BRASILIA_OFFSET = -3; // -3 horas
+const BRASILIA_OFFSET = -3; // -3 horas (UTC-3)
 
 // ============================================
-// FUNÇÃO 1: Obter horário atual de Brasília (como objeto Date)
+// FUNÇÃO 1: Obter horário atual de Brasília
 // ============================================
 function getHorarioBrasilia() {
     const agora = new Date();
     
-    // Converter para UTC puro (sem fusos)
-    const utc = Date.UTC(
+    // Pegar o UTC atual
+    const utcAtual = Date.UTC(
         agora.getUTCFullYear(),
         agora.getUTCMonth(),
         agora.getUTCDate(),
@@ -22,15 +22,17 @@ function getHorarioBrasilia() {
         agora.getUTCMilliseconds()
     );
     
-    // Aplicar offset de Brasília (UTC-3)
-    return new Date(utc + (BRASILIA_OFFSET * 60 * 60 * 1000));
+    // Converter para Brasília (UTC - 3 horas)
+    // IMPORTANTE: subtrair 3 * 60 * 60 * 1000 milissegundos
+    const brasiliaTime = new Date(utcAtual + (BRASILIA_OFFSET * 60 * 60 * 1000));
+    
+    return brasiliaTime;
 }
 
 // ============================================
 // FUNÇÃO 2: Converter data do INPUT (Brasília) para UTC para salvar
 // ============================================
 function brasiliaParaUTC(dataBrasiliaStr) {
-    // dataBrasiliaStr formato: "2026-03-05T10:00"
     if (!dataBrasiliaStr) return null;
     
     // Extrair partes da data
@@ -38,7 +40,8 @@ function brasiliaParaUTC(dataBrasiliaStr) {
     const [ano, mes, dia] = dataParte.split('-').map(Number);
     const [hora, minuto] = horaParte.split(':').map(Number);
     
-    // Criar data em UTC (Brasília + 3 horas = UTC)
+    // IMPORTANTE: Brasília para UTC = ADICIONAR 3 horas
+    // Ex: 08:00 Brasília = 11:00 UTC
     return new Date(Date.UTC(ano, mes-1, dia, hora + 3, minuto, 0)).toISOString();
 }
 
@@ -50,7 +53,8 @@ function utcParaBrasiliaInput(utcStr) {
     
     const data = new Date(utcStr);
     
-    // UTC - 3 horas = Brasília
+    // IMPORTANTE: UTC para Brasília = SUBTRAIR 3 horas
+    // Ex: 11:00 UTC = 08:00 Brasília
     const ano = data.getUTCFullYear();
     const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
     const dia = String(data.getUTCDate()).padStart(2, '0');
@@ -68,6 +72,7 @@ function formatarBrasilia(utcStr) {
     
     const data = new Date(utcStr);
     
+    // IMPORTANTE: UTC para Brasília = SUBTRAIR 3 horas
     const ano = data.getUTCFullYear();
     const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
     const dia = String(data.getUTCDate()).padStart(2, '0');
@@ -88,7 +93,8 @@ function isOfertaAtiva(oferta) {
     const dataInicio = new Date(oferta.dataInicio);
     const dataFim = new Date(oferta.dataFim);
     
-    // COMPARAÇÃO DIRETA (ambas em UTC)
+    // COMPARAÇÃO DIRETA: agoraBrasilia já está em UTC (porque veio de Date.UTC)
+    // dataInicio e dataFim também estão em UTC
     return (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim);
 }
 
@@ -97,8 +103,9 @@ function isOfertaAtiva(oferta) {
 // ============================================
 function debugOferta(oferta) {
     console.log('=== DEBUG HORÁRIO ===');
-    console.log('🕒 Agora (Brasília):', formatarBrasilia(getHorarioBrasilia().toISOString()));
-    console.log('📅 Agora (UTC raw):', getHorarioBrasilia().toISOString());
+    console.log('🕒 Agora (UTC puro):', new Date().toISOString());
+    console.log('🕒 Agora (Brasília UTC):', getHorarioBrasilia().toISOString());
+    console.log('🕒 Agora (Brasília formatado):', formatarBrasilia(getHorarioBrasilia().toISOString()));
     
     if (oferta) {
         console.log('📅 Início (UTC salvo):', oferta.dataInicio);
