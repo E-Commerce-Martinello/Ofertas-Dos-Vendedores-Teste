@@ -30,7 +30,7 @@ function getHorarioBrasilia() {
 }
 
 // ============================================
-// FUNÇÃO 2: Formatar data UTC para exibição (Brasília)
+// FUNÇÃO: Formatar data UTC para exibição (Brasília) - CORRIGIDA!
 // ============================================
 function formatarBrasilia(utcStr) {
     if (!utcStr) return 'Data inválida';
@@ -39,16 +39,19 @@ function formatarBrasilia(utcStr) {
         const data = new Date(utcStr);
         if (isNaN(data.getTime())) return 'Data inválida';
         
-        // A data que chega aqui JÁ É BRASÍLIA em UTC
-        // Exemplo: "2026-03-05T10:00:00.000Z" = 10:00 Brasília
+        // A data que chega aqui está em UTC
+        // Exemplo: "2026-03-05T13:25:00.000Z" = 10:25 Brasília
         
-        // Extrair componentes diretamente do UTC
-        const ano = data.getUTCFullYear();
-        const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
-        const dia = String(data.getUTCDate()).padStart(2, '0');
-        const hora = String(data.getUTCHours()).padStart(2, '0');
-        const minuto = String(data.getUTCMinutes()).padStart(2, '0');
-        const segundo = String(data.getUTCSeconds()).padStart(2, '0');
+        // Converter UTC para Brasília (subtrair 3 horas)
+        const dataBrasilia = new Date(data.getTime() - (3 * 60 * 60 * 1000));
+        
+        // Extrair componentes
+        const ano = dataBrasilia.getUTCFullYear();
+        const mes = String(dataBrasilia.getUTCMonth() + 1).padStart(2, '0');
+        const dia = String(dataBrasilia.getUTCDate()).padStart(2, '0');
+        const hora = String(dataBrasilia.getUTCHours()).padStart(2, '0');
+        const minuto = String(dataBrasilia.getUTCMinutes()).padStart(2, '0');
+        const segundo = String(dataBrasilia.getUTCSeconds()).padStart(2, '0');
         
         return `${dia}/${mes}/${ano} ${hora}:${minuto}:${segundo}`;
     } catch (e) {
@@ -57,7 +60,7 @@ function formatarBrasilia(utcStr) {
 }
 
 // ============================================
-// FUNÇÃO 3: Converter data do INPUT (Brasília) para UTC
+// FUNÇÃO: Converter data do INPUT (Brasília) para UTC
 // ============================================
 function brasiliaParaUTC(dataBrasiliaStr) {
     if (!dataBrasiliaStr) return null;
@@ -67,17 +70,18 @@ function brasiliaParaUTC(dataBrasiliaStr) {
         const [ano, mes, dia] = dataParte.split('-').map(Number);
         const [hora, minuto] = horaParte.split(':').map(Number);
         
-        // IMPORTANTE: O que você digitou É BRASÍLIA
-        // Para converter para UTC: BRASÍLIA + 3 HORAS
-        // Exemplo: 10:00 Brasília = 13:00 UTC
-        return new Date(Date.UTC(ano, mes-1, dia, hora + 3, minuto, 0)).toISOString();
+        // Criar data em Brasília (UTC-3)
+        const dataBrasilia = new Date(Date.UTC(ano, mes-1, dia, hora, minuto, 0));
+        
+        // Converter para UTC (adicionar 3 horas)
+        return new Date(dataBrasilia.getTime() + (3 * 60 * 60 * 1000)).toISOString();
     } catch (e) {
         return null;
     }
 }
 
 // ============================================
-// FUNÇÃO 4: Converter UTC para formato do INPUT (Brasília)
+// FUNÇÃO: Converter UTC para formato do INPUT (Brasília)
 // ============================================
 function utcParaBrasiliaInput(utcStr) {
     if (!utcStr) return '';
@@ -86,13 +90,14 @@ function utcParaBrasiliaInput(utcStr) {
         const data = new Date(utcStr);
         if (isNaN(data.getTime())) return '';
         
-        // UTC para Brasília: UTC - 3 HORAS
-        // Exemplo: 13:00 UTC = 10:00 Brasília
-        const ano = data.getUTCFullYear();
-        const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
-        const dia = String(data.getUTCDate()).padStart(2, '0');
-        const hora = String(data.getUTCHours() - 3).padStart(2, '0');
-        const minuto = String(data.getUTCMinutes()).padStart(2, '0');
+        // UTC para Brasília: subtrair 3 horas
+        const dataBrasilia = new Date(data.getTime() - (3 * 60 * 60 * 1000));
+        
+        const ano = dataBrasilia.getUTCFullYear();
+        const mes = String(dataBrasilia.getUTCMonth() + 1).padStart(2, '0');
+        const dia = String(dataBrasilia.getUTCDate()).padStart(2, '0');
+        const hora = String(dataBrasilia.getUTCHours()).padStart(2, '0');
+        const minuto = String(dataBrasilia.getUTCMinutes()).padStart(2, '0');
         
         return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
     } catch (e) {
