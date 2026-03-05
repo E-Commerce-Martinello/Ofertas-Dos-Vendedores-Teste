@@ -22,7 +22,7 @@
     <!-- 3. Serviços e API -->
     <script src="js/api.js"></script>
     <script src="js/cache.js"></script>
-    <script src="js/github-storage.js"></script>  <!-- NOVO! -->
+    <!-- GITHUB REMOVIDO -->
     
     <!-- 4. Interface -->
     <script src="js/ui.js"></script>
@@ -625,16 +625,6 @@
 
     <script>
         // ============================================
-        // CONFIGURAÇÕES DO GITHUB (COLOQUE SEU TOKEN AQUI!)
-        // ============================================
-        const GITHUB_CONFIG = {
-            owner: 'e-commerce-martinello',
-            repo: 'ofertas-dos-vendedores-teste',
-            path: 'ofertas.json',
-            token: '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' // ← COLE SEU TOKEN AQUI!
-        };
-
-        // ============================================
         // CONFIGURAÇÕES
         // ============================================
         const SENHA_ADMIN = "777";
@@ -642,116 +632,32 @@
         let ofertas = [];
         
         // ============================================
-        // FUNÇÕES DE INTEGRAÇÃO COM GITHUB
+        // FUNÇÕES DE STORAGE (APENAS LOCALSTORAGE)
         // ============================================
         async function carregarOfertas() {
             try {
-                console.log('📥 Carregando ofertas do GitHub...');
-                
-                const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-                
-                const response = await fetch(url, {
-                    headers: {
-                        'Authorization': `token ${GITHUB_CONFIG.token}`,
-                        'Accept': 'application/vnd.github.v3+json'
-                    }
-                });
-                
-                if (response.status === 404) {
-                    console.log('ℹ️ Arquivo não existe ainda');
-                    return [];
-                }
-                
-                if (!response.ok) {
-                    throw new Error(`Erro GitHub: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                const content = atob(data.content);
-                const ofertasCarregadas = JSON.parse(content);
-                
-                console.log(`✅ ${ofertasCarregadas.length} ofertas carregadas do GitHub`);
-                
-                // Salvar no localStorage como cache
-                localStorage.setItem('ofertasMartinello', JSON.stringify(ofertasCarregadas));
-                
-                return ofertasCarregadas;
-                
-            } catch (error) {
-                console.error('❌ Erro ao carregar do GitHub:', error);
-                console.log('ℹ️ Usando localStorage como fallback');
-                
-                // Fallback para localStorage
+                console.log('📥 Carregando ofertas do localStorage...');
                 const ofertasLocal = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
+                console.log(`✅ ${ofertasLocal.length} ofertas carregadas`);
                 return ofertasLocal;
+            } catch (error) {
+                console.error('❌ Erro ao carregar:', error);
+                return [];
             }
         }
 
         async function salvarOfertas(novasOfertas) {
             try {
-                console.log('📤 Salvando ofertas no GitHub...');
-                
-                // Primeiro, verificar se o arquivo já existe
-                const urlGet = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
-                
-                let sha = '';
-                const getResponse = await fetch(urlGet, {
-                    headers: {
-                        'Authorization': `token ${GITHUB_CONFIG.token}`,
-                        'Accept': 'application/vnd.github.v3+json'
-                    }
-                });
-                
-                if (getResponse.status !== 404) {
-                    const data = await getResponse.json();
-                    sha = data.sha;
-                }
-                
-                // Preparar conteúdo
-                const content = btoa(JSON.stringify(novasOfertas, null, 2));
-                
-                // Salvar no GitHub
-                const putResponse = await fetch(urlGet, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${GITHUB_CONFIG.token}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: `Atualizando ofertas - ${new Date().toLocaleString('pt-BR')}`,
-                        content: content,
-                        sha: sha
-                    })
-                });
-                
-                if (putResponse.ok) {
-                    console.log('✅ Ofertas salvas no GitHub!');
-                    
-                    // Salvar também no localStorage
-                    localStorage.setItem('ofertasMartinello', JSON.stringify(novasOfertas));
-                    
-                    if (typeof NOTIFICACAO !== 'undefined') {
-                        NOTIFICACAO.sucesso('Ofertas sincronizadas com GitHub!');
-                    }
-                    
-                    return true;
-                } else {
-                    const erro = await putResponse.text();
-                    throw new Error(`Erro GitHub: ${erro}`);
-                }
-                
-            } catch (error) {
-                console.error('❌ Erro ao salvar no GitHub:', error);
-                console.log('ℹ️ Salvando apenas no localStorage');
-                
-                // Fallback: salvar só no localStorage
+                console.log('💾 Salvando no localStorage...');
                 localStorage.setItem('ofertasMartinello', JSON.stringify(novasOfertas));
                 
                 if (typeof NOTIFICACAO !== 'undefined') {
-                    NOTIFICACAO.erro('Erro ao sincronizar com GitHub. Salvo apenas localmente.');
+                    NOTIFICACAO.sucesso('Oferta salva com sucesso!');
                 }
                 
+                return true;
+            } catch (error) {
+                console.error('❌ Erro ao salvar:', error);
                 return false;
             }
         }
@@ -1130,7 +1036,7 @@
                     ofertas.push(ofertaDados);
                 }
                 
-                // Salvar no GitHub
+                // Salvar no localStorage
                 await salvarOfertas(ofertas);
                 
                 // Atualizar oferta ativa
