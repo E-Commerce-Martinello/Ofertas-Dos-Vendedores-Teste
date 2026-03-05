@@ -731,46 +731,41 @@ async function enviar() {
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
-// ============================================
-// INICIALIZAÇÃO AJUSTADA PARA 700 VENDEDORES
-// ============================================
 function iniciar() {
     try {
-        // 1. Recuperar matrícula salva no navegador
-        const campoMatricula = document.getElementById('cod');
-        const matriculaSalva = localStorage.getItem('martinello_matricula');
-        
-        if (matriculaSalva) {
-            campoMatricula.value = matriculaSalva;
-            console.log('✅ Matrícula recuperada');
+        // Inicializar tema
+        if (typeof TEMA !== 'undefined') {
+            TEMA.init();
         }
-
-        // 2. Salvar matrícula automaticamente enquanto ele digita
-        campoMatricula.addEventListener('input', (e) => {
-            validarMatricula(e.target); // Mantém sua validação original
-            localStorage.setItem('martinello_matricula', e.target.value);
-        });
-
-        // 3. Inicializar tema
-        if (typeof TEMA !== 'undefined') TEMA.init();
         
-        // 4. Relógio Local (Roda a cada 1s sem gastar internet)
-        setInterval(() => {
-            const agora = new Date(); 
-            // Se você tiver uma função específica de fuso horário, use-a aqui
-            document.getElementById('infoHoraBrasilia').innerText = agora.toLocaleTimeString('pt-BR');
-        }, 1000);
-
-        // 5. Verificação de Ofertas no Firebase (Roda a cada 60s para economizar cota)
-        verificarStatus(); // Roda uma vez ao abrir
-        setInterval(verificarStatus, 60000); // Depois só de minuto em minuto
+        // Verificar imagem
+        const img = document.getElementById('fotoProduto');
+        if (typeof IMAGEM !== 'undefined' && IMAGEM.verificarCarregamento) {
+            IMAGEM.verificarCarregamento(img, configTelaEmBreve.imagem);
+        }
         
-        console.log('✅ Portal otimizado para escala de 700 usuários');
+        // Iniciar verificação de status
+        verificarStatus();
+        setInterval(verificarStatus, 1000);
+        
+        console.log('✅ Portal do Vendedor iniciado');
         
     } catch (error) {
         console.error('❌ Erro na inicialização:', error);
     }
 }
+
+// Iniciar quando a página carregar
+document.addEventListener('DOMContentLoaded', iniciar);
+
+// Efeito de brilho no botão
+setInterval(() => {
+    const btn = document.getElementById('btnEnviar');
+    if (btn && !btn.disabled) {
+        btn.classList.add('glow');
+        setTimeout(() => btn.classList.remove('glow'), 1000);
+    }
+}, 3000);
 </script>
 
 </body>
