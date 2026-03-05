@@ -9,10 +9,6 @@ function formatarTexto(texto, link, codigo) {
         .replace('[CODIGO]', codigo);
 }
 
-// ============================================
-// utils.js - FUNÇÕES UTILITÁRIAS
-// ============================================
-
 // Validar matrícula (apenas números, máximo 5 dígitos)
 function validarMatricula(input) {
     // Remove qualquer caractere que não seja número
@@ -29,9 +25,7 @@ function validarMatricula(input) {
     input.value = valor;
 }
 
-// Exportar para uso global
-window.validarMatricula = validarMatricula;
-
+// Validar imagem
 function validarImagem(file) {
     if (!file) return { valido: false, erro: 'Nenhum arquivo selecionado' };
     
@@ -84,3 +78,13 @@ function throttle(func, limit) {
         }
     };
 }
+
+// ============================================
+// EXPORTAÇÕES PARA USO GLOBAL
+// ============================================
+window.formatarTexto = formatarTexto;
+window.validarMatricula = validarMatricula;
+window.validarImagem = validarImagem;
+window.getBrowserName = getBrowserName;
+window.debounce = debounce;
+window.throttle = throttle;
