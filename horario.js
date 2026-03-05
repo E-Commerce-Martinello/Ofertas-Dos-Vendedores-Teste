@@ -1,10 +1,10 @@
 // ============================================
 // horario.js - GERENCIAMENTO DE HORÁRIO BRASÍLIA
-// VERSÃO CORRIGIDA - SEM ERROS DE OFFSET
+// VERSÃO FINAL CORRIGIDA
 // ============================================
 
 // ============================================
-// FUNÇÃO 1: Obter horário atual de Brasília (como objeto Date)
+// FUNÇÃO 1: Obter horário atual de Brasília
 // ============================================
 function getHorarioBrasilia() {
     const agora = new Date();
@@ -37,16 +37,13 @@ function getHorarioBrasilia() {
 // FUNÇÃO 2: Converter data do INPUT (Brasília) para UTC para salvar
 // ============================================
 function brasiliaParaUTC(dataBrasiliaStr) {
-    // dataBrasiliaStr formato: "2026-03-05T08:00"
     if (!dataBrasiliaStr) return null;
     
-    // Extrair partes
     const [dataParte, horaParte] = dataBrasiliaStr.split('T');
     const [ano, mes, dia] = dataParte.split('-').map(Number);
     const [hora, minuto] = horaParte.split(':').map(Number);
     
-    // IMPORTANTE: O que você digitou (8:00) já é Brasília
-    // Para UTC: 8:00 Brasília = 11:00 UTC (somar 3)
+    // Brasília para UTC = adicionar 3 horas
     return new Date(Date.UTC(ano, mes-1, dia, hora + 3, minuto, 0)).toISOString();
 }
 
@@ -58,8 +55,6 @@ function utcParaBrasiliaInput(utcStr) {
     
     const data = new Date(utcStr);
     
-    // UTC para Brasília: subtrair 3 horas
-    // Ex: 11:00 UTC = 8:00 Brasília
     const ano = data.getUTCFullYear();
     const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
     const dia = String(data.getUTCDate()).padStart(2, '0');
@@ -77,7 +72,6 @@ function formatarBrasilia(utcStr) {
     
     const data = new Date(utcStr);
     
-    // Converter UTC para Brasília (subtrair 3)
     const ano = data.getUTCFullYear();
     const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
     const dia = String(data.getUTCDate()).padStart(2, '0');
@@ -98,28 +92,18 @@ function isOfertaAtiva(oferta) {
     const dataInicio = new Date(oferta.dataInicio);
     const dataFim = new Date(oferta.dataFim);
     
-    // COMPARAÇÃO CORRETA: ambos em UTC
+    // COMPARAÇÃO CORRETA: todos em UTC
     return (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim);
 }
 
 // ============================================
-// FUNÇÃO 6: DEBUG - Mostrar TODAS as informações
+// FUNÇÃO 6: DEBUG - Mostrar informações no console
 // ============================================
-function debugCompleto(oferta) {
-    const agora = new Date();
-    const agoraBrasilia = getHorarioBrasilia();
-    
-    console.log('=== DEBUG COMPLETO ===');
-    console.log('1️⃣ Hora do computador:', agora.toString());
-    console.log('2️⃣ Hora UTC pura:', agora.toISOString());
-    console.log('3️⃣ Hora Brasília (calculada):', agoraBrasilia.toISOString());
-    console.log('4️⃣ Hora Brasília (formatada):', formatarBrasilia(agoraBrasilia.toISOString()));
-    
-    if (oferta) {
-        console.log('5️⃣ Oferta início (UTC):', oferta.dataInicio);
-        console.log('6️⃣ Oferta fim (UTC):', oferta.dataFim);
-        console.log('7️⃣ Início (Brasília):', formatarBrasilia(oferta.dataInicio));
-        console.log('8️⃣ Fim (Brasília):', formatarBrasilia(oferta.dataFim));
-        console.log('9️⃣ Ativa?', isOfertaAtiva(oferta));
-    }
+function debugHorario() {
+    console.log('=== DEBUG HORARIO.JS ===');
+    console.log('getHorarioBrasilia():', getHorarioBrasilia().toISOString());
+    console.log('formatarBrasilia(getHorarioBrasilia()):', formatarBrasilia(getHorarioBrasilia().toISOString()));
 }
+
+// Executar debug automático ao carregar
+debugHorario();
