@@ -517,6 +517,46 @@
 
     <script>
         // ============================================
+// DIAGNÓSTICO DO LOCALSTORAGE
+// ============================================
+function diagnosticarStorage() {
+    console.log('=== DIAGNÓSTICO DO ADMIN ===');
+    console.log('Itens no localStorage:');
+    for (let i = 0; i < localStorage.length; i++) {
+        const chave = localStorage.key(i);
+        const valor = localStorage.getItem(chave);
+        console.log(`- ${chave}:`, valor ? valor.substring(0, 100) + '...' : 'vazio');
+    }
+    
+    // Verificar ofertas
+    try {
+        const ofertas = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
+        console.log('📦 Ofertas cadastradas:', ofertas.length);
+        
+        const agora = getHorarioBrasilia();
+        console.log('🕒 Agora (Brasília):', formatarBrasilia(agora.toISOString()));
+        
+        ofertas.forEach((ofertas, index) => {
+            console.log(`Oferta ${index}:`, {
+                titulo: ofertas.tituloPagina,
+                inicio: ofertas.dataInicio,
+                fim: ofertas.dataFim,
+                inicioBrasilia: formatarBrasilia(ofertas.dataInicio),
+                fimBrasilia: formatarBrasilia(ofertas.dataFim),
+                ativa: isOfertaAtiva(ofertas)
+            });
+        });
+    } catch (e) {
+        console.error('Erro ao analisar ofertas:', e);
+    }
+}
+
+// Chamar diagnóstico após login
+// Na função verificarSenha(), adicione esta linha:
+// diagnosticarStorage();
+
+        
+        // ============================================
         // CONFIGURAÇÕES
         // ============================================
         const SENHA_ADMIN = "777";
@@ -542,19 +582,22 @@
         // ============================================
         // FUNÇÕES DE LOGIN
         // ============================================
-        function verificarSenha() {
-            const senha = document.getElementById('senhaInput').value;
-            if (senha === SENHA_ADMIN) {
-                localStorage.setItem(SESSION_KEY, 'true');
-                document.getElementById('loginBox').style.display = 'none';
-                document.getElementById('painelAdmin').style.display = 'block';
-                renderizarListaOfertas();
-                carregarConfigPadrao();
-                setupDragAndDrop();
-            } else {
-                alert('❌ Senha incorreta!');
-            }
-        }
+       function verificarSenha() {
+    const senha = document.getElementById('senhaInput').value;
+    if (senha === SENHA_ADMIN) {
+        localStorage.setItem(SESSION_KEY, 'true');
+        document.getElementById('loginBox').style.display = 'none';
+        document.getElementById('painelAdmin').style.display = 'block';
+        renderizarListaOfertas();
+        carregarConfigPadrao();
+        setupDragAndDrop();
+        
+        // 🔍 DIAGNÓSTICO
+        diagnosticarStorage();
+    } else {
+        alert('❌ Senha incorreta!');
+    }
+}
         
         function logout() {
             localStorage.removeItem(SESSION_KEY);
