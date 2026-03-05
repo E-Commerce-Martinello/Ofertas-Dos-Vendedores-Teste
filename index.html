@@ -11,26 +11,16 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- ARQUIVOS JS (ORDEM DE CARREGAMENTO IMPORTANTE!) -->
-    <!-- 1. Configurações e utilitários básicos -->
+    <!-- ARQUIVOS JS -->
     <script src="js/config.js"></script>
     <script src="js/horario.js"></script>
     <script src="js/utils.js"></script>
-    
-    <!-- 2. Funcionalidades principais -->
     <script src="js/storage.js"></script>
     <script src="js/validators.js"></script>
     <script src="js/image.js"></script>
-    
-    <!-- 3. Serviços e API -->
     <script src="js/api.js"></script>
     <script src="js/cache.js"></script>
-    
-    <!-- 4. Interface -->
     <script src="js/ui.js"></script>
-    
-    <!-- 5. Diagnóstico -->
-    <script src="js/debug.js"></script>
     
     <style>
         * {
@@ -50,11 +40,16 @@
             --text-dark: #f4f4f4;
             --card-light: white;
             --card-dark: #2d2d2d;
+            --embreve-bg: #f0f0f0;
+            --embreve-text: #666;
         }
 
         body.dark-mode {
             background: var(--bg-dark);
             color: var(--text-dark);
+            --card-light: var(--card-dark);
+            --embreve-bg: #3d3d3d;
+            --embreve-text: #aaa;
         }
 
         body.dark-mode .card {
@@ -396,78 +391,71 @@
         }
 
         .mensagem-embreve {
-            color: #666;
+            color: var(--embreve-text);
             margin: 15px 0;
             font-size: 16px;
             line-height: 1.5;
             padding: 15px;
-            background: #f9f9f9;
+            background: var(--embreve-bg);
             border-radius: 10px;
             display: none;
             white-space: pre-line;
         }
 
-        .debug-panel {
-            font-size: 12px;
+        .info-panel {
+            font-size: 13px;
             color: #666;
             margin-top: 20px;
-            padding: 10px;
-            background: #f5f5f5;
-            border-radius: 8px;
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 10px;
             text-align: left;
             border: 1px solid #eee;
         }
 
-        .debug-panel div {
-            margin: 5px 0;
+        body.dark-mode .info-panel {
+            background: #3d3d3d;
+            color: #aaa;
+            border-color: #555;
         }
 
-        /* Estilos para notificações */
-        .notificacao {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 10px;
-            color: white;
-            font-weight: bold;
-            z-index: 9999;
-            animation: slideIn 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        .info-panel div {
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .notificacao.sucesso {
+        .info-panel i {
+            width: 20px;
+            color: var(--primary-color);
+        }
+
+        .status-text {
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .status-ativo {
             background: #28a745;
+            color: white;
         }
 
-        .notificacao.erro {
-            background: #dc3545;
+        .status-inativo {
+            background: #6c757d;
+            color: white;
         }
 
-        .notificacao-saindo {
-            animation: slideOut 0.3s ease forwards;
+        .status-embreve {
+            background: #ffc107;
+            color: black;
         }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
+        .empty-message {
+            color: #999;
+            font-style: italic;
         }
     </style>
 </head>
@@ -486,24 +474,32 @@
         
         <img id="fotoProduto" class="product-image" src="img/produto.png" alt="Imagem do Produto">
         
-        <!-- Mensagem para tela "EM BREVE" -->
+        <!-- Mensagem para quando não há oferta -->
         <div id="mensagemEmBreve" class="mensagem-embreve"></div>
         
         <div class="input-group">
             <i class="fas fa-tag input-icon"></i>
-            <input type="text" id="cod" placeholder="DIGITE SUA MATRÍCULA AQUI!" oninput="validarMatricula(this)">
+            <input type="text" id="cod" placeholder="DIGITE SUA MATRÍCULA AQUI!" oninput="validarMatricula(this)" maxlength="5">
         </div>
         
         <button class="btn-primary" onclick="enviar()" id="btnEnviar">
             <span class="btn-text">GERAR E ENVIAR NO WHATSAPP</span>
         </button>
         
-        <!-- PAINEL DE DEBUG -->
-        <div class="debug-panel">
-            <div>🕒 <strong>Horário Brasília:</strong> <span id="debugHoraBrasilia"></span></div>
-            <div>📅 <strong>Oferta:</strong> <span id="debugOfertaInfo"></span></div>
-            <div>⏰ <strong>Status:</strong> <span id="debugStatus"></span></div>
-            <div><button onclick="diagnosticarCompleto('INDEX')" style="background:#17a2b8; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; margin-top:5px;">🔍 DIAGNOSTICAR</button></div>
+        <!-- PAINEL DE INFORMAÇÕES (SEM BOTÃO DE DIAGNÓSTICO) -->
+        <div class="info-panel">
+            <div>
+                <i class="fas fa-clock"></i>
+                <strong>Horário Brasília:</strong> <span id="infoHoraBrasilia"></span>
+            </div>
+            <div>
+                <i class="fas fa-tag"></i>
+                <strong>Oferta:</strong> <span id="infoOferta">EM BREVE</span>
+            </div>
+            <div>
+                <i class="fas fa-info-circle"></i>
+                <strong>Status:</strong> <span id="infoStatus" class="status-text">SEM OFERTAS NO MOMENTO</span>
+            </div>
         </div>
     </div>
 </div>
@@ -518,11 +514,6 @@
 
 <script>
 // ============================================
-// INICIALIZAÇÃO DO TEMA
-// ============================================
-TEMA.init();
-
-// ============================================
 // CONFIGURAÇÕES DA TELA "EM BREVE"
 // ============================================
 let configTelaEmBreve = {
@@ -535,38 +526,33 @@ try {
     const configSalva = localStorage.getItem('configTelaEmBreve');
     if (configSalva) {
         configTelaEmBreve = { ...configTelaEmBreve, ...JSON.parse(configSalva) };
+        console.log('✅ Configurações "EM BREVE" carregadas');
     }
 } catch (e) {}
 
 // ============================================
-// VERIFICAR STATUS DA OFERTA (VERSÃO CORRIGIDA)
+// VERIFICAR STATUS DA OFERTA
 // ============================================
 function verificarStatus() {
     try {
-        // 1️⃣ PEGAR HORÁRIO ATUAL DE BRASÍLIA
+        // 1️⃣ PEGAR HORÁRIO ATUAL DE BRASÍLIA (sempre atualiza)
         const agoraBrasilia = getHorarioBrasilia();
         const horaFormatada = formatarBrasilia(agoraBrasilia.toISOString());
-        document.getElementById('debugHoraBrasilia').innerText = horaFormatada;
+        document.getElementById('infoHoraBrasilia').innerText = horaFormatada;
         
-        console.log('🕒 Horário Brasília agora:', horaFormatada);
-        console.log('🕒 UTC agora:', agoraBrasilia.toISOString());
-        
-        // 2️⃣ CARREGAR OFERTAS DO STORAGE
+        // 2️⃣ CARREGAR OFERTAS
         let ofertas = [];
         try {
             ofertas = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
-        } catch (e) {
-            console.error('Erro ao carregar ofertas:', e);
-        }
+        } catch (e) {}
         
-        // 3️⃣ ENCONTRAR OFERTA ATIVA (SEM USAR atualizarOfertaAtiva)
+        // 3️⃣ ENCONTRAR OFERTA ATIVA
         let ofertaAtiva = null;
         
         for (const oferta of ofertas) {
             const inicio = new Date(oferta.dataInicio);
             const fim = new Date(oferta.dataFim);
             
-            // COMPARAÇÃO DIRETA
             if (agoraBrasilia >= inicio && agoraBrasilia <= fim) {
                 ofertaAtiva = oferta;
                 console.log('✅ Oferta ativa encontrada:', oferta.tituloPagina);
@@ -574,40 +560,13 @@ function verificarStatus() {
             }
         }
         
-        // 4️⃣ SE NÃO ENCONTROU, TENTAR PELA CHAVE 'ofertaAtiva' (legado)
-        if (!ofertaAtiva) {
-            try {
-                const ofertaSalva = localStorage.getItem('ofertaAtiva');
-                if (ofertaSalva) {
-                    const oferta = JSON.parse(ofertaSalva);
-                    const inicio = new Date(oferta.dataInicio);
-                    const fim = new Date(oferta.dataFim);
-                    
-                    if (agoraBrasilia >= inicio && agoraBrasilia <= fim) {
-                        ofertaAtiva = oferta;
-                        console.log('✅ Oferta ativa (legado):', oferta.tituloPagina);
-                    }
-                }
-            } catch (e) {}
-        }
+        // 4️⃣ ATUALIZAR INTERFACE
+        const statusElement = document.getElementById('infoStatus');
+        const ofertaElement = document.getElementById('infoOferta');
+        const statusClass = statusElement.className;
         
-        // 5️⃣ ATUALIZAR INTERFACE
-        if (!ofertaAtiva) {
-            aplicarModoEmBreve();
-            document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
-            document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
-            return;
-        }
-        
-        // Mostrar informações da oferta
-        document.getElementById('debugOfertaInfo').innerHTML = 
-            `${ofertaAtiva.tituloPagina} (${formatarBrasilia(ofertaAtiva.dataInicio)} até ${formatarBrasilia(ofertaAtiva.dataFim)})`;
-        
-        // Verificar se está ativa (redundante, mas seguro)
-        const ativa = (agoraBrasilia >= new Date(ofertaAtiva.dataInicio) && 
-                      agoraBrasilia <= new Date(ofertaAtiva.dataFim));
-        
-        if (ativa) {
+        if (ofertaAtiva) {
+            // ✅ MODO COM OFERTA ATIVA
             document.querySelector('h2').innerText = ofertaAtiva.tituloPagina;
             if (ofertaAtiva.urlImagem) {
                 document.getElementById('fotoProduto').src = ofertaAtiva.urlImagem;
@@ -616,22 +575,47 @@ function verificarStatus() {
             document.getElementById('btnEnviar').disabled = false;
             document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
             document.getElementById('mensagemEmBreve').style.display = 'none';
-            document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
+            
+            // Atualizar painel de informações
+            ofertaElement.innerHTML = `${ofertaAtiva.tituloPagina} (${formatarBrasilia(ofertaAtiva.dataInicio)} - ${formatarBrasilia(ofertaAtiva.dataFim)})`;
+            statusElement.innerHTML = '✅ OFERTA ATIVA';
+            statusElement.className = 'status-text status-ativo';
+            
         } else {
-            aplicarModoEmBreve();
-            document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
+            // ⏸️ MODO SEM OFERTA
+            document.querySelector('h2').innerText = configTelaEmBreve.titulo;
+            document.getElementById('fotoProduto').src = configTelaEmBreve.imagem;
+            document.getElementById('cod').disabled = true;
+            document.getElementById('btnEnviar').disabled = true;
+            document.querySelector('.btn-text').textContent = 'EM BREVE';
+            
+            // Mostrar mensagem personalizada se existir
+            const msgElement = document.getElementById('mensagemEmBreve');
+            if (configTelaEmBreve.mensagem) {
+                msgElement.innerText = configTelaEmBreve.mensagem;
+                msgElement.style.display = 'block';
+            } else {
+                msgElement.style.display = 'none';
+            }
+            
+            // Atualizar painel de informações
+            ofertaElement.innerHTML = 'EM BREVE';
+            statusElement.innerHTML = '⏸️ SEM OFERTAS NO MOMENTO';
+            statusElement.className = 'status-text status-embreve';
         }
         
     } catch (error) {
-        console.error('❌ Erro crítico:', error);
-        aplicarModoEmBreve();
+        console.error('❌ Erro em verificarStatus:', error);
     }
 }
 
 // ============================================
-// FUNÇÃO DE ENVIO (usando os novos módulos)
+// FUNÇÃO DE ENVIO
 // ============================================
+let enviando = false;
+
 async function enviar() {
+    // Verificar se há oferta ativa
     const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
     if (!oferta) {
         NOTIFICACAO.erro('Nenhuma oferta ativa no momento');
@@ -648,7 +632,13 @@ async function enviar() {
         }
 
         enviando = true;
-        LOADER.mostrar(document.getElementById('btnEnviar'));
+        
+        // Mostrar loading
+        const btn = document.getElementById('btnEnviar');
+        const btnText = btn.querySelector('.btn-text');
+        const textoOriginal = btnText.textContent;
+        btn.disabled = true;
+        btnText.innerHTML = '<span class="spinner"></span>Processando...';
 
         const navegador = getBrowserName();
         const linkFinal = `https://www.martinello.com.br/parceiros/${codInput}?redir=${encodeURIComponent(oferta.linkProduto)}`;
@@ -664,21 +654,21 @@ async function enviar() {
             NOTIFICACAO.sucesso('Compartilhado com sucesso!');
         }
         
-        LOADER.esconder(document.getElementById('btnEnviar'));
+        // Restaurar botão
+        btn.disabled = false;
+        btnText.textContent = textoOriginal;
         enviando = false;
         
     } catch (error) {
         console.error("Erro:", error);
         NOTIFICACAO.erro('Erro ao compartilhar');
-        LOADER.esconder(document.getElementById('btnEnviar'));
+        
+        const btn = document.getElementById('btnEnviar');
+        btn.disabled = false;
+        btn.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
         enviando = false;
     }
 }
-
-// ============================================
-// VARIÁVEIS GLOBAIS
-// ============================================
-let enviando = false;
 
 // ============================================
 // INICIALIZAÇÃO
@@ -696,11 +686,10 @@ function iniciar() {
         verificarStatus();
         setInterval(verificarStatus, 1000);
         
-        // Diagnóstico automático
-        setTimeout(() => diagnosticarCompleto('INDEX'), 2000);
+        console.log('✅ Portal do Vendedor iniciado');
         
     } catch (error) {
-        console.error('Erro na inicialização:', error);
+        console.error('❌ Erro na inicialização:', error);
     }
 }
 
