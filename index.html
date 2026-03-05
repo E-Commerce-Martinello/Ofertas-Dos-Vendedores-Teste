@@ -480,42 +480,49 @@ try {
 }
 
 // ============================================
-// VERIFICAR STATUS DA OFERTA
+// VERIFICAR STATUS DA OFERTA (SEM ERROS)
 // ============================================
 function verificarStatus() {
     try {
-        const oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
+        // Atualizar horário no debug (sempre funciona)
+        const agoraBrasilia = getHorarioBrasilia();
+        document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
+        
+        // Tentar carregar oferta
+        let oferta = null;
+        try {
+            oferta = JSON.parse(localStorage.getItem('ofertaAtiva'));
+        } catch (e) {
+            oferta = null;
+        }
+        
         const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
         
-        // Atualizar horário no debug - COM VALIDAÇÃO
-try {
-    const agoraBrasilia = getHorarioBrasilia();
-    if (agoraBrasilia && !isNaN(agoraBrasilia.getTime())) {
-        document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
-    } else {
-        document.getElementById('debugHoraBrasilia').innerText = 'Erro ao obter horário';
-    }
-} catch (error) {
-    console.error('❌ Erro ao atualizar horário:', error);
-    document.getElementById('debugHoraBrasilia').innerText = 'Erro';
-}
+        // Se não tem oferta ou está expirado
+        if (!oferta || modoExpirado) {
+            aplicarModoEmBreve();
+            document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
+            document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
+            return;
+        }
         
-        console.log('📦 Oferta carregada:', oferta);
-        console.log('📅 Início (UTC):', oferta.dataInicio);
-        console.log('📅 Fim (UTC):', oferta.dataFim);
-        console.log('📅 Início (Brasília):', formatarBrasilia(oferta.dataInicio));
-        console.log('📅 Fim (Brasília):', formatarBrasilia(oferta.dataFim));
+        // Verificar se a oferta tem as propriedades necessárias
+        if (!oferta.dataInicio || !oferta.dataFim) {
+            aplicarModoEmBreve();
+            document.getElementById('debugOfertaInfo').innerText = 'Oferta inválida';
+            document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
+            return;
+        }
         
-        // USAR FUNÇÃO DO horario.js PARA VERIFICAR
+        // Verificar se está ativa
         const ativa = isOfertaAtiva(oferta);
-        console.log('🔍 Oferta ativa?', ativa);
         
         document.getElementById('debugOfertaInfo').innerHTML = 
-            `${oferta.tituloPagina} (${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)})`;
+            `${oferta.tituloPagina || 'Oferta'} (${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)})`;
         
         if (ativa) {
             // OFERTA ATIVA
-            document.querySelector('h2').innerText = oferta.tituloPagina;
+            document.querySelector('h2').innerText = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
             if (oferta.urlImagem) {
                 document.getElementById('fotoProduto').src = oferta.urlImagem;
             }
@@ -529,22 +536,9 @@ try {
             document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
         }
     } catch (error) {
-        console.error('❌ Erro em verificarStatus:', error);
-    }
-}
-
-function aplicarModoEmBreve() {
-    document.querySelector('h2').innerText = configTelaEmBreve.titulo;
-    document.getElementById('fotoProduto').src = configTelaEmBreve.imagem;
-    document.getElementById('cod').disabled = true;
-    document.getElementById('btnEnviar').disabled = true;
-    document.querySelector('.btn-text').textContent = 'EM BREVE';
-    
-    if (configTelaEmBreve.mensagem) {
-        document.getElementById('mensagemEmBreve').innerText = configTelaEmBreve.mensagem;
-        document.getElementById('mensagemEmBreve').style.display = 'block';
-    } else {
-        document.getElementById('mensagemEmBreve').style.display = 'none';
+        // Silenciosamente ignorar erros para não poluir o console
+        // Mas manter o sistema funcionando
+        aplicarModoEmBreve();
     }
 }
 
