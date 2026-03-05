@@ -480,63 +480,123 @@ try {
 }
 
 // ============================================
-// VERIFICAR STATUS DA OFERTA (SEM ERROS!)
+// VERIFICAR STATUS DA OFERTA (COM DIAGNÓSTICO)
 // ============================================
 function verificarStatus() {
-    // Sempre atualizar o horário (isso nunca falha)
-    const agoraBrasilia = getHorarioBrasilia();
-    document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
-    
-    // Tentar pegar a oferta de forma segura
-    let oferta = null;
     try {
-        const ofertaStr = localStorage.getItem('ofertaAtiva');
-        if (ofertaStr) {
-            oferta = JSON.parse(ofertaStr);
+        // 1️⃣ Atualizar horário
+        const agoraBrasilia = getHorarioBrasilia();
+        document.getElementById('debugHoraBrasilia').innerText = formatarBrasilia(agoraBrasilia.toISOString());
+        
+        // 2️⃣ DIAGNÓSTICO: Mostrar TODOS os itens do localStorage
+        console.log('=== DIAGNÓSTICO DO LOCALSTORAGE ===');
+        console.log('Todos os itens:');
+        for (let i = 0; i < localStorage.length; i++) {
+            const chave = localStorage.key(i);
+            const valor = localStorage.getItem(chave);
+            console.log(`- ${chave}:`, valor.substring(0, 100) + '...');
         }
-    } catch (e) {
-        oferta = null;
-    }
-    
-    const modoExpirado = localStorage.getItem('modoExpirado') === 'true';
-    
-    // Se não tem oferta ou está expirado
-    if (!oferta || modoExpirado) {
-        aplicarModoEmBreve();
-        document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
-        document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
-        return;
-    }
-    
-    // Verificar se a oferta tem as datas
-    if (!oferta.dataInicio || !oferta.dataFim) {
-        aplicarModoEmBreve();
-        document.getElementById('debugOfertaInfo').innerText = 'Oferta inválida';
-        document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
-        return;
-    }
-    
-    // Verificar se está ativa
-    const ativa = isOfertaAtiva(oferta);
-    
-    // Mostrar informações da oferta
-    document.getElementById('debugOfertaInfo').innerHTML = 
-        `${oferta.tituloPagina || 'Oferta'} (${formatarBrasilia(oferta.dataInicio)} até ${formatarBrasilia(oferta.dataFim)})`;
-    
-    if (ativa) {
-        // OFERTA ATIVA
-        document.querySelector('h2').innerText = oferta.tituloPagina || 'DISPARO EM ANDAMENTO!';
-        if (oferta.urlImagem) {
-            document.getElementById('fotoProduto').src = oferta.urlImagem;
+        
+        // 3️⃣ Tentar carregar a oferta de diferentes formas
+        let oferta = null;
+        let ofertaAtiva = null;
+        let modoExpirado = localStorage.getItem('modoExpirado') === 'true';
+        
+        // Tentar pela chave 'ofertaAtiva' (a que usamos)
+        try {
+            const ofertaStr = localStorage.getItem('ofertaAtiva');
+            if (ofertaStr) {
+                ofertaAtiva = JSON.parse(ofertaStr);
+                console.log('✅ ofertaAtiva encontrada:', ofertaAtiva);
+            } else {
+                console.log('❌ Nenhuma ofertaAtiva encontrada');
+            }
+        } catch (e) {
+            console.error('Erro ao ler ofertaAtiva:', e);
         }
-        document.getElementById('cod').disabled = false;
-        document.getElementById('btnEnviar').disabled = false;
-        document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
-        document.getElementById('mensagemEmBreve').style.display = 'none';
-        document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
-    } else {
+        
+        // Tentar pela chave 'ofertasMartinello' (lista completa)
+        try {
+            const ofertasStr = localStorage.getItem('ofertasMartinello');
+            if (ofertasStr) {
+                const ofertas = JSON.parse(ofertasStr);
+                console.log('✅ ofertasMartinello encontrada:', ofertas.length, 'ofertas');
+                
+                // Verificar se alguma oferta está ativa AGORA
+                const agora = getHorarioBrasilia();
+                for (const of of ofertas) {
+                    const inicio = new Date(of.dataInicio);
+                    const fim = new Date(of.dataFim);
+                    if (agora >= inicio && agora <= fim) {
+                        oferta = of;
+                        console.log('✅ Oferta ativa encontrada na lista:', of);
+                        break;
+                    }
+                }
+            } else {
+                console.log('❌ Nenhuma ofertasMartinello encontrada');
+            }
+        } catch (e) {
+            console.error('Erro ao ler ofertasMartinello:', e);
+        }
+        
+        // 4️⃣ Usar a oferta encontrada (prioridade para ofertaAtiva)
+        const ofertaFinal = ofertaAtiva || oferta;
+        
+        if (!ofertaFinal || modoExpirado) {
+            console.log('ℹ️ Modo EM BREVE ativado');
+            aplicarModoEmBreve();
+            document.getElementById('debugOfertaInfo').innerText = 'Nenhuma oferta ativa';
+            document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
+            return;
+        }
+        
+        // 5️⃣ Verificar se a oferta tem as datas necessárias
+        if (!ofertaFinal.dataInicio || !ofertaFinal.dataFim) {
+            console.error('❌ Oferta sem datas:', ofertaFinal);
+            aplicarModoEmBreve();
+            document.getElementById('debugOfertaInfo').innerText = 'Oferta inválida';
+            document.getElementById('debugStatus').innerHTML = '<span style="color:orange">⏸️ EM BREVE</span>';
+            return;
+        }
+        
+        // 6️⃣ Verificar se está ativa
+        const ativa = isOfertaAtiva(ofertaFinal);
+        
+        console.log('📊 Dados da oferta:', {
+            titulo: ofertaFinal.tituloPagina,
+            inicio: ofertaFinal.dataInicio,
+            fim: ofertaFinal.dataFim,
+            inicioBrasilia: formatarBrasilia(ofertaFinal.dataInicio),
+            fimBrasilia: formatarBrasilia(ofertaFinal.dataFim),
+            ativa: ativa
+        });
+        
+        // 7️⃣ Atualizar interface
+        document.getElementById('debugOfertaInfo').innerHTML = 
+            `${ofertaFinal.tituloPagina || 'Oferta'} (${formatarBrasilia(ofertaFinal.dataInicio)} até ${formatarBrasilia(ofertaFinal.dataFim)})`;
+        
+        if (ativa) {
+            // OFERTA ATIVA
+            document.querySelector('h2').innerText = ofertaFinal.tituloPagina || 'DISPARO EM ANDAMENTO!';
+            if (ofertaFinal.urlImagem) {
+                document.getElementById('fotoProduto').src = ofertaFinal.urlImagem;
+            }
+            document.getElementById('cod').disabled = false;
+            document.getElementById('btnEnviar').disabled = false;
+            document.querySelector('.btn-text').textContent = 'GERAR E ENVIAR NO WHATSAPP';
+            document.getElementById('mensagemEmBreve').style.display = 'none';
+            document.getElementById('debugStatus').innerHTML = '<span style="color:green">✅ ATIVA</span>';
+            console.log('🎯 OFERTA ATIVA!');
+        } else {
+            aplicarModoEmBreve();
+            document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
+            console.log('⏰ Oferta inativa no momento');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro crítico em verificarStatus:', error);
         aplicarModoEmBreve();
-        document.getElementById('debugStatus').innerHTML = '<span style="color:red">❌ INATIVA</span>';
     }
 }
 
