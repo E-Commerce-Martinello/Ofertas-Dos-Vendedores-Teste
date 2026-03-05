@@ -1,40 +1,34 @@
 // ============================================
 // horario.js - GERENCIAMENTO DE HORÁRIO BRASÍLIA
-// VERSÃO SEM ERROS NO CONSOLE
+// VERSÃO FINAL - SEM ERROS!
 // ============================================
 
 // ============================================
-// FUNÇÃO 1: Obter horário atual de Brasília (VERSÃO SIMPLIFICADA)
+// FUNÇÃO 1: Obter horário atual de Brasília
 // ============================================
 function getHorarioBrasilia() {
-    try {
-        const agora = new Date();
-        
-        // Método mais simples e confiável: usar UTC e subtrair 3 horas
-        const utc = Date.UTC(
-            agora.getUTCFullYear(),
-            agora.getUTCMonth(),
-            agora.getUTCDate(),
-            agora.getUTCHours(),
-            agora.getUTCMinutes(),
-            agora.getUTCSeconds()
-        );
-        
-        // Brasília = UTC - 3 horas
-        return new Date(utc - (3 * 60 * 60 * 1000));
-    } catch (error) {
-        console.error('Erro em getHorarioBrasilia:', error);
-        return new Date();
-    }
+    const agora = new Date();
+    
+    // Pegar UTC e subtrair 3 horas (Brasília = UTC-3)
+    const utc = Date.UTC(
+        agora.getUTCFullYear(),
+        agora.getUTCMonth(),
+        agora.getUTCDate(),
+        agora.getUTCHours(),
+        agora.getUTCMinutes(),
+        agora.getUTCSeconds()
+    );
+    
+    return new Date(utc - (3 * 60 * 60 * 1000));
 }
 
 // ============================================
 // FUNÇÃO 2: Formatar data UTC para exibição (Brasília)
 // ============================================
 function formatarBrasilia(utcStr) {
+    if (!utcStr) return 'Data inválida';
+    
     try {
-        if (!utcStr) return 'Data inválida';
-        
         const data = new Date(utcStr);
         if (isNaN(data.getTime())) return 'Data inválida';
         
@@ -49,26 +43,25 @@ function formatarBrasilia(utcStr) {
         const segundo = String(dataBrasilia.getUTCSeconds()).padStart(2, '0');
         
         return `${dia}/${mes}/${ano} ${hora}:${minuto}:${segundo}`;
-    } catch (error) {
+    } catch (e) {
         return 'Data inválida';
     }
 }
 
 // ============================================
-// FUNÇÃO 3: Converter data do INPUT (Brasília) para UTC para salvar
+// FUNÇÃO 3: Converter data do INPUT (Brasília) para UTC
 // ============================================
 function brasiliaParaUTC(dataBrasiliaStr) {
+    if (!dataBrasiliaStr) return null;
+    
     try {
-        if (!dataBrasiliaStr) return null;
-        
         const [dataParte, horaParte] = dataBrasiliaStr.split('T');
         const [ano, mes, dia] = dataParte.split('-').map(Number);
         const [hora, minuto] = horaParte.split(':').map(Number);
         
         // Brasília para UTC = adicionar 3 horas
         return new Date(Date.UTC(ano, mes-1, dia, hora + 3, minuto, 0)).toISOString();
-    } catch (error) {
-        console.error('Erro em brasiliaParaUTC:', error);
+    } catch (e) {
         return null;
     }
 }
@@ -77,9 +70,9 @@ function brasiliaParaUTC(dataBrasiliaStr) {
 // FUNÇÃO 4: Converter UTC para formato do INPUT (Brasília)
 // ============================================
 function utcParaBrasiliaInput(utcStr) {
+    if (!utcStr) return '';
+    
     try {
-        if (!utcStr) return '';
-        
         const data = new Date(utcStr);
         if (isNaN(data.getTime())) return '';
         
@@ -90,18 +83,18 @@ function utcParaBrasiliaInput(utcStr) {
         const minuto = String(data.getUTCMinutes()).padStart(2, '0');
         
         return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
-    } catch (error) {
+    } catch (e) {
         return '';
     }
 }
 
 // ============================================
-// FUNÇÃO 5: Verificar se uma oferta está ativa AGORA
+// FUNÇÃO 5: Verificar se oferta está ativa
 // ============================================
 function isOfertaAtiva(oferta) {
+    if (!oferta || !oferta.dataInicio || !oferta.dataFim) return false;
+    
     try {
-        if (!oferta || !oferta.dataInicio || !oferta.dataFim) return false;
-        
         const agoraBrasilia = getHorarioBrasilia();
         const dataInicio = new Date(oferta.dataInicio);
         const dataFim = new Date(oferta.dataFim);
@@ -109,15 +102,16 @@ function isOfertaAtiva(oferta) {
         if (isNaN(dataInicio.getTime()) || isNaN(dataFim.getTime())) return false;
         
         return (agoraBrasilia >= dataInicio && agoraBrasilia <= dataFim);
-    } catch (error) {
+    } catch (e) {
         return false;
     }
 }
 
 // ============================================
-// FUNÇÃO 6: DEBUG (opcional - pode remover)
+// FUNÇÃO 6: Debug silencioso (opcional)
 // ============================================
 function debugHorario() {
-    const agora = getHorarioBrasilia();
-    console.log('=== Horário Brasília ===', formatarBrasilia(agora.toISOString()));
+    // Comentado para não poluir o console
+    // const agora = getHorarioBrasilia();
+    // console.log('Horário Brasília:', formatarBrasilia(agora.toISOString()));
 }
