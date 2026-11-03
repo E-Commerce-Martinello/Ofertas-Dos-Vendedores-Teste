@@ -10,6 +10,7 @@ const VendorImportPresenter = {
     processando: false,
     conflitos: [],
     registrosSemConflito: [],
+    filiaisEncontradas: [],
 
     _texto(v) { return String(v == null ? '' : v).replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim(); },
     _digitos(v) { return this._texto(v).replace(/\D/g, ''); },
@@ -26,6 +27,7 @@ const VendorImportPresenter = {
         this.resumo = null;
         this.conflitos = [];
         this.registrosSemConflito = [];
+        this.filiaisEncontradas = [];
         const status = document.getElementById('arquivoRelatorioSelecionado');
         const botao = document.getElementById('btnAnalisarRelatorio');
         const previa = document.getElementById('painelPreviaImportacao');
@@ -72,11 +74,25 @@ const VendorImportPresenter = {
 
     _filialDoCabecalho(valor) {
         const t = this._texto(valor);
-        if (!t) return '';
-        // Ex.: "1.0001, MARTINELLO, F0001 LUCAS DO RIO VERDE"
-        const m = t.match(/\bF\s*0*(\d{3,6})\s+(.+)$/i);
-        if (m) return this._texto(m[2]).replace(/^[,;:\-\s]+/, '').replace(/[;,\s]+$/, '');
-        return '';
+        // No XLS da empresa: "1.0001 , MARTINELLO, F0001 LUCAS DO RIO VERDE".
+        // O identificador do cadastro é 1 (F0001), não a cidade nem o número 1.0001.
+        const m = t.match(/\bF\s*0*(\d{1,6})\s+(.+)$/i);
+        if (!m) return null;
+        const numero = String(Number(m[1]));
+        const localidade = this._texto(m[2]).replace(/^[,;:\-\s]+/, '').replace(/[;,\s]+$/, '');
+        if (!/^\d+$/.test(numero) || numero === '0' || !localidade) return null;
+        return { numero, localidade };
+    },
+
+    _numeroFilial(valor) {
+        const texto = this._texto(valor);
+        const m = texto.match(/^(?:F)?0*(\d{1,6})$/i);
+        return m ? String(Number(m[1])) : '';
+    },
+
+    _ehLinhaPaginacao(row) {
+        const nome = this._texto(row[1]);
+        return nome === '-' && row.some(c => /p[aá]g\.?\s*:/i.test(this._texto(c)));
     },
 
     _situacaoAtiva(valor) {
@@ -89,40 +105,44 @@ const VendorImportPresenter = {
 
     _parseSheet(rows, sheetName) {
         const result = [];
-        let filialAtual = '';
+        let filialAtual = null;
         const cab = this._lerCabecalho(rows);
         if (cab) {
-            // Alguns relatórios colocam o nome da filial antes do cabeçalho da tabela.
             for (let i = 0; i < cab.linha; i++) {
                 const secao = (rows[i] || []).map(c => this._filialDoCabecalho(c)).find(Boolean);
                 if (secao) filialAtual = secao;
             }
             for (let i = cab.linha + 1; i < rows.length; i++) {
                 const row = rows[i] || [];
-                const filialCab = row.map(c => this._filialDoCabecalho(c)).find(Boolean);
-                if (filialCab) filialAtual = filialCab;
+                const secao = row.map(c => this._filialDoCabecalho(c)).find(Boolean);
+                if (secao) { filialAtual = secao; continue; }
+                if (this._ehLinhaPaginacao(row)) continue;
                 const matricula = this._digitos(row[cab.matricula]);
                 const nome = this._texto(row[cab.nome]);
-                if (!matricula || !nome) continue;
-                const filialDaColuna = cab.filial >= 0 ? this._texto(row[cab.filial]) : '';
-                const filial = filialDaColuna || filialAtual;
+                // O número 1 do relatório é um marcador de página, nunca uma matrícula.
+                if (!matricula || matricula === '1' || !nome || nome === '-') continue;
+                const daColuna = cab.filial >= 0 ? this._numeroFilial(row[cab.filial]) : '';
+                const filial = daColuna || (filialAtual && filialAtual.numero) || '';
                 if (!filial) continue;
+                const localidadeFilial = filialAtual && filialAtual.numero === filial ? filialAtual.localidade : '';
                 const situacao = cab.situacao >= 0 ? this._situacaoAtiva(row[cab.situacao]) : {ativo:true, situacaoFuncional:'OK'};
-                result.push({ matricula, nome, filial, ativo:situacao.ativo, situacaoFuncional:situacao.situacaoFuncional, origemPlanilha:sheetName, linhaRelatorio:i+1 });
+                result.push({matricula, nome, filial, localidadeFilial, ativo:situacao.ativo,
+                    situacaoFuncional:situacao.situacaoFuncional, origemPlanilha:sheetName, linhaRelatorio:i+1});
             }
             return result;
         }
 
-        // Layout formatado por blocos: linha de filial seguida de matrícula e nome.
+        // Formato original/formatado por blocos: uma linha F0001 + linhas de vendedores.
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i] || [];
-            const a = this._texto(row[0]);
-            const filialCab = this._filialDoCabecalho(a);
-            if (filialCab) { filialAtual = filialCab; continue; }
-            const matricula = this._digitos(a);
+            const secao = row.map(c => this._filialDoCabecalho(c)).find(Boolean);
+            if (secao) { filialAtual = secao; continue; }
+            if (this._ehLinhaPaginacao(row)) continue;
+            const matricula = this._digitos(row[0]);
             const nome = this._texto(row[1]);
-            if (!filialAtual || !matricula || !/^\d{1,12}$/.test(matricula) || !nome) continue;
-            result.push({ matricula, nome, filial:filialAtual, ativo:true, situacaoFuncional:'OK', origemPlanilha:sheetName, linhaRelatorio:i+1 });
+            if (!filialAtual || !matricula || matricula === '1' || !/^\d{1,12}$/.test(matricula) || !nome || nome === '-') continue;
+            result.push({matricula, nome, filial:filialAtual.numero, localidadeFilial:filialAtual.localidade,
+                ativo:true, situacaoFuncional:'OK', origemPlanilha:sheetName, linhaRelatorio:i+1});
         }
         return result;
     },
@@ -134,6 +154,18 @@ const VendorImportPresenter = {
             const rows = XLSX.utils.sheet_to_json(sheet, { header:1, defval:'', raw:false, blankrows:false });
             encontrados.push(...this._parseSheet(rows, nome));
         });
+        // Mapa filial -> localidade, persistido em aba própria ao confirmar a importação.
+        // Não criamos campos adicionais no cadastro individual de vendedor.
+        const filiais = new Map();
+        encontrados.forEach(r => {
+            if (!r.localidadeFilial) return;
+            const anterior = filiais.get(r.filial);
+            if (anterior && this._normalizar(anterior) !== this._normalizar(r.localidadeFilial)) {
+                throw new Error(`A filial ${r.filial} está associada a localidades diferentes no relatório. Confira o arquivo antes de importar.`);
+            }
+            filiais.set(r.filial, r.localidadeFilial);
+        });
+        this.filiaisEncontradas = [...filiais].map(([filial, localidade]) => ({filial, localidade}));
         // Preserva TODAS as ocorrências conflitantes, mostrando as linhas de origem.
         // Nunca escolhe um vendedor automaticamente: o operador revisa e decide.
         const grupos = new Map();
@@ -260,10 +292,10 @@ const VendorImportPresenter = {
                 <div class="vendor-import-kpi"><strong>${r.alterados.toLocaleString('pt-BR')}</strong><span>Nome/filial alterados</span></div>
                 <div class="vendor-import-kpi"><strong>${r.ausentes.toLocaleString('pt-BR')}</strong><span>Atuais ausentes</span></div>
             </div>
-            <p class="vendor-subtext">Sem alteração: ${r.iguais.toLocaleString('pt-BR')} · Marcados inativos no relatório: ${r.desativadosNoArquivo.toLocaleString('pt-BR')}</p>
-            <div class="vendor-import-warning">A importação atualiza matrícula, nome, filial e situação funcional. Telefones, validações, observações e histórico serão preservados. Cadastros ausentes só serão desativados se você marcar a opção; cadastros manuais ficam preservados.</div>
+            <p class="vendor-subtext">Sem alteração: ${r.iguais.toLocaleString('pt-BR')} · Marcados inativos no relatório: ${r.desativadosNoArquivo.toLocaleString('pt-BR')} · ${this.filiaisEncontradas.length} filiais com localidade identificada</p>
+            <div class="vendor-import-warning">A filial será salva pelo <strong>número</strong>. O nome da localidade será vinculado automaticamente na aba Filiais. Telefones, validações, observações e histórico serão preservados. Cadastros ausentes só serão desativados se você marcar a opção.</div>
             <label class="vendor-checkbox"><input type="checkbox" id="marcarAusentesInativosImportacao"> Marcar como INATIVO quem está na base atual, mas não aparece neste relatório</label>
-            ${exemplos.length ? `<div class="vendor-import-preview-scroll"><table class="vendor-import-table"><thead><tr><th>Tipo</th><th>Matrícula</th><th>Nome</th><th>Filial</th></tr></thead><tbody>${exemplos.map(x=>`<tr><td>${this._escapar(x.tipo)}</td><td>${this._escapar(x.matricula)}</td><td>${this._escapar(x.nome)}</td><td>${this._escapar(x.filial||'')}</td></tr>`).join('')}</tbody></table></div>` : ''}
+            ${exemplos.length ? `<div class="vendor-import-preview-scroll"><table class="vendor-import-table"><thead><tr><th>Tipo</th><th>Matrícula</th><th>Nome</th><th>Filial</th></tr></thead><tbody>${exemplos.map(x=>`<tr><td>${this._escapar(x.tipo)}</td><td>${this._escapar(x.matricula)}</td><td>${this._escapar(x.nome)}</td><td><strong>${this._escapar(x.filial||'')}</strong>${x.localidadeFilial ? `<div style="font-size:11px;color:#777;">${this._escapar(x.localidadeFilial)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>` : ''}
             <div class="vendor-actions" style="margin-top:14px;">
                 <button type="button" class="btn-primary" id="btnAplicarImportacao" onclick="VendorImportPresenter.aplicar()"><i class="fas fa-check"></i> APLICAR IMPORTAÇÃO</button>
                 <button type="button" class="btn-outline" onclick="VendorImportPresenter.cancelar()">CANCELAR</button>
@@ -281,7 +313,7 @@ const VendorImportPresenter = {
         if (botao) { botao.disabled = true; botao.textContent = 'APLICANDO...'; }
         try {
             const cfg = VendedoresPresenter._validarConfiguracao();
-            const resposta = await GoogleSheetsService.importarFuncionarios(this.registros, ausentes, this.arquivo?.name || 'Relatorio');
+            const resposta = await GoogleSheetsService.importarFuncionarios(this.registros, ausentes, this.arquivo?.name || 'Relatorio', this.filiaisEncontradas);
             const dados = resposta.resultado || {};
             UI.ok(`Importação concluída: ${dados.novos || 0} novos, ${dados.atualizados || 0} atualizados e ${dados.inativados || 0} inativados.`);
             this.cancelar();
@@ -301,6 +333,7 @@ const VendorImportPresenter = {
         this.resumo = null;
         this.conflitos = [];
         this.registrosSemConflito = [];
+        this.filiaisEncontradas = [];
         const input = document.getElementById('arquivoRelatorioFuncionarios');
         if (input) input.value = '';
         const status = document.getElementById('arquivoRelatorioSelecionado');

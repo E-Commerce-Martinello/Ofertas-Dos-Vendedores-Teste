@@ -10,6 +10,7 @@ const VendedoresPresenter = {
     apiUrl: '',
     apiToken: '',
     registros: [],
+    filiais: {},
     filtrados: [],
     links: {},
     pagina: 1,
@@ -68,6 +69,7 @@ const VendedoresPresenter = {
 
     limparDados() {
         this.registros = [];
+        this.filiais = {};
         this.filtrados = [];
         this.links = {};
         this.pagina = 1;
@@ -108,6 +110,7 @@ const VendedoresPresenter = {
                 matricula: get('matricula'),
                 nome: get('nome'),
                 filial: get('filial'),
+                localidadeFilial: this.filiais[get('filial')] || '',
                 codfil: get('codigo_filial'),
                 numero: telefone,
                 telefoneNormalizado: get('telefone_normalizado') || this._normalizarTelefone(telefone),
@@ -169,7 +172,10 @@ const VendedoresPresenter = {
         if (botaoAtualizar) botaoAtualizar.disabled = true;
         this._status('Consultando a aba Vendedores da planilha de TESTE...');
         try {
-            const linhas = await GoogleSheetsService.carregarVendedores(apiUrl, apiToken);
+            const base = await GoogleSheetsService.carregarVendedores(apiUrl, apiToken);
+            const linhas = base.linhas;
+            this.filiais = Object.fromEntries((base.filiais || [])
+                .filter(v => Array.isArray(v) && v.length >= 2 && /^\d+$/.test(String(v[0]))));
             // O Firebase permanece apenas como repositório auxiliar dos resultados da verificação de links.
             let gestao = {};
             try { gestao = await VendorManagementService.carregar(); }
@@ -209,9 +215,23 @@ const VendedoresPresenter = {
             .filter(Boolean))]
             .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
         select.innerHTML = '<option value="">Todas as filiais</option>' + filiais.map(f =>
-            `<option value="${this._escapar(f)}">${this._escapar(f)}</option>`
+            `<option value="${this._escapar(f)}">${this._escapar(f)}${this.filiais[f] ? ' — ' + this._escapar(this.filiais[f]) : ''}</option>`
         ).join('');
+        const sugestoes = document.getElementById('listaNumerosFiliais');
+        if (sugestoes) sugestoes.innerHTML = Object.entries(this.filiais)
+            .sort((a,b) => Number(a[0]) - Number(b[0]))
+            .map(([numero, local]) => `<option value="${this._escapar(numero)}" label="${this._escapar(local)}"></option>`).join('');
         if (filiais.includes(selecionada)) select.value = selecionada;
+    },
+
+    atualizarLocalidadeFilial() {
+        const input = document.getElementById('editarFilialVendedor');
+        const ajuda = document.getElementById('localidadeFilialVendedor');
+        if (!ajuda) return;
+        const numero = String(input?.value || '').trim();
+        ajuda.textContent = numero && this.filiais[numero]
+            ? `Localidade vinculada: ${this.filiais[numero]}`
+            : 'Informe apenas o número da filial; a localidade é vinculada pelo relatório.';
     },
 
     filtrar() {
@@ -223,7 +243,7 @@ const VendedoresPresenter = {
             if (filtroAtivo === 'ativos' && !v.ativo) return false;
             if (filtroAtivo === 'inativos' && v.ativo) return false;
             if (filtroFilial && this._texto(v.filial).toLocaleLowerCase('pt-BR') !== filtroFilial) return false;
-            const correspondeBusca = !termo || [v.nome, v.matricula, v.numero, v.filial, v.codfil]
+            const correspondeBusca = !termo || [v.nome, v.matricula, v.numero, v.filial, v.localidadeFilial, v.codfil]
                 .some(campo => this._texto(campo).toLocaleLowerCase('pt-BR').includes(termo));
             if (!correspondeBusca) return false;
             if (filtroTelefone === 'validado') return v.statusTelefone === 'VALIDADO';
@@ -282,7 +302,7 @@ const VendedoresPresenter = {
                 <tr>
                     <td>${this._escapar(v.matricula)}</td>
                     <td>${this._escapar(v.nome)}</td>
-                    <td>${this._escapar(v.filial || '—')}</td>
+                    <td><strong>${this._escapar(v.filial || '—')}</strong>${v.localidadeFilial ? `<div style="font-size:11px;color:#777;">${this._escapar(v.localidadeFilial)}</div>` : ''}</td>
                     <td><span class="vendor-badge ${v.ativo ? 'success' : 'inactive'}">${v.ativo ? 'ATIVO' : 'INATIVO'}</span></td>
                     <td>${this._escapar(this._exibirTelefone(v.numero))}</td>
                     <td>${this._statusTelefone(v)}</td>
@@ -313,6 +333,7 @@ const VendedoresPresenter = {
         document.getElementById('editarMatricula').readOnly = false;
         document.getElementById('editarNomeVendedor').value = '';
         document.getElementById('editarFilialVendedor').value = '';
+        this.atualizarLocalidadeFilial();
         document.getElementById('editarTelefoneVendedor').value = '';
         document.getElementById('editarStatusTelefone').value = 'PENDENTE';
         document.getElementById('editarAtivoVendedor').checked = true;
@@ -333,6 +354,7 @@ const VendedoresPresenter = {
         document.getElementById('editarMatricula').readOnly = true;
         document.getElementById('editarNomeVendedor').value = vendedor.nome || '';
         document.getElementById('editarFilialVendedor').value = vendedor.filial || '';
+        this.atualizarLocalidadeFilial();
         document.getElementById('editarTelefoneVendedor').value = vendedor.numero || '';
         document.getElementById('editarStatusTelefone').value = vendedor.statusTelefone || 'PENDENTE';
         document.getElementById('editarAtivoVendedor').checked = vendedor.ativo !== false;
@@ -356,12 +378,13 @@ const VendedoresPresenter = {
         if (this.salvando) return;
         const matricula = this._matricula(document.getElementById('editarMatricula').value);
         const nome = this._texto(document.getElementById('editarNomeVendedor').value);
-        const filial = this._texto(document.getElementById('editarFilialVendedor').value);
+        const filialDigitada = this._texto(document.getElementById('editarFilialVendedor').value);
+        const filial = /^\d{1,6}$/.test(filialDigitada) ? String(Number(filialDigitada)) : filialDigitada;
         const numero = this._digitos(document.getElementById('editarTelefoneVendedor').value);
         const statusTelefone = this._texto(document.getElementById('editarStatusTelefone').value).toUpperCase();
         const ativo = document.getElementById('editarAtivoVendedor').checked;
         const observacoes = this._texto(document.getElementById('editarObservacoesVendedor').value);
-        if (!matricula || !nome || !filial) { UI.erro('Matrícula, nome e filial são obrigatórios.'); return; }
+        if (!matricula || !nome || !/^\d{1,6}$/.test(filial)) { UI.erro('Informe matrícula, nome e apenas o número da filial.'); return; }
         if (numero && !([10, 11, 12, 13].includes(numero.length) && (!([12, 13].includes(numero.length)) || numero.startsWith('55')))) {
             UI.erro('Confira o telefone. Informe DDD e número com 10 ou 11 dígitos.'); return;
         }

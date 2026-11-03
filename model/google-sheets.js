@@ -75,9 +75,12 @@ const GoogleSheetsService = {
                 if (data.ok) finalizar(null, data);
                 else finalizar(new Error(data.erro || 'O Apps Script não conseguiu concluir a operação.'));
             };
+            // A importação pode atualizar centenas de linhas e o mapa de filiais.
+            // Damos mais tempo a ela sem alterar o prazo normal das consultas.
+            const prazoMs = action === 'importarFuncionarios' ? 120000 : 30000;
             const timer = setTimeout(() => finalizar(
                 new Error('A API não devolveu a confirmação. Verifique se a implantação atualizada do Apps Script está publicada e se a origem do site de teste está autorizada. A autorização em uma aba separada, sozinha, não testa a resposta POST.')
-            ), 30000);
+            ), prazoMs);
             window.addEventListener('message', aoReceber);
             document.body.appendChild(iframe);
             document.body.appendChild(form);
@@ -96,7 +99,7 @@ const GoogleSheetsService = {
         const resposta = await this._post('listarVendedores', {});
         const linhas = resposta.resultado?.linhas;
         if (!Array.isArray(linhas)) throw new Error('O Apps Script não retornou a lista de vendedores.');
-        return linhas;
+        return { linhas, filiais: Array.isArray(resposta.resultado?.filiais) ? resposta.resultado.filiais : [] };
     },
 
     async verificarLinks(matriculas) {
@@ -117,11 +120,12 @@ const GoogleSheetsService = {
         return this._post('criarVendedor', dados);
     },
 
-    async importarFuncionarios(registros, inativarAusentes, nomeArquivo) {
+    async importarFuncionarios(registros, inativarAusentes, nomeArquivo, filiais = []) {
         if (!Array.isArray(registros) || !registros.length) throw new Error('Nenhum vendedor válido foi encontrado no relatório.');
         if (registros.length > 2500) throw new Error('O relatório excede o limite de 2.500 registros por importação.');
         return this._post('importarFuncionarios', {
             registros,
+            filiais,
             inativarAusentes: inativarAusentes === true,
             nomeArquivo: String(nomeArquivo || '').slice(0, 160)
         });
