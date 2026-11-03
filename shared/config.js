@@ -13,6 +13,8 @@ const CONFIG = Object.freeze({
 
     // Cache — mude o número a cada atualização para limpar cache dos vendedores
     CACHE_VERSION:    '1.6',
+    // Planilha oficial de vendedores — o acesso continua protegido pelo OAuth do Google.
+    googleSpreadsheetId: '1oDslsFeW1aFQj-FEguAJsxKew6V3QIlVvfqpMiMUnu0',
 
     // Admin
     SESSION_KEY:      'adminSessao',

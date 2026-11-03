@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello</title>
+    <title>Admin Martinello | 1.4.3</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -35,6 +35,7 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script id="googleIdentityServices" src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- Firebase -->
 
@@ -175,6 +176,62 @@
         .notificacao-saindo  { animation:slideOut .3s ease forwards; }
         @keyframes slideIn { from{transform:translateX(110%);opacity:0} to{transform:translateX(0);opacity:1} }
         @keyframes slideOut{ from{transform:translateX(0);opacity:1} to{transform:translateX(110%);opacity:0} }
+
+        /* ABAS DO ADMIN */
+        .admin-tabs { display:flex; gap:10px; flex-wrap:wrap; margin:0 0 18px; }
+        .admin-tab { flex:1; min-width:150px; border:1px solid #ddd; border-radius:14px; padding:13px 16px; background:#fff; color:#555; font-weight:800; cursor:pointer; transition:.2s; }
+        .admin-tab i { margin-right:7px; }
+        .admin-tab.active { background:#d0252a; border-color:#d0252a; color:#fff; box-shadow:0 5px 14px rgba(208,37,42,.2); }
+        body.dark-mode .admin-tab { background:#2d2d2d; color:#ddd; border-color:#555; }
+        body.dark-mode .admin-tab.active { background:#d0252a; color:#fff; border-color:#d0252a; }
+        .vendor-help { background:#eef5ff; border-left:4px solid #2874c6; border-radius:10px; padding:13px 15px; color:#345; font-size:13px; line-height:1.55; margin:12px 0 18px; }
+        body.dark-mode .vendor-help { background:#1e3a5f; color:#d6e5f5; }
+        .vendor-config-grid { display:grid; grid-template-columns:1fr; gap:12px; }
+        @media(min-width:700px) { .vendor-config-grid { grid-template-columns:1fr 1fr; } }
+        .vendor-config-grid .form-group { margin-bottom:8px; }
+        .vendor-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+        .vendor-actions button { width:auto; flex:1; min-width:170px; }
+        .vendor-status { display:flex; align-items:center; gap:9px; padding:12px 14px; background:#f5f5f5; border-radius:12px; color:#555; font-size:13px; margin-top:14px; }
+        body.dark-mode .vendor-status { background:#383838; color:#ddd; }
+        .vendor-status.ok { background:#e8f6ec; color:#176b31; }
+        body.dark-mode .vendor-status.ok { background:#173d25; color:#c9f0d3; }
+        .vendor-status.error { background:#fdebec; color:#9b1c25; }
+        body.dark-mode .vendor-status.error { background:#4a2024; color:#ffd7da; }
+        .vendor-kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+        @media(min-width:700px) { .vendor-kpis { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+        .vendor-kpi { background:#f7f7f7; border:1px solid #e8e8e8; border-radius:14px; padding:15px; min-width:0; }
+        body.dark-mode .vendor-kpi { background:#333; border-color:#4a4a4a; }
+        .vendor-kpi strong { display:block; font-size:25px; margin-bottom:4px; color:#333; }
+        body.dark-mode .vendor-kpi strong { color:#fff; }
+        .vendor-kpi span { color:#777; font-size:11px; font-weight:700; text-transform:uppercase; }
+        .vendor-filters { display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:15px; }
+        @media(min-width:700px) { .vendor-filters { grid-template-columns:2fr 1fr 1fr; } }
+        .vendor-filters input,.vendor-filters select { width:100%; padding:13px; border:2px solid #ddd; border-radius:10px; font-size:14px; background:#fff; color:#333; }
+        body.dark-mode .vendor-filters input, body.dark-mode .vendor-filters select { background:#3d3d3d; border-color:#555; color:#fff; }
+        .vendor-table-wrap { overflow-x:auto; border:1px solid #e5e5e5; border-radius:12px; }
+        body.dark-mode .vendor-table-wrap { border-color:#4b4b4b; }
+        .vendor-table { width:100%; border-collapse:collapse; min-width:760px; font-size:12px; }
+        .vendor-table th { background:#f1f1f1; color:#555; text-align:left; padding:12px 10px; white-space:nowrap; }
+        .vendor-table td { border-top:1px solid #ececec; padding:11px 10px; color:#444; vertical-align:middle; }
+        body.dark-mode .vendor-table th { background:#3a3a3a; color:#eee; }
+        body.dark-mode .vendor-table td { border-color:#4a4a4a; color:#ddd; }
+        .vendor-table tr:hover td { background:rgba(208,37,42,.045); }
+        .vendor-badge { display:inline-block; padding:5px 8px; border-radius:30px; font-size:10px; font-weight:800; white-space:nowrap; }
+        .vendor-badge.in { background:#e4f5e8; color:#176b31; }
+        .vendor-badge.out { background:#fff0df; color:#9a5200; }
+        .vendor-badge.review { background:#fff7d6; color:#7c5a00; }
+        .vendor-badge.unknown { background:#eee; color:#555; }
+        body.dark-mode .vendor-badge.in { background:#173d25; color:#c9f0d3; }
+        body.dark-mode .vendor-badge.out { background:#493016; color:#ffd6a3; }
+        body.dark-mode .vendor-badge.review { background:#4a3c12; color:#ffe89b; }
+        body.dark-mode .vendor-badge.unknown { background:#484848; color:#ddd; }
+        .vendor-pagination { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px; color:#777; font-size:12px; }
+        .vendor-pagination button { width:auto; padding:9px 14px; border:0; border-radius:9px; background:#555; color:white; cursor:pointer; font-weight:700; }
+        .vendor-pagination button:disabled { opacity:.35; cursor:not-allowed; }
+        .vendor-empty { text-align:center; padding:28px; color:#777; }
+        .vendor-last-update { color:#888; font-size:11px; margin-top:10px; }
+        .btn-outline { background:transparent; color:#d0252a; border:2px solid #d0252a; padding:12px 18px; border-radius:50px; font-weight:800; cursor:pointer; }
+        body.dark-mode .btn-outline { color:#ff8589; border-color:#ff8589; }
     </style>
 </head>
 <body>
@@ -199,18 +256,29 @@
         <div class="admin-card">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;">
                 <div style="display:flex;align-items:center;">
-                    <h1>⚙️ AGENDADOR</h1>
+                    <h1 id="tituloAdmin">⚙️ AGENDADOR</h1>
                     <button class="logout-button" onclick="logout()">SAIR</button>
                 </div>
                 <div class="toolbar">
-                    <button class="btn-nova" onclick="mostrarNovaOferta()">
+                    <button class="btn-nova" id="btnNovaOfertaTopo" onclick="mostrarNovaOferta()">
                         <i class="fas fa-plus"></i> NOVA OFERTA
                     </button>
                 </div>
             </div>
-            <p style="color:#888;font-size:13px;margin-top:8px;">Apenas UMA oferta fica ativa por vez</p>
+            <p id="subtituloAdmin" style="color:#888;font-size:13px;margin-top:8px;">Apenas UMA oferta fica ativa por vez</p>
         </div>
 
+        <!-- NAVEGAÇÃO DO ADMIN -->
+        <nav class="admin-tabs" aria-label="Seções administrativas">
+            <button type="button" class="admin-tab active" id="tabOfertas" onclick="AdminPresenter.mostrarAba('ofertas')">
+                <i class="fas fa-tags"></i> OFERTAS
+            </button>
+            <button type="button" class="admin-tab" id="tabVendedores" onclick="AdminPresenter.mostrarAba('vendedores')">
+                <i class="fas fa-users"></i> VENDEDORES
+            </button>
+        </nav>
+
+        <section id="abaOfertas" class="aba-conteudo">
         <!-- ALERTA SEM OFERTA -->
         <div id="bannerSemOferta" class="admin-card" style="display:none;">
             ⚠️ Nenhuma oferta ativa agora! Os vendedores estão vendo a tela "EM BREVE".
@@ -321,6 +389,80 @@
 
             <button class="btn-primary" onclick="salvarConfigPadrao()">💾 SALVAR CONFIGURAÇÕES</button>
         </div>
+        </section><!-- /abaOfertas -->
+
+        <section id="abaVendedores" class="aba-conteudo" style="display:none;">
+            <div class="admin-card">
+                <h2><i class="fas fa-users" style="color:#d0252a;"></i> BASE DE VENDEDORES</h2>
+                <p style="color:#777;font-size:13px;line-height:1.6;">Consulte os vendedores diretamente na aba <strong>Banco de Dados</strong> da sua planilha. A planilha continua sendo a fonte oficial: o site apenas lê os dados e não altera nenhuma célula.</p>
+
+                <div class="vendor-help">
+                    <strong>Conexão privada com o Google Sheets</strong><br>
+                    A leitura usa sua conta Google e permissão somente de visualização. O site não publica a planilha, não envia os telefones ao Firebase e não modifica os relatórios.
+                </div>
+
+                <div class="vendor-config-grid">
+                    <div class="form-group">
+                        <label for="googleClientId">ID do cliente OAuth do Google</label>
+                        <input type="text" id="googleClientId" placeholder="000000000000-abc.apps.googleusercontent.com" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="googleSheetId">Link ou ID da planilha Google Sheets</label>
+                        <input type="text" id="googleSheetId" placeholder="Cole o link da planilha ou apenas o ID" autocomplete="off">
+                    </div>
+                </div>
+                <div class="vendor-actions">
+                    <button type="button" class="btn-primary" id="btnConectarSheets" onclick="VendedoresPresenter.conectar()"><i class="fab fa-google"></i> CONECTAR E CARREGAR</button>
+                    <button type="button" class="btn-outline" id="btnAtualizarVendedores" onclick="VendedoresPresenter.atualizar()" disabled><i class="fas fa-sync-alt"></i> ATUALIZAR DADOS</button>
+                </div>
+                <div id="statusConexaoSheets" class="vendor-status"><i class="fas fa-info-circle"></i><span>Configure o acesso à planilha para carregar os vendedores.</span></div>
+                <p class="vendor-last-update">A planilha precisa ter uma aba chamada exatamente <strong>Banco de Dados</strong>, com os dados nas colunas A até J.</p>
+            </div>
+
+            <div class="admin-card" id="painelDadosVendedores" style="display:none;">
+                <h2>VISÃO GERAL</h2>
+                <div class="vendor-kpis">
+                    <div class="vendor-kpi"><strong id="kpiTotalAtivos">0</strong><span>Vendedores ativos</span></div>
+                    <div class="vendor-kpi"><strong id="kpiNoGrupo">0</strong><span>Já estão no grupo</span></div>
+                    <div class="vendor-kpi"><strong id="kpiForaGrupo">0</strong><span>Fora do grupo</span></div>
+                    <div class="vendor-kpi"><strong id="kpiRevisar">0</strong><span>Revisar telefone</span></div>
+                </div>
+
+                <h2>CONSULTAR VENDEDORES</h2>
+                <div class="vendor-filters">
+                    <input id="buscaVendedor" type="search" placeholder="Buscar por nome, matrícula ou telefone..." oninput="VendedoresPresenter.filtrar()">
+                    <select id="filtroEmpresaVendedor" onchange="VendedoresPresenter.filtrar()">
+                        <option value="ativos">Somente vendedores ativos</option>
+                        <option value="todos">Todos (inclui removidos)</option>
+                    </select>
+                    <select id="filtroStatusVendedor" onchange="VendedoresPresenter.filtrar()">
+                        <option value="todos">Todos os status do grupo</option>
+                        <option value="fora">Não estão no grupo</option>
+                        <option value="no-grupo">Já estão no grupo</option>
+                        <option value="revisar">Revisar telefone</option>
+                        <option value="sem-telefone">Sem telefone</option>
+                    </select>
+                </div>
+                <div class="vendor-table-wrap">
+                    <table class="vendor-table">
+                        <thead>
+                            <tr>
+                                <th>MATRÍCULA</th><th>NOME</th><th>FILIAL</th><th>TELEFONE</th><th>SITUAÇÃO NO GRUPO</th><th>CONTATO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoTabelaVendedores"><tr><td colspan="6" class="vendor-empty">Carregue a planilha para visualizar os vendedores.</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="vendor-pagination">
+                    <span id="infoPaginacaoVendedores">Nenhum registro</span>
+                    <div style="display:flex;gap:8px;">
+                        <button type="button" id="paginaAnteriorVendedores" onclick="VendedoresPresenter.mudarPagina(-1)" disabled>ANTERIOR</button>
+                        <button type="button" id="paginaProximaVendedores" onclick="VendedoresPresenter.mudarPagina(1)" disabled>PRÓXIMA</button>
+                    </div>
+                </div>
+                <p class="vendor-last-update" id="ultimaAtualizacaoVendedores"></p>
+            </div>
+        </section><!-- /abaVendedores -->
 
     </div><!-- /painelAdmin -->
 </div>
@@ -335,6 +477,8 @@
     <script src="model/validators.js"></script>
     <script src="model/auth.js"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js"></script>
+    <script src="presenter/admin-presenter.js?v=1.4.3"></script>
+    <script src="model/google-sheets.js?v=1.4.3"></script>
+    <script src="presenter/vendors-presenter.js?v=1.4.3"></script>
 </body>
 </html>
