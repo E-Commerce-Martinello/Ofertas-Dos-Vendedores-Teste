@@ -57,11 +57,11 @@
                 });
             }
             // Limpar cache de versões antigas automaticamente
-            if (localStorage.getItem('cacheVersion') !== '1.4') {
+            if (localStorage.getItem('cacheVersion') !== '1.7') {
                 ['ofertasMartinello','ofertaAtiva','configTelaEmBreve'].forEach(function(k){
                     try { localStorage.removeItem(k); } catch(e){}
                 });
-                try { localStorage.setItem('cacheVersion','1.4'); } catch(e){}
+                try { localStorage.setItem('cacheVersion','1.7'); } catch(e){}
             }
         })();
     </script>

@@ -12,7 +12,7 @@ const CONFIG = Object.freeze({
     urlBase:          'https://www.martinello.com.br/parceiros/',
 
     // Cache — mude o número a cada atualização para limpar cache dos vendedores
-    CACHE_VERSION:    '1.6',
+    CACHE_VERSION:    '1.7',
     // Planilha oficial de vendedores — o acesso continua protegido pelo OAuth do Google.
     googleSpreadsheetId: '1oDslsFeW1aFQj-FEguAJsxKew6V3QIlVvfqpMiMUnu0',
 

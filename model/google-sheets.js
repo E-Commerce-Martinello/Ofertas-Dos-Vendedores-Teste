@@ -101,6 +101,23 @@ const GoogleSheetsService = {
         return Array.isArray(dados.values) ? dados.values : [];
     },
 
+    async carregarParametros(clientId, spreadsheetId) {
+        const token = await this._obterToken(clientId);
+        // A aba contém os participantes (A:C) e a relação de funcionários ativos (F:H).
+        const intervalo = encodeURIComponent("'Parâmetros de Dados'!A1:H1500");
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${intervalo}?valueRenderOption=FORMATTED_VALUE`;
+        const resposta = await fetch(url, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const dados = await resposta.json().catch(() => ({}));
+        if (!resposta.ok) {
+            const detalhe = dados?.error?.message || `Erro HTTP ${resposta.status}`;
+            throw new Error(`Não foi possível consultar a aba Parâmetros de Dados: ${detalhe}`);
+        }
+        return Array.isArray(dados.values) ? dados.values : [];
+    },
+
     limparSessao() {
         this.accessToken = null;
         this.tokenExpiraEm = 0;
