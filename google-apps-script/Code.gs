@@ -106,6 +106,8 @@ function doPost(e) {
       resultado = salvarVendedorV153_(payload);
     } else if (p.action === 'criarVendedor') {
       resultado = criarVendedorV153_(payload);
+    } else if (p.action === 'importarFuncionarios') {
+      resultado = importarFuncionariosV153_(payload);
     } else {
       throw new Error('Ação não reconhecida.');
     }
@@ -175,7 +177,6 @@ function salvarVendedorV153_(p) {
   const matricula = somenteDigitosV153_(p.matricula);
   const nome = textoV153_(p.nome);
   const filial = textoV153_(p.filial);
-  const codigoFilial = textoV153_(p.codigoFilial);
   const telefone = somenteDigitosV153_(p.telefone);
   if (!matricula || !nome) throw new Error('Matrícula e nome são obrigatórios.');
   if (telefone && !telefoneValidoV153_(telefone)) throw new Error('Telefone inválido. Informe DDD e número com 10 ou 11 dígitos, ou o código 55 mais o telefone.');
@@ -196,6 +197,7 @@ function salvarVendedorV153_(p) {
     const statusCadastro = textoV153_(p.statusCadastro).toUpperCase() || textoV153_(atual[7]) || 'ATIVO';
     const statusTelefone = telefone ? (textoV153_(p.statusTelefone).toUpperCase() === 'VALIDADO' ? 'VALIDADO' : 'PENDENTE') : 'PENDENTE';
     const agora = new Date().toISOString();
+    const codigoFilial = String(atual[3] == null ? '' : atual[3]); // campo legado preservado sem aparecer no formulário
     const nova = [
       matricula, nome, filial, codigoFilial,
       telefone, normalizarTelefoneV153_(telefone),
@@ -213,7 +215,6 @@ function criarVendedorV153_(p) {
   const matricula = somenteDigitosV153_(p.matricula);
   const nome = textoV153_(p.nome);
   const filial = textoV153_(p.filial);
-  const codigoFilial = textoV153_(p.codigoFilial);
   const telefone = somenteDigitosV153_(p.telefone);
   if (!matricula || !nome || !filial) throw new Error('Matrícula, nome e filial são obrigatórios.');
   if (telefone && !telefoneValidoV153_(telefone)) throw new Error('Telefone inválido. Informe DDD e número com 10 ou 11 dígitos, ou o código 55 mais o telefone.');
@@ -228,7 +229,7 @@ function criarVendedorV153_(p) {
     const agora = new Date().toISOString();
     const statusTelefone = telefone && textoV153_(p.statusTelefone).toUpperCase() === 'VALIDADO' ? 'VALIDADO' : 'PENDENTE';
     const linha = [
-      matricula, nome, filial, codigoFilial,
+      matricula, nome, filial, '',
       telefone, normalizarTelefoneV153_(telefone),
       'PENDENTE_VALIDACAO', 'ATIVO', 'CADASTRO_MANUAL',
       agora, agora, textoV153_(p.observacoes), statusTelefone
@@ -236,6 +237,119 @@ function criarVendedorV153_(p) {
     const destino = sh.getLastRow() + 1;
     gravarLinhaTextoV153_(sh, destino, linha);
     return { matricula, linha: destino, criadoEm: agora, statusTelefone };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Importação controlada do relatório de funcionários.
+ * Atualiza nome/filial/situação pela matrícula, preservando telefones, validações,
+ * observações, datas de criação e o campo legado codigo_filial.
+ */
+function importarFuncionariosV153_(payload) {
+  const entrada = Array.isArray(payload.registros) ? payload.registros : [];
+  if (!entrada.length) throw new Error('O relatório não contém vendedores válidos.');
+  if (entrada.length > 2500) throw new Error('O limite é de 2.500 registros por importação.');
+
+  const vistos = {};
+  const registros = entrada.map((item, indice) => {
+    const matricula = somenteDigitosV153_(item.matricula);
+    const nome = textoV153_(item.nome);
+    const filial = textoV153_(item.filial);
+    if (!matricula || !nome || !filial) throw new Error('Registro inválido na linha importada ' + (indice + 1) + ': matrícula, nome e filial são obrigatórios.');
+    if (vistos[matricula]) throw new Error('A matrícula ' + matricula + ' aparece mais de uma vez no arquivo. Corrija o relatório antes de importar.');
+    vistos[matricula] = true;
+    return {
+      matricula,
+      nome: nome.slice(0, 160),
+      filial: filial.slice(0, 120),
+      situacaoFuncional: textoV153_(item.situacaoFuncional) || (item.ativo === false ? 'INATIVO' : 'OK'),
+      ativo: item.ativo !== false
+    };
+  });
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const sh = obterAbaVendedoresV153_(obterPlanilhaVendedoresV153_());
+    const ultima = sh.getLastRow();
+    const totalExistente = Math.max(0, ultima - 1);
+    const dados = totalExistente ? sh.getRange(2, 1, totalExistente, MART_V153_HEADERS.length).getDisplayValues() : [];
+    const indicePorMatricula = {};
+    dados.forEach((linha, i) => {
+      const mat = somenteDigitosV153_(linha[0]);
+      if (!mat) return;
+      if (indicePorMatricula[mat] !== undefined) throw new Error('A base atual contém matrícula duplicada (' + mat + '). Nenhuma importação foi aplicada.');
+      indicePorMatricula[mat] = i;
+    });
+
+    const entradaPorMatricula = {};
+    registros.forEach(r => { entradaPorMatricula[r.matricula] = r; });
+    const agora = new Date().toISOString();
+    let novos = 0, atualizados = 0, semAlteracao = 0, inativados = 0;
+
+    dados.forEach((linha, i) => {
+      const mat = somenteDigitosV153_(linha[0]);
+      if (!mat) return;
+      const registro = entradaPorMatricula[mat];
+      if (registro) {
+        const antes = [linha[1], linha[2], linha[6], linha[7]].join('|');
+        const depoisSituacao = registro.situacaoFuncional;
+        const depoisStatus = registro.ativo ? 'ATIVO' : 'INATIVO';
+        const depois = [registro.nome, registro.filial, depoisSituacao, depoisStatus].join('|');
+        if (antes !== depois) {
+          linha[1] = registro.nome;
+          linha[2] = registro.filial;
+          // linha[3] codigo_filial legado: manter sem alterações.
+          linha[6] = depoisSituacao;
+          linha[7] = depoisStatus;
+          linha[10] = agora;
+          atualizados++;
+        } else semAlteracao++;
+      } else if (payload.inativarAusentes === true
+          && String(linha[7] || '').toUpperCase() !== 'INATIVO'
+          && String(linha[8] || '').toUpperCase() !== 'CADASTRO_MANUAL') {
+        linha[6] = 'NAO_ENCONTRADO_NO_RELATORIO';
+        linha[7] = 'INATIVO';
+        linha[10] = agora;
+        inativados++;
+      }
+    });
+
+    const novosRegistros = [];
+    registros.forEach(r => {
+      if (indicePorMatricula[r.matricula] !== undefined) return;
+      novosRegistros.push([
+        r.matricula, r.nome, r.filial, '', '', '',
+        r.situacaoFuncional, r.ativo ? 'ATIVO' : 'INATIVO',
+        'IMPORTACAO_RELATORIO', agora, agora, '', 'PENDENTE'
+      ]);
+      novos++;
+    });
+
+    // A aba Vendedores é uma tabela de valores (sem fórmulas). Regrava somente A:M.
+    if (dados.length) {
+      const destino = sh.getRange(2, 1, dados.length, MART_V153_HEADERS.length);
+      destino.setNumberFormat('@');
+      destino.setValues(dados.map(l => l.map(v => String(v == null ? '' : v))));
+    }
+    if (novosRegistros.length) {
+      const inicio = sh.getLastRow() + 1;
+      const destinoNovos = sh.getRange(inicio, 1, novosRegistros.length, MART_V153_HEADERS.length);
+      destinoNovos.setNumberFormat('@');
+      destinoNovos.setValues(novosRegistros);
+    }
+    SpreadsheetApp.flush();
+    return {
+      totalImportado: registros.length,
+      novos,
+      atualizados,
+      semAlteracao,
+      inativados,
+      preservados: true,
+      arquivo: textoV153_(payload.nomeArquivo)
+    };
   } finally {
     lock.releaseLock();
   }

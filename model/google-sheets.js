@@ -117,6 +117,16 @@ const GoogleSheetsService = {
         return this._post('criarVendedor', dados);
     },
 
+    async importarFuncionarios(registros, inativarAusentes, nomeArquivo) {
+        if (!Array.isArray(registros) || !registros.length) throw new Error('Nenhum vendedor válido foi encontrado no relatório.');
+        if (registros.length > 2500) throw new Error('O relatório excede o limite de 2.500 registros por importação.');
+        return this._post('importarFuncionarios', {
+            registros,
+            inativarAusentes: inativarAusentes === true,
+            nomeArquivo: String(nomeArquivo || '').slice(0, 160)
+        });
+    },
+
     limparSessao() {
         this.apiUrl = '';
         this.apiToken = '';

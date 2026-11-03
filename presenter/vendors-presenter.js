@@ -177,8 +177,11 @@ const VendedoresPresenter = {
             this.links = gestao.links || {};
             this.registros = this._mapearVendedores(linhas);
             if (!this.registros.length) throw new Error('A aba Vendedores foi lida, mas não contém linhas válidas.');
+            this._atualizarFiltroFilial();
             document.getElementById('painelDadosVendedores').style.display = 'block';
             document.getElementById('painelGestaoVendedores').style.display = 'block';
+            const painelImportacao = document.getElementById('painelImportacaoFuncionarios');
+            if (painelImportacao) painelImportacao.style.display = 'block';
             if (botaoAtualizar) botaoAtualizar.disabled = false;
             this.pagina = 1;
             this.filtrar();
@@ -197,13 +200,29 @@ const VendedoresPresenter = {
         }
     },
 
+    _atualizarFiltroFilial() {
+        const select = document.getElementById('filtroFilialVendedor');
+        if (!select) return;
+        const selecionada = select.value || '';
+        const filiais = [...new Set(this.registros
+            .map(v => this._texto(v.filial))
+            .filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+        select.innerHTML = '<option value="">Todas as filiais</option>' + filiais.map(f =>
+            `<option value="${this._escapar(f)}">${this._escapar(f)}</option>`
+        ).join('');
+        if (filiais.includes(selecionada)) select.value = selecionada;
+    },
+
     filtrar() {
         const termo = this._texto(document.getElementById('buscaVendedor')?.value).toLocaleLowerCase('pt-BR');
         const filtroAtivo = document.getElementById('filtroEmpresaVendedor')?.value || 'ativos';
         const filtroTelefone = document.getElementById('filtroStatusVendedor')?.value || 'todos';
+        const filtroFilial = this._texto(document.getElementById('filtroFilialVendedor')?.value).toLocaleLowerCase('pt-BR');
         this.filtrados = this.registros.filter(v => {
             if (filtroAtivo === 'ativos' && !v.ativo) return false;
             if (filtroAtivo === 'inativos' && v.ativo) return false;
+            if (filtroFilial && this._texto(v.filial).toLocaleLowerCase('pt-BR') !== filtroFilial) return false;
             const correspondeBusca = !termo || [v.nome, v.matricula, v.numero, v.filial, v.codfil]
                 .some(campo => this._texto(campo).toLocaleLowerCase('pt-BR').includes(termo));
             if (!correspondeBusca) return false;
@@ -294,7 +313,6 @@ const VendedoresPresenter = {
         document.getElementById('editarMatricula').readOnly = false;
         document.getElementById('editarNomeVendedor').value = '';
         document.getElementById('editarFilialVendedor').value = '';
-        document.getElementById('editarCodigoFilialVendedor').value = '';
         document.getElementById('editarTelefoneVendedor').value = '';
         document.getElementById('editarStatusTelefone').value = 'PENDENTE';
         document.getElementById('editarAtivoVendedor').checked = true;
@@ -315,7 +333,6 @@ const VendedoresPresenter = {
         document.getElementById('editarMatricula').readOnly = true;
         document.getElementById('editarNomeVendedor').value = vendedor.nome || '';
         document.getElementById('editarFilialVendedor').value = vendedor.filial || '';
-        document.getElementById('editarCodigoFilialVendedor').value = vendedor.codfil || '';
         document.getElementById('editarTelefoneVendedor').value = vendedor.numero || '';
         document.getElementById('editarStatusTelefone').value = vendedor.statusTelefone || 'PENDENTE';
         document.getElementById('editarAtivoVendedor').checked = vendedor.ativo !== false;
@@ -340,7 +357,6 @@ const VendedoresPresenter = {
         const matricula = this._matricula(document.getElementById('editarMatricula').value);
         const nome = this._texto(document.getElementById('editarNomeVendedor').value);
         const filial = this._texto(document.getElementById('editarFilialVendedor').value);
-        const codigoFilial = this._texto(document.getElementById('editarCodigoFilialVendedor').value);
         const numero = this._digitos(document.getElementById('editarTelefoneVendedor').value);
         const statusTelefone = this._texto(document.getElementById('editarStatusTelefone').value).toUpperCase();
         const ativo = document.getElementById('editarAtivoVendedor').checked;
@@ -358,7 +374,7 @@ const VendedoresPresenter = {
         try {
             if (this.modoModal === 'novo') {
                 await GoogleSheetsService.criarVendedor(cfg.url, cfg.token, {
-                    matricula, nome, filial, codigoFilial, telefone: numero,
+                    matricula, nome, filial, telefone: numero,
                     statusTelefone: numero ? statusTelefone : 'PENDENTE', statusCadastro: ativo ? 'ATIVO' : 'INATIVO', observacoes
                 });
                 UI.ok('Vendedor cadastrado diretamente na aba Vendedores.');
@@ -367,7 +383,7 @@ const VendedoresPresenter = {
                 if (!atual) throw new Error('Cadastro não encontrado. Atualize a lista e tente novamente.');
                 const statusCadastro = !ativo ? 'INATIVO' : (atual.statusCadastro === 'INATIVO' ? 'ATIVO' : atual.statusCadastro);
                 await GoogleSheetsService.salvarVendedor(cfg.url, cfg.token, {
-                    matricula, nome, filial, codigoFilial, telefone: numero,
+                    matricula, nome, filial, telefone: numero,
                     statusTelefone: numero ? statusTelefone : 'PENDENTE', statusCadastro, observacoes
                 });
                 UI.ok('Cadastro atualizado diretamente na aba Vendedores.');

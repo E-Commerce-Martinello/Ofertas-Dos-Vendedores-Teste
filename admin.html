@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.5.3</title>
+    <title>Admin Martinello | 1.5.4</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -203,8 +203,9 @@
         .vendor-kpi strong { display:block; font-size:25px; margin-bottom:4px; color:#333; }
         body.dark-mode .vendor-kpi strong { color:#fff; }
         .vendor-kpi span { color:#777; font-size:11px; font-weight:700; text-transform:uppercase; }
-        .vendor-filters { display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:15px; }
-        @media(min-width:700px) { .vendor-filters { grid-template-columns:2fr 1fr 1fr; } }
+         .vendor-filters { display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:15px; }
+        @media(min-width:700px) and (max-width:1099px) { .vendor-filters { grid-template-columns:2fr 1fr; } }
+        @media(min-width:1100px) { .vendor-filters { grid-template-columns:2fr 1fr 1fr 1fr; } }
         .vendor-filters input,.vendor-filters select { width:100%; padding:13px; border:2px solid #ddd; border-radius:10px; font-size:14px; background:#fff; color:#333; }
         body.dark-mode .vendor-filters input, body.dark-mode .vendor-filters select { background:#3d3d3d; border-color:#555; color:#fff; }
         .vendor-table-wrap { overflow-x:auto; border:1px solid #e5e5e5; border-radius:12px; }
@@ -254,6 +255,21 @@
         @media(min-width:700px) { .vendor-checker-config { grid-template-columns:2fr auto auto; } }
         .vendor-checker-config input { width:100%; padding:12px; border:2px solid #ddd; border-radius:10px; font-size:13px; }
         body.dark-mode .vendor-checker-config input { background:#3d3d3d; color:white; border-color:#555; }
+        .vendor-import-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:14px 0; }
+        @media(min-width:700px) { .vendor-import-summary { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+        .vendor-import-kpi { border:1px solid #e5e5e5; background:#fafafa; padding:12px; border-radius:12px; }
+        .vendor-import-kpi strong { display:block; font-size:22px; color:#333; }
+        .vendor-import-kpi span { display:block; font-size:10px; font-weight:800; color:#777; text-transform:uppercase; margin-top:3px; }
+        body.dark-mode .vendor-import-kpi { background:#333; border-color:#4a4a4a; }
+        body.dark-mode .vendor-import-kpi strong { color:#fff; }
+        .vendor-import-table { width:100%; border-collapse:collapse; min-width:520px; font-size:12px; margin-top:12px; }
+        .vendor-import-table th,.vendor-import-table td { padding:9px; border-bottom:1px solid #e8e8e8; text-align:left; }
+        .vendor-import-table th { background:#f1f1f1; color:#555; }
+        body.dark-mode .vendor-import-table th { background:#3a3a3a; color:#eee; }
+        body.dark-mode .vendor-import-table td { border-color:#4a4a4a; color:#ddd; }
+        .vendor-import-preview-scroll { overflow-x:auto; max-height:300px; overflow-y:auto; border:1px solid #e5e5e5; border-radius:10px; }
+        .vendor-import-warning { background:#fff7df; border-left:4px solid #d69e36; padding:12px; border-radius:9px; color:#6b4f00; font-size:12px; line-height:1.5; margin:12px 0; }
+        body.dark-mode .vendor-import-warning { background:#473912; color:#ffe9a6; }
         .vendor-subtext { color:#777; font-size:12px; line-height:1.55; margin:8px 0 14px; }
         body.dark-mode .vendor-subtext { color:#bbb; }
         .vendor-checkbox { display:flex; align-items:center; gap:9px; font-size:13px; color:#555; margin-top:10px; }
@@ -452,6 +468,18 @@
                 <p class="vendor-last-update">A API trabalha exclusivamente com a aba <strong>Vendedores (A:M)</strong>. Telefone alterado volta para <strong>PENDENTE</strong> até ser validado explicitamente.</p>
             </div>
 
+            <div class="admin-card" id="painelImportacaoFuncionarios" style="display:none;">
+                <h2><i class="fas fa-file-import" style="color:#d0252a;"></i> IMPORTAR RELATÓRIO DE FUNCIONÁRIOS</h2>
+                <p class="vendor-subtext">Envie o relatório original da empresa (.XLS, .XLSX ou .ODS). O navegador extrai somente matrícula, nome, filial e situação; CPF, RG, nascimento e outros campos não são enviados nem armazenados.</p>
+                <input type="file" id="arquivoRelatorioFuncionarios" accept=".xls,.xlsx,.xlsm,.ods,.csv" style="display:none" onchange="VendorImportPresenter.aoSelecionarArquivo(this)">
+                <div class="vendor-actions">
+                    <button type="button" class="btn-outline" id="btnEscolherRelatorio" onclick="document.getElementById('arquivoRelatorioFuncionarios').click()"><i class="fas fa-folder-open"></i> ESCOLHER RELATÓRIO</button>
+                    <button type="button" class="btn-primary" id="btnAnalisarRelatorio" onclick="VendorImportPresenter.analisar()" disabled><i class="fas fa-search"></i> ANALISAR RELATÓRIO</button>
+                </div>
+                <div id="arquivoRelatorioSelecionado" class="vendor-status"><i class="fas fa-info-circle"></i><span>Nenhum arquivo selecionado.</span></div>
+                <div id="painelPreviaImportacao" style="display:none;margin-top:16px;"></div>
+            </div>
+
             <div class="admin-card" id="painelDadosVendedores" style="display:none;">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                     <h2 style="margin:0;">VISÃO GERAL</h2>
@@ -467,12 +495,15 @@
                 <h2>CONSULTAR E GERENCIAR VENDEDORES</h2>
                 <div class="vendor-filters">
                     <input id="buscaVendedor" type="search" placeholder="Buscar por nome, matrícula, filial ou telefone..." oninput="VendedoresPresenter.filtrar()">
-                    <select id="filtroEmpresaVendedor" onchange="VendedoresPresenter.filtrar()">
+                    <select id="filtroEmpresaVendedor" aria-label="Filtrar situação do cadastro" onchange="VendedoresPresenter.filtrar()">
                         <option value="ativos">Somente cadastros ativos</option>
                         <option value="todos">Todos os cadastros</option>
                         <option value="inativos">Somente inativos</option>
                     </select>
-                    <select id="filtroStatusVendedor" onchange="VendedoresPresenter.filtrar()">
+                    <select id="filtroFilialVendedor" aria-label="Filtrar por filial" onchange="VendedoresPresenter.filtrar()">
+                        <option value="">Todas as filiais</option>
+                    </select>
+                    <select id="filtroStatusVendedor" aria-label="Filtrar situação do telefone" onchange="VendedoresPresenter.filtrar()">
                         <option value="todos">Todos os telefones</option>
                         <option value="validado">Telefone validado</option>
                         <option value="pendente">Telefone pendente</option>
@@ -519,7 +550,6 @@
         <div class="form-group"><label for="editarMatricula">Matrícula / Rubi</label><input type="text" id="editarMatricula" inputmode="numeric"></div>
         <div class="form-group"><label for="editarNomeVendedor">Nome</label><input type="text" id="editarNomeVendedor" maxlength="160"></div>
         <div class="form-group"><label for="editarFilialVendedor">Filial</label><input type="text" id="editarFilialVendedor" maxlength="120"></div>
-        <div class="form-group"><label for="editarCodigoFilialVendedor">Código da filial</label><input type="text" id="editarCodigoFilialVendedor" maxlength="30"></div>
         <div class="form-group"><label for="editarTelefoneVendedor">Telefone / WhatsApp</label><input type="tel" id="editarTelefoneVendedor" inputmode="tel" oninput="VendedoresPresenter.aoAlterarTelefone()"></div>
         <div class="form-group"><label for="editarStatusTelefone">Validação do telefone</label><select id="editarStatusTelefone"><option value="PENDENTE">Pendente de validação</option><option value="VALIDADO">Validado manualmente</option></select></div>
         <div class="form-group"><label>Situação funcional atual</label><div id="editarSituacaoFuncional" class="vendor-help" style="margin:0;">Não informada</div></div>
@@ -544,10 +574,13 @@
     <script src="model/validators.js"></script>
     <script src="model/auth.js"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.5.3"></script>
-    <script src="model/google-sheets.js?v=1.5.3"></script>
-    <script src="model/vendor-management.js?v=1.5.3"></script>
-    <script src="model/link-checker.js?v=1.5.3"></script>
-    <script src="presenter/vendors-presenter.js?v=1.5.3"></script>
+    <script src="presenter/admin-presenter.js?v=1.5.4"></script>
+    <script src="model/google-sheets.js?v=1.5.4"></script>
+    <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="model/vendor-import.js?v=1.5.4"></script>
+    <script src="model/vendor-management.js?v=1.5.4"></script>
+    <script src="model/link-checker.js?v=1.5.4"></script>
+    <script src="presenter/vendors-presenter.js?v=1.5.4"></script>
 </body>
 </html>
