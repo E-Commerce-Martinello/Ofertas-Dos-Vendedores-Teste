@@ -8,7 +8,6 @@ const AdminPresenter = {
     ofertas: [],
     intervaloStatus: null,
     timerBloqueio: null,
-    abaAtual: 'ofertas',
 
     async init() {
         Storage.verificarQuota(); // Limpar localStorage se cheio (Safari/iPhone)
@@ -87,8 +86,6 @@ const AdminPresenter = {
         console.log('👋 Logout realizado');
         Auth.logout();
         clearInterval(this.intervaloStatus);
-        if (typeof GoogleSheetsService !== 'undefined') GoogleSheetsService.limparSessao();
-        if (typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.limparDados();
         this._mostrarLogin();
     },
 
@@ -106,21 +103,6 @@ const AdminPresenter = {
 
         this.intervaloStatus = setInterval(() => this.renderLista(), 5000);
         console.log('✅ Painel admin pronto!');
-    },
-
-    mostrarAba(aba) {
-        const vendedores = aba === 'vendedores';
-        this.abaAtual = vendedores ? 'vendedores' : 'ofertas';
-        document.getElementById('abaOfertas').style.display = vendedores ? 'none' : 'block';
-        document.getElementById('abaVendedores').style.display = vendedores ? 'block' : 'none';
-        document.getElementById('tabOfertas').classList.toggle('active', !vendedores);
-        document.getElementById('tabVendedores').classList.toggle('active', vendedores);
-        document.getElementById('btnNovaOfertaTopo').style.display = vendedores ? 'none' : 'inline-block';
-        document.getElementById('tituloAdmin').textContent = vendedores ? '👥 VENDEDORES' : '⚙️ AGENDADOR';
-        document.getElementById('subtituloAdmin').textContent = vendedores
-            ? 'Consulta da base de vendedores e situação no grupo de WhatsApp.'
-            : 'Apenas UMA oferta fica ativa por vez';
-        if (vendedores && typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.init();
     },
 
     // ── LISTA DE OFERTAS ─────────────────────
