@@ -288,10 +288,12 @@
             <img src="img/logo.png" alt="Martinello">
             <div class="environment-badge">🧪 AMBIENTE DE TESTE</div>
             <h2>Acesso Restrito</h2>
-            <input type="password" id="senhaInput" placeholder="Digite sua senha">
-            <div id="infoBloqueio"></div>
-            <button id="btnEntrar" onclick="login()" style="margin-top:12px;">ENTRAR</button>
-            <p style="margin-top:15px;font-size:12px;color:#888;">🔐 Sessão expira em 4h por segurança</p>
+            <p style="font-size:13px;color:#666;line-height:1.6;margin:12px 0;">Acesso com uma conta Google autorizada. Não há senha compartilhada no site.</p>
+            <label for="apiUrlLogin" style="display:block;text-align:left;font-size:12px;font-weight:700;margin:10px 0 5px;">URL da API de teste (/exec)</label>
+            <input type="url" id="apiUrlLogin" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="url" style="width:100%;">
+            <p id="loginStatus" role="alert" style="display:none;color:#a21d20;font-size:12px;margin:12px 0;overflow-wrap:anywhere;"></p>
+            <button id="btnEntrar" onclick="login()" style="margin-top:12px;"><i class="fab fa-google"></i> ENTRAR COM GOOGLE</button>
+            <p style="margin-top:15px;font-size:12px;color:#888;">A autorização é conferida no Apps Script antes de abrir o painel.</p>
         </div>
     </div>
 
@@ -447,7 +449,7 @@
 
                 <div class="vendor-help">
                     <strong>Conexão protegida pelo Google Apps Script</strong><br>
-                    O script usa o ID fixo da planilha de TESTE e valida a conta Google autorizada. O Google exige escopo de planilhas da conta para a API Web; o código limita as operações ao documento de teste. O token privado fica neste navegador e nunca deve ser colocado no GitHub.
+                    A API usa a planilha de TESTE e valida a identidade Google via Firebase Authentication no servidor. Nenhum token permanente é armazenado neste navegador.
                 </div>
 
                 <div class="vendor-config-grid">
@@ -455,16 +457,13 @@
                         <label for="apiVendedoresUrl">URL do Apps Script de gestão (/exec)</label>
                         <input type="url" id="apiVendedoresUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
                     </div>
-                    <div class="form-group">
-                        <label for="apiVendedoresToken">Token privado do administrador</label>
-                        <input type="password" id="apiVendedoresToken" placeholder="Cole o token gerado no Apps Script" autocomplete="new-password">
-                    </div>
+
                 </div>
                 <div class="vendor-actions">
                     <button type="button" class="btn-primary" id="btnConectarSheets" onclick="VendedoresPresenter.conectar()"><i class="fas fa-plug"></i> CONECTAR E CARREGAR</button>
                     <button type="button" class="btn-outline" id="btnAtualizarVendedores" onclick="VendedoresPresenter.atualizar()" disabled><i class="fas fa-sync-alt"></i> ATUALIZAR DADOS</button>
                 </div>
-                <div id="statusConexaoSheets" class="vendor-status"><i class="fas fa-info-circle"></i><span>Configure o endereço e o token da API da planilha de teste.</span></div>
+                <div id="statusConexaoSheets" class="vendor-status"><i class="fas fa-info-circle"></i><span>Conecte com sua conta Google autorizada para consultar os vendedores.</span></div>
                 <p class="vendor-last-update">A API trabalha exclusivamente com a aba <strong>Vendedores (A:M)</strong>. Telefone alterado volta para <strong>PENDENTE</strong> até ser validado explicitamente.</p>
             </div>
 
@@ -566,21 +565,22 @@
     <!-- Scripts — carregados no final para garantir ordem em todos os browsers -->
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
     <script src="shared/config.js"></script>
     <script src="shared/utils.js"></script>
     <script src="model/firebase-config.js"></script>
     <script src="model/horario.js"></script>
     <script src="model/storage.js"></script>
     <script src="model/validators.js"></script>
-    <script src="model/auth.js"></script>
+    <script src="model/auth.js?v=1.6.0"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.5.4"></script>
-    <script src="model/google-sheets.js?v=1.5.5"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.0"></script>
+    <script src="model/google-sheets.js?v=1.6.0"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-    <script src="model/vendor-import.js?v=1.5.5"></script>
+    <script src="model/vendor-import.js?v=1.6.0"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
-    <script src="presenter/vendors-presenter.js?v=1.5.5"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.0"></script>
 </body>
 </html>

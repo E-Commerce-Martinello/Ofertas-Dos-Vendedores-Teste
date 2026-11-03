@@ -11,90 +11,75 @@ const AdminPresenter = {
     abaAtual: 'ofertas',
 
     async init() {
-        Storage.verificarQuota(); // Limpar localStorage se cheio (Safari/iPhone)
-        console.log('🔐 Admin iniciando...');
+        Storage.verificarQuota();
         UI.tema.aplicar(Storage.carregarTema());
-
-        if (Auth.sessaoValida()) {
-            console.log('✅ Sessão válida — abrindo painel');
-            await this._abrirPainel();
-        } else {
-            console.log('🔒 Sem sessão — exibindo login');
-            this._mostrarLogin();
+        const inputUrl = document.getElementById('apiUrlLogin');
+        const url = localStorage.getItem('martVendedoresApiUrl_TESTE') || '';
+        if (inputUrl) inputUrl.value = url;
+        // Eliminar credenciais e sessões antigas da versão com senha fixa.
+        localStorage.removeItem('martVendedoresApiToken_TESTE');
+        sessionStorage.removeItem(CONFIG.SESSION_KEY);
+        this._mostrarLogin();
+        try {
+            const usuario = await Auth.iniciar();
+            if (usuario && url) {
+                await GoogleSheetsService.testarConexao(url);
+                await this._abrirPainel();
+            }
+        } catch (erro) {
+            // A sessão Firebase pode existir, mas a conta precisa ter permissão no Apps Script.
+            this._mensagemLogin(erro.message || 'Não foi possível validar a conta.');
+            await Auth.sair().catch(() => {});
         }
-
-        document.getElementById('senhaInput')
-            ?.addEventListener('keydown', e => { if (e.key === 'Enter') this.login(); });
     },
 
-    // ── LOGIN ────────────────────────────────
+    _mensagemLogin(mensagem) {
+        const el = document.getElementById('loginStatus');
+        if (el) { el.textContent = mensagem || ''; el.style.display = mensagem ? 'block' : 'none'; }
+    },
 
     _mostrarLogin() {
-        document.getElementById('loginBox').style.display    = 'block';
+        document.getElementById('loginBox').style.display = 'block';
         document.getElementById('painelAdmin').style.display = 'none';
-        if (Auth.estaBloqueado()) this._iniciarTimerBloqueio();
     },
 
     async login() {
-        if (Auth.estaBloqueado()) {
-            UI.erro(`Bloqueado. Aguarde ${Auth.tempoRestanteBloqueio()}s.`);
-            return;
+        const btn = document.getElementById('btnEntrar');
+        const url = (document.getElementById('apiUrlLogin')?.value || '').trim().split('?')[0];
+        if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) {
+            this._mensagemLogin('Informe a URL /exec do Apps Script de teste.'); return;
         }
-
-        const senha = document.getElementById('senhaInput').value;
-        console.log('🔑 Tentativa de login...');
-        const res = await Auth.verificarSenha(senha);
-
-        if (res.ok) {
-            console.log('✅ Login bem-sucedido');
+        if (btn) { btn.disabled = true; btn.textContent = 'VERIFICANDO...'; }
+        this._mensagemLogin('');
+        try {
+            await Auth.entrarGoogle();
+            // Exige permissão no servidor antes de mostrar dados internos no painel.
+            await GoogleSheetsService.testarConexao(url);
+            localStorage.setItem('martVendedoresApiUrl_TESTE', url);
             await this._abrirPainel();
-        } else if (res.bloqueado) {
-            console.warn('🚫 Conta bloqueada por excesso de tentativas');
-            this._iniciarTimerBloqueio();
-        } else {
-            console.warn(`❌ Senha incorreta — ${res.restantes} tentativa(s) restante(s)`);
-            const msg = res.restantes > 0
-                ? `Senha incorreta. ${res.restantes} tentativa(s) restante(s).`
-                : `Bloqueado por ${Math.ceil(CONFIG.BLOQUEIO_MS / 60000)} minutos.`;
-            UI.erro(msg);
-            document.getElementById('senhaInput').value = '';
+        } catch (erro) {
+            await Auth.sair().catch(() => {});
+            this._mensagemLogin(erro.message || 'Acesso não autorizado.');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fab fa-google"></i> ENTRAR COM GOOGLE'; }
         }
     },
 
-    _iniciarTimerBloqueio() {
-        clearInterval(this.timerBloqueio);
-        const btn  = document.getElementById('btnEntrar');
-        const info = document.getElementById('infoBloqueio');
-
-        const atualizar = () => {
-            const s = Auth.tempoRestanteBloqueio();
-            if (s <= 0) {
-                clearInterval(this.timerBloqueio);
-                if (btn)  { btn.disabled = false; btn.textContent = 'ENTRAR'; }
-                if (info) info.style.display = 'none';
-                return;
-            }
-            const m = Math.floor(s / 60), ss = s % 60;
-            if (btn)  { btn.disabled = true; btn.textContent = `BLOQUEADO (${m}:${String(ss).padStart(2,'0')})`; }
-            if (info) { info.style.display = 'block'; info.textContent = `Muitas tentativas incorretas. Aguarde ${m}:${String(ss).padStart(2,'0')}.`; }
-        };
-
-        atualizar();
-        this.timerBloqueio = setInterval(atualizar, 1000);
-    },
-
-    logout() {
-        console.log('👋 Logout realizado');
-        Auth.logout();
+    async logout() {
         clearInterval(this.intervaloStatus);
+        this.intervaloStatus = null;
         if (typeof GoogleSheetsService !== 'undefined') GoogleSheetsService.limparSessao();
         if (typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.limparDados();
+        await Auth.sair();
+        this.ofertas = [];
+        this._mensagemLogin('');
         this._mostrarLogin();
     },
 
     // ── PAINEL ───────────────────────────────
 
     async _abrirPainel() {
+        if (this.intervaloStatus) clearInterval(this.intervaloStatus);
         document.getElementById('loginBox').style.display    = 'none';
         document.getElementById('painelAdmin').style.display = 'block';
 

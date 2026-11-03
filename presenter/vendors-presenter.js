@@ -5,10 +5,8 @@
 // ============================================
 const VendedoresPresenter = {
     STORAGE_API_URL: 'martVendedoresApiUrl_TESTE',
-    STORAGE_API_TOKEN: 'martVendedoresApiToken_TESTE',
     STORAGE_LINK_CHECKER: 'adminLinkCheckerUrl',
     apiUrl: '',
-    apiToken: '',
     registros: [],
     filiais: {},
     filtrados: [],
@@ -26,14 +24,11 @@ const VendedoresPresenter = {
     init() {
         if (!this.inicializado) {
             const url = document.getElementById('apiVendedoresUrl');
-            const token = document.getElementById('apiVendedoresToken');
             if (url) url.value = localStorage.getItem(this.STORAGE_API_URL) || '';
-            if (token) token.value = localStorage.getItem(this.STORAGE_API_TOKEN) || '';
             this.apiUrl = localStorage.getItem(this.STORAGE_API_URL) || '';
-            this.apiToken = localStorage.getItem(this.STORAGE_API_TOKEN) || '';
             this.inicializado = true;
         }
-        if (!this.registros.length) this._status('Informe a URL e o token do Apps Script de TESTE para carregar a base Vendedores.');
+        if (!this.registros.length) this._status('Conecte a API com a conta Google autorizada para carregar a base de teste.');
     },
 
     _status(mensagem, tipo = 'info') {
@@ -130,16 +125,12 @@ const VendedoresPresenter = {
 
     _validarConfiguracao() {
         const url = this._texto(document.getElementById('apiVendedoresUrl')?.value) || this.apiUrl;
-        const token = this._texto(document.getElementById('apiVendedoresToken')?.value) || this.apiToken;
         if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec(?:\?.*)?$/.test(url)) {
             throw new Error('Informe a URL /exec da implantação do Apps Script vinculada à planilha de TESTE.');
         }
-        if (token.length < 30) throw new Error('Informe o token privado gerado na função configurarAdministradorApiVendedoresV153.');
         this.apiUrl = url.split('?')[0];
-        this.apiToken = token;
         localStorage.setItem(this.STORAGE_API_URL, this.apiUrl);
-        localStorage.setItem(this.STORAGE_API_TOKEN, this.apiToken);
-        return { url: this.apiUrl, token: this.apiToken };
+        return { url: this.apiUrl, token: null };
     },
 
     async conectar() {
@@ -164,7 +155,7 @@ const VendedoresPresenter = {
         }
     },
 
-    async _carregar(apiUrl, apiToken) {
+    async _carregar(apiUrl, _naoUsado) {
         this.carregando = true;
         const botao = document.getElementById('btnConectarSheets');
         const botaoAtualizar = document.getElementById('btnAtualizarVendedores');
@@ -172,7 +163,7 @@ const VendedoresPresenter = {
         if (botaoAtualizar) botaoAtualizar.disabled = true;
         this._status('Consultando a aba Vendedores da planilha de TESTE...');
         try {
-            const base = await GoogleSheetsService.carregarVendedores(apiUrl, apiToken);
+            const base = await GoogleSheetsService.carregarVendedores(apiUrl);
             const linhas = base.linhas;
             this.filiais = Object.fromEntries((base.filiais || [])
                 .filter(v => Array.isArray(v) && v.length >= 2 && /^\d+$/.test(String(v[0]))));
@@ -389,8 +380,8 @@ const VendedoresPresenter = {
             UI.erro('Confira o telefone. Informe DDD e número com 10 ou 11 dígitos.'); return;
         }
         if (numero && !['VALIDADO', 'PENDENTE'].includes(statusTelefone)) { UI.erro('Selecione a situação de validação do telefone.'); return; }
-        const cfg = { url: this.apiUrl || localStorage.getItem(this.STORAGE_API_URL), token: this.apiToken || localStorage.getItem(this.STORAGE_API_TOKEN) };
-        if (!cfg.url || !cfg.token) { UI.erro('Conecte a API antes de salvar.'); return; }
+        const cfg = { url: this.apiUrl || localStorage.getItem(this.STORAGE_API_URL), token: null };
+        if (!cfg.url || !Auth.usuarioAtual()) { UI.erro('Conecte a API com sua conta Google antes de salvar.'); return; }
         this.salvando = true;
         const botao = document.getElementById('btnSalvarVendedor');
         if (botao) { botao.disabled = true; botao.textContent = 'SALVANDO...'; }
@@ -427,8 +418,7 @@ const VendedoresPresenter = {
     async verificarProximosLinks() {
         if (this.verificandoLinks) return;
         const endpoint = this.apiUrl || localStorage.getItem(this.STORAGE_API_URL) || '';
-        const apiToken = this.apiToken || localStorage.getItem(this.STORAGE_API_TOKEN) || '';
-        if (!endpoint || !apiToken) { UI.erro('Conecte a API de vendedores antes de verificar links.'); return; }
+        if (!endpoint || !Auth.usuarioAtual()) { UI.erro('Conecte a API de vendedores antes de verificar links.'); return; }
         const candidatos = this.registros.filter(v => v.ativo && this._matricula(v.matricula)).filter(v => {
             const link = this.links[`m${this._matricula(v.matricula)}`];
             if (!link?.verificadoEm) return true;
@@ -443,7 +433,7 @@ const VendedoresPresenter = {
         const status = document.getElementById('statusVerificacaoLinks');
         if (status) status.textContent = `Verificando lote com ${candidatos.length} links...`;
         try {
-            const resposta = await LinkCheckerService.verificar(endpoint, candidatos.map(v => v.matricula), apiToken);
+            const resposta = await LinkCheckerService.verificar(endpoint, candidatos.map(v => v.matricula));
             const resultados = resposta.resultados || [];
             await Promise.all(resultados.map(async r => {
                 const dados = { status: r.status || 'inconclusivo', httpCode: r.httpCode || '', destino: r.destino || '', url: r.url || '' };

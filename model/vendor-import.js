@@ -222,7 +222,13 @@ const VendorImportPresenter = {
                 const existente = atual.get(r.matricula);
                 if (!existente) { novos++; detalhes.push({tipo:'NOVO',...r}); return; }
                 const mudou = this._normalizar(existente.nome) !== this._normalizar(r.nome) || this._normalizar(existente.filial) !== this._normalizar(r.filial);
-                if (mudou) { alterados++; detalhes.push({tipo:'ATUALIZAR',...r}); } else iguais++;
+                if (mudou) {
+                    alterados++;
+                    const diferencas = [];
+                    if (this._normalizar(existente.nome) !== this._normalizar(r.nome)) diferencas.push({campo:'Nome', antes:existente.nome, depois:r.nome});
+                    if (this._normalizar(existente.filial) !== this._normalizar(r.filial)) diferencas.push({campo:'Filial', antes:existente.filial, depois:r.filial});
+                    detalhes.push({tipo:'ATUALIZAR',...r, diferencas});
+                } else iguais++;
                 if (!r.ativo) desativadosNoArquivo++;
             });
             VendedoresPresenter.registros.forEach(v => {
@@ -281,7 +287,9 @@ const VendorImportPresenter = {
         const painel = document.getElementById('painelPreviaImportacao');
         if (!painel || !this.resumo) return;
         const r = this.resumo;
-        const exemplos = r.detalhes.slice(0, 12);
+        // Mostrar primeiro os registros alterados, para facilitar a conferência antes/depois.
+        const prioridade = { ATUALIZAR: 0, NOVO: 1, AUSENTE: 2 };
+        const exemplos = [...r.detalhes].sort((a,b) => (prioridade[a.tipo] ?? 3) - (prioridade[b.tipo] ?? 3)).slice(0, 30);
         painel.style.display = 'block';
         painel.innerHTML = `
             <h3 style="margin:10px 0;">PRÉVIA DA IMPORTAÇÃO</h3>
@@ -295,7 +303,7 @@ const VendorImportPresenter = {
             <p class="vendor-subtext">Sem alteração: ${r.iguais.toLocaleString('pt-BR')} · Marcados inativos no relatório: ${r.desativadosNoArquivo.toLocaleString('pt-BR')} · ${this.filiaisEncontradas.length} filiais com localidade identificada</p>
             <div class="vendor-import-warning">A filial será salva pelo <strong>número</strong>. O nome da localidade será vinculado automaticamente na aba Filiais. Telefones, validações, observações e histórico serão preservados. Cadastros ausentes só serão desativados se você marcar a opção.</div>
             <label class="vendor-checkbox"><input type="checkbox" id="marcarAusentesInativosImportacao"> Marcar como INATIVO quem está na base atual, mas não aparece neste relatório</label>
-            ${exemplos.length ? `<div class="vendor-import-preview-scroll"><table class="vendor-import-table"><thead><tr><th>Tipo</th><th>Matrícula</th><th>Nome</th><th>Filial</th></tr></thead><tbody>${exemplos.map(x=>`<tr><td>${this._escapar(x.tipo)}</td><td>${this._escapar(x.matricula)}</td><td>${this._escapar(x.nome)}</td><td><strong>${this._escapar(x.filial||'')}</strong>${x.localidadeFilial ? `<div style="font-size:11px;color:#777;">${this._escapar(x.localidadeFilial)}</div>` : ''}</td></tr>`).join('')}</tbody></table></div>` : ''}
+            ${exemplos.length ? `<div class="vendor-import-preview-scroll"><table class="vendor-import-table"><thead><tr><th>Tipo</th><th>Matrícula</th><th>Nome</th><th>Filial</th><th>O que mudou</th></tr></thead><tbody>${exemplos.map(x=>`<tr><td>${this._escapar(x.tipo)}</td><td>${this._escapar(x.matricula)}</td><td>${this._escapar(x.nome)}</td><td><strong>${this._escapar(x.filial||'')}</strong>${x.localidadeFilial ? `<div style="font-size:11px;color:#777;">${this._escapar(x.localidadeFilial)}</div>` : ''}</td><td>${(x.diferencas || []).map(d=>`<div style="margin:3px 0"><strong>${this._escapar(d.campo)}:</strong> <span style="color:#9b2e32;text-decoration:line-through">${this._escapar(d.antes)}</span> → <strong>${this._escapar(d.depois)}</strong></div>`).join('') || (x.tipo === 'NOVO' ? 'Cadastro novo' : x.tipo === 'AUSENTE' ? 'Ausente do relatório' : '—')}</td></tr>`).join('')}</tbody></table></div>` : ''}
             <div class="vendor-actions" style="margin-top:14px;">
                 <button type="button" class="btn-primary" id="btnAplicarImportacao" onclick="VendorImportPresenter.aplicar()"><i class="fas fa-check"></i> APLICAR IMPORTAÇÃO</button>
                 <button type="button" class="btn-outline" onclick="VendorImportPresenter.cancelar()">CANCELAR</button>

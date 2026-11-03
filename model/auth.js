@@ -1,83 +1,36 @@
-// ============================================
-// model/auth.js — AUTENTICAÇÃO DO ADMIN
-// Hash SHA-256 + bloqueio por tentativas + sessão com expiração
-// ============================================
-
-// Hash SHA-256 da senha "777"
-// Para trocar a senha: gere o novo hash em: https://emn178.github.io/online-tools/sha256.html
-// e substitua a constante abaixo.
-const SENHA_HASH = 'eaf89db7108470dc3f6b23ea90618264b3e8f8b6145371667c4055e9c5ce9f52';
-
+// Login real com Firebase Authentication (Google).
+// A autorização é validada NOVAMENTE pelo Apps Script no servidor.
 const Auth = {
-
-    // ----- TENTATIVAS -----
-
-    _tentativas() {
-        try { return JSON.parse(sessionStorage.getItem('adminTentativas') || '{"count":0,"desde":0}'); }
-        catch { return { count: 0, desde: 0 }; }
+    async iniciar() {
+        if (!firebase.auth) throw new Error('Firebase Authentication não carregou.');
+        await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
+        return await new Promise((resolve, reject) => {
+            let cancelar = () => {};
+            cancelar = firebase.auth().onAuthStateChanged(usuario => {
+                cancelar(); resolve(usuario);
+            }, erro => { cancelar(); reject(erro); });
+        });
     },
 
-    _salvarTentativas(obj) {
-        sessionStorage.setItem('adminTentativas', JSON.stringify(obj));
-    },
+    usuarioAtual() { return firebase.auth().currentUser; },
 
-    estaBloqueado() {
-        const t = this._tentativas();
-        if (t.count < CONFIG.MAX_TENTATIVAS) return false;
-        if (Date.now() - t.desde < CONFIG.BLOQUEIO_MS) return true;
-        // Desbloqueado — resetar
-        this._salvarTentativas({ count: 0, desde: 0 });
-        return false;
-    },
-
-    tempoRestanteBloqueio() {
-        const t = this._tentativas();
-        const resto = CONFIG.BLOQUEIO_MS - (Date.now() - t.desde);
-        return Math.max(0, Math.ceil(resto / 1000));
-    },
-
-    _registrarFalha() {
-        const t = this._tentativas();
-        t.count++;
-        if (t.count === CONFIG.MAX_TENTATIVAS) t.desde = Date.now();
-        this._salvarTentativas(t);
-    },
-
-    _resetarTentativas() {
-        this._salvarTentativas({ count: 0, desde: 0 });
-    },
-
-    // ----- SESSÃO -----
-
-    async verificarSenha(senhaDigitada) {
-        if (this.estaBloqueado()) return { ok: false, bloqueado: true };
-        const hash = await sha256(senhaDigitada);
-        if (hash === SENHA_HASH) {
-            this._resetarTentativas();
-            const sessao = { inicio: Date.now() };
-            sessionStorage.setItem(CONFIG.SESSION_KEY, JSON.stringify(sessao));
-            return { ok: true };
+    async entrarGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        const resultado = await firebase.auth().signInWithPopup(provider);
+        if (!resultado.user || !resultado.user.emailVerified) {
+            await firebase.auth().signOut();
+            throw new Error('É necessária uma conta Google com e-mail verificado.');
         }
-        this._registrarFalha();
-        const t = this._tentativas();
-        const restantes = CONFIG.MAX_TENTATIVAS - t.count;
-        return { ok: false, bloqueado: false, restantes: Math.max(0, restantes) };
+        return resultado.user;
     },
 
-    sessaoValida() {
-        try {
-            const raw = sessionStorage.getItem(CONFIG.SESSION_KEY);
-            if (!raw) return false;
-            const s = JSON.parse(raw);
-            if (Date.now() - s.inicio > CONFIG.SESSAO_EXPIRA_MS) {
-                sessionStorage.removeItem(CONFIG.SESSION_KEY);
-                return false;
-            }
-            return true;
-        } catch { return false; }
+    async idToken() {
+        const usuario = this.usuarioAtual();
+        if (!usuario) throw new Error('Entre com a conta Google autorizada para continuar.');
+        // Firebase renova automaticamente o token quando necessário.
+        return usuario.getIdToken();
     },
 
-    logout() {
-        sessionStorage.removeItem(CONFIG.SESSION_KEY);
-    },
+    async sair() { await firebase.auth().signOut(); }
 };

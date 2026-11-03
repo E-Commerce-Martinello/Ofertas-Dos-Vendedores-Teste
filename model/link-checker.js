@@ -3,9 +3,9 @@
 // O verificador utiliza a mesma API privada de vendedores via POST.
 // ============================================
 const LinkCheckerService = {
-    verificar(endpoint, matriculas, apiToken) {
+    verificar(endpoint, matriculas) {
         try {
-            GoogleSheetsService.configurar(endpoint, apiToken);
+            GoogleSheetsService.configurar(endpoint);
         } catch (erro) {
             return Promise.reject(erro);
         }

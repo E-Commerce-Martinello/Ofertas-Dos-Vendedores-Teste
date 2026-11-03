@@ -1,25 +1,22 @@
 // ============================================
 // model/google-sheets.js
 // Cliente da API privada do Apps Script vinculado à planilha de TESTE.
-// Todas as operações usam POST com token no corpo (não na URL).
+// Todas as operações usam Firebase ID token temporário no corpo do POST.
 // ============================================
 const GoogleSheetsService = {
     apiUrl: '',
-    apiToken: '',
 
-    configurar(apiUrl, apiToken) {
+    configurar(apiUrl) {
         const url = String(apiUrl || '').trim();
-        const token = String(apiToken || '').trim();
         if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec(?:\?.*)?$/.test(url)) {
             throw new Error('Informe a URL /exec do Apps Script de gestão.');
         }
-        if (token.length < 30) throw new Error('Informe o token privado gerado pelo Apps Script.');
         this.apiUrl = url.split('?')[0];
-        this.apiToken = token;
     },
 
-    _post(action, payload = {}) {
-        if (!this.apiUrl || !this.apiToken) return Promise.reject(new Error('Conecte a API da planilha antes de continuar.'));
+    async _post(action, payload = {}) {
+        if (!this.apiUrl) throw new Error('Informe a URL da API da planilha.');
+        const firebaseIdToken = await Auth.idToken();
         return new Promise((resolve, reject) => {
             const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
             const iframe = document.createElement('iframe');
@@ -37,7 +34,7 @@ const GoogleSheetsService = {
 
             const campos = {
                 action,
-                apiToken: this.apiToken,
+                firebaseIdToken,
                 requestId,
                 parentOrigin: window.location.origin,
                 payload: JSON.stringify(payload || {})
@@ -88,14 +85,14 @@ const GoogleSheetsService = {
         });
     },
 
-    async testarConexao(apiUrl, apiToken) {
-        this.configurar(apiUrl, apiToken);
+    async testarConexao(apiUrl) {
+        this.configurar(apiUrl);
         const resposta = await this._post('listarVendedores', { apenasResumo: true });
         return resposta.resultado?.resumo || {};
     },
 
-    async carregarVendedores(apiUrl, apiToken) {
-        this.configurar(apiUrl, apiToken);
+    async carregarVendedores(apiUrl) {
+        this.configurar(apiUrl);
         const resposta = await this._post('listarVendedores', {});
         const linhas = resposta.resultado?.linhas;
         if (!Array.isArray(linhas)) throw new Error('O Apps Script não retornou a lista de vendedores.');
@@ -110,13 +107,13 @@ const GoogleSheetsService = {
         return resposta.resultado || { resultados: [] };
     },
 
-    async salvarVendedor(apiUrl, apiToken, dados) {
-        this.configurar(apiUrl, apiToken);
+    async salvarVendedor(apiUrl, _naoUsado, dados) {
+        this.configurar(apiUrl);
         return this._post('salvarVendedor', dados);
     },
 
-    async criarVendedor(apiUrl, apiToken, dados) {
-        this.configurar(apiUrl, apiToken);
+    async criarVendedor(apiUrl, _naoUsado, dados) {
+        this.configurar(apiUrl);
         return this._post('criarVendedor', dados);
     },
 
@@ -133,6 +130,5 @@ const GoogleSheetsService = {
 
     limparSessao() {
         this.apiUrl = '';
-        this.apiToken = '';
     }
 };
