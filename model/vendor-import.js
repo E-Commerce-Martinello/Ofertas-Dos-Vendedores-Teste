@@ -8,6 +8,8 @@ const VendorImportPresenter = {
     registros: [],
     resumo: null,
     processando: false,
+    conflitos: [],
+    registrosSemConflito: [],
 
     _texto(v) { return String(v == null ? '' : v).replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim(); },
     _digitos(v) { return this._texto(v).replace(/\D/g, ''); },
@@ -22,6 +24,8 @@ const VendorImportPresenter = {
         this.arquivo = input && input.files && input.files[0] ? input.files[0] : null;
         this.registros = [];
         this.resumo = null;
+        this.conflitos = [];
+        this.registrosSemConflito = [];
         const status = document.getElementById('arquivoRelatorioSelecionado');
         const botao = document.getElementById('btnAnalisarRelatorio');
         const previa = document.getElementById('painelPreviaImportacao');
@@ -104,7 +108,7 @@ const VendorImportPresenter = {
                 const filial = filialDaColuna || filialAtual;
                 if (!filial) continue;
                 const situacao = cab.situacao >= 0 ? this._situacaoAtiva(row[cab.situacao]) : {ativo:true, situacaoFuncional:'OK'};
-                result.push({ matricula, nome, filial, ativo:situacao.ativo, situacaoFuncional:situacao.situacaoFuncional, origemPlanilha:sheetName });
+                result.push({ matricula, nome, filial, ativo:situacao.ativo, situacaoFuncional:situacao.situacaoFuncional, origemPlanilha:sheetName, linhaRelatorio:i+1 });
             }
             return result;
         }
@@ -118,7 +122,7 @@ const VendorImportPresenter = {
             const matricula = this._digitos(a);
             const nome = this._texto(row[1]);
             if (!filialAtual || !matricula || !/^\d{1,12}$/.test(matricula) || !nome) continue;
-            result.push({ matricula, nome, filial:filialAtual, ativo:true, situacaoFuncional:'OK', origemPlanilha:sheetName });
+            result.push({ matricula, nome, filial:filialAtual, ativo:true, situacaoFuncional:'OK', origemPlanilha:sheetName, linhaRelatorio:i+1 });
         }
         return result;
     },
@@ -130,15 +134,20 @@ const VendorImportPresenter = {
             const rows = XLSX.utils.sheet_to_json(sheet, { header:1, defval:'', raw:false, blankrows:false });
             encontrados.push(...this._parseSheet(rows, nome));
         });
-        const unicos = new Map();
-        const conflitantes = [];
+        // Preserva TODAS as ocorrências conflitantes, mostrando as linhas de origem.
+        // Nunca escolhe um vendedor automaticamente: o operador revisa e decide.
+        const grupos = new Map();
         encontrados.forEach(r => {
-            const anterior = unicos.get(r.matricula);
-            if (!anterior) unicos.set(r.matricula, r);
-            else if (anterior.nome.toLocaleUpperCase('pt-BR') !== r.nome.toLocaleUpperCase('pt-BR') || anterior.filial.toLocaleUpperCase('pt-BR') !== r.filial.toLocaleUpperCase('pt-BR')) conflitantes.push(r.matricula);
+            if (!grupos.has(r.matricula)) grupos.set(r.matricula, []);
+            grupos.get(r.matricula).push(r);
         });
-        if (conflitantes.length) throw new Error(`O relatório contém matrículas repetidas com dados diferentes: ${[...new Set(conflitantes)].slice(0,8).join(', ')}. Corrija antes de importar.`);
-        return [...unicos.values()];
+        const registros = [], conflitos = [];
+        grupos.forEach((ocorrencias, matricula) => {
+            const assinaturas = new Set(ocorrencias.map(r => `${this._normalizar(r.nome)}|${this._normalizar(r.filial)}`));
+            if (assinaturas.size === 1) registros.push(ocorrencias[0]);
+            else conflitos.push({ matricula, ocorrencias });
+        });
+        return { registros, conflitos };
     },
 
     async analisar() {
@@ -152,8 +161,27 @@ const VendorImportPresenter = {
         try {
             const bytes = await this.arquivo.arrayBuffer();
             const workbook = XLSX.read(bytes, { type:'array', codepage:1252, cellDates:true, cellText:true, cellFormula:false, cellHTML:false });
-            const registros = this._extrairRegistros(workbook);
-            if (!registros.length) throw new Error('Não encontrei uma tabela reconhecível. O relatório precisa ter colunas de matrícula, nome e filial, ou estar organizado em blocos por filial como o arquivo formatado.');
+            const resultado = this._extrairRegistros(workbook);
+            this.registrosSemConflito = resultado.registros;
+            this.conflitos = resultado.conflitos;
+            if (!resultado.registros.length && !resultado.conflitos.length) throw new Error('Não encontrei uma tabela reconhecível. O relatório precisa ter colunas de matrícula, nome e filial, ou estar organizado em blocos por filial como o arquivo formatado.');
+            if (this.conflitos.length) {
+                this.registros = [];
+                this.resumo = null;
+                this._renderizarConflitos();
+                return;
+            }
+            this._calcularResumo(resultado.registros);
+        } catch (erro) {
+            console.error('Falha ao analisar relatório:', erro);
+            UI.erro(erro.message || 'Não foi possível ler o relatório.');
+        } finally {
+            this.processando = false;
+            if (botao) { botao.disabled = !this.arquivo; botao.innerHTML = '<i class="fas fa-search"></i> ANALISAR RELATÓRIO'; }
+        }
+    },
+
+    _calcularResumo(registros) {
             const atual = new Map(VendedoresPresenter.registros.map(v => [VendedoresPresenter._matricula(v.matricula), v]));
             let novos = 0, alterados = 0, iguais = 0, ausentes = 0, desativadosNoArquivo = 0;
             const detalhes = [];
@@ -174,13 +202,47 @@ const VendorImportPresenter = {
             this.registros = registros;
             this.resumo = { total:registros.length, novos, alterados, iguais, ausentes, desativadosNoArquivo, detalhes, arquivo:this.arquivo.name };
             this._renderizarPrevia();
-        } catch (erro) {
-            console.error('Falha ao analisar relatório:', erro);
-            UI.erro(erro.message || 'Não foi possível ler o relatório.');
-        } finally {
-            this.processando = false;
-            if (botao) { botao.disabled = !this.arquivo; botao.innerHTML = '<i class="fas fa-search"></i> ANALISAR RELATÓRIO'; }
+    },
+
+    _renderizarConflitos() {
+        const painel = document.getElementById('painelPreviaImportacao');
+        if (!painel) return;
+        painel.style.display = 'block';
+        const itens = this.conflitos.map((grupo, i) => `
+          <div class="vendor-import-warning" style="margin:12px 0;padding:14px;border-left:4px solid #d97706;">
+            <strong>Matrícula ${this._escapar(grupo.matricula)}</strong>
+            <p class="vendor-subtext">Foram encontradas ${grupo.ocorrencias.length} linhas com informações diferentes. Se forem cabeçalhos interpretados como cadastro, escolha Ignorar. Caso sejam registros válidos, escolha o correto.</p>
+            ${grupo.ocorrencias.map((r, j) => `<label style="display:block;margin:9px 0;cursor:pointer;overflow-wrap:anywhere;">
+              <input type="radio" name="decisaoConflito${i}" value="${j}">
+              <strong>${this._escapar(r.nome)}</strong> — ${this._escapar(r.filial)}
+              <small>(aba ${this._escapar(r.origemPlanilha)}, linha ${Number(r.linhaRelatorio)||'?'} )</small>
+            </label>`).join('')}
+            <label style="display:block;margin:9px 0;cursor:pointer;"><input type="radio" name="decisaoConflito${i}" value="ignorar"> Ignorar todas as ocorrências desta matrícula neste relatório</label>
+          </div>`).join('');
+        painel.innerHTML = `
+          <h3 style="margin:10px 0;">REVISAR REGISTROS DO RELATÓRIO</h3>
+          <p class="vendor-subtext">Identificamos ${this.conflitos.length} matrícula(s) com dados diferentes no arquivo <strong>${this._escapar(this.arquivo?.name||'')}</strong>. A matrícula apresentada é o número do registro — não a quantidade de erros. <strong>Nada foi alterado na planilha.</strong></p>
+          ${itens}
+          <div class="vendor-actions" style="margin-top:14px;">
+            <button type="button" class="btn-primary" onclick="VendorImportPresenter.confirmarConflitos()"><i class="fas fa-check"></i> CONFIRMAR E VER PRÉVIA</button>
+            <button type="button" class="btn-outline" onclick="VendorImportPresenter.cancelar()">CANCELAR</button>
+          </div>`;
+    },
+
+    confirmarConflitos() {
+        if (!this.conflitos.length) return;
+        const registros = [...this.registrosSemConflito];
+        for (let i = 0; i < this.conflitos.length; i++) {
+            const marcado = document.querySelector(`input[name="decisaoConflito${i}"]:checked`);
+            if (!marcado) { UI.erro(`Escolha uma opção para a matrícula ${this.conflitos[i].matricula}.`); return; }
+            if (marcado.value !== 'ignorar') {
+                const selecionado = this.conflitos[i].ocorrencias[Number(marcado.value)];
+                if (!selecionado) { UI.erro('Seleção inválida. Analise novamente o relatório.'); return; }
+                registros.push(selecionado);
+            }
         }
+        this.conflitos = [];
+        this._calcularResumo(registros);
     },
 
     _renderizarPrevia() {
@@ -237,6 +299,8 @@ const VendorImportPresenter = {
         this.arquivo = null;
         this.registros = [];
         this.resumo = null;
+        this.conflitos = [];
+        this.registrosSemConflito = [];
         const input = document.getElementById('arquivoRelatorioFuncionarios');
         if (input) input.value = '';
         const status = document.getElementById('arquivoRelatorioSelecionado');
