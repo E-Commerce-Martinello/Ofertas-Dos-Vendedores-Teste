@@ -28,20 +28,12 @@ const Validators = {
             if (fim <= ini) erros.push('Data fim deve ser posterior à data início');
         }
 
-        // BUG FIX: ignorarIndex pode chegar como string ("0","1"…) vindo do value de input HTML
-        // Converter para número antes de comparar com o índice do loop (que é sempre número)
-        const ignorar = (ignorarIndex !== null && ignorarIndex !== '') ? parseInt(ignorarIndex) : null;
-
-        const ini = new Date(dados.dataInicio), fim = new Date(dados.dataFim);
-        for (let i = 0; i < ofertasExistentes.length; i++) {
-            if (ignorar !== null && i === ignorar) continue; // pula a própria oferta sendo editada
-            const oi = new Date(ofertasExistentes[i].dataInicio);
-            const of = new Date(ofertasExistentes[i].dataFim);
-            if (ini <= of && fim >= oi) {
-                erros.push('Conflito com outra oferta no mesmo período');
-                break;
-            }
-        }
+        // Múltiplas campanhas podem acontecer simultaneamente.
+        // Datas que se sobrepõem NÃO são um conflito: cada oferta é independente.
+        if (dados.dataInicio && !Number.isFinite(new Date(dados.dataInicio).getTime()))
+            erros.push('Data de início inválida');
+        if (dados.dataFim && !Number.isFinite(new Date(dados.dataFim).getTime()))
+            erros.push('Data de fim inválida');
 
         return { valido: erros.length === 0, erros };
     },

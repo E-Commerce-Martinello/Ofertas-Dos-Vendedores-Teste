@@ -108,7 +108,7 @@ const Storage = {
 
             console.log(`✅ ${arr.length} oferta(s) carregada(s) do Firebase`);
 
-            if (arr.length > 0 || dados !== null) {
+            if (Array.isArray(dados) || (dados && typeof dados === 'object') || dados === null) {
                 // Salvar SEM imagens base64 no localStorage (economiza quota)
                 const semImagens = arr.map(o => this._ofertaSemImagem(o));
                 this._salvarLocalSafe('ofertasMartinello', semImagens);
@@ -125,25 +125,28 @@ const Storage = {
     },
 
     async salvarOfertas(ofertas) {
-        console.log('💾 Salvando', ofertas.length, 'oferta(s)...');
-
-        // Salvar SEM imagens base64 no localStorage
-        const semImagens = ofertas.map(o => this._ofertaSemImagem(o));
-        this._salvarLocalSafe('ofertasMartinello', semImagens);
-        this._atualizarAtiva(ofertas);
-
-        // Firebase recebe com imagem completa
+        // Somente exibir confirmação após gravação aceita pelo servidor.
+        // Nunca sobrescrever cache de ofertas se a operação falhar.
+        if (this._salvando) return false;
         this._salvando = true;
         try {
             await ofertasRef.set(ofertas);
-            this._salvando = false;
-            console.log('☁️ Sincronizado com Firebase!');
+            this._salvarLocalSafe('ofertasMartinello', ofertas.map(o => this._ofertaSemImagem(o)));
+            this._atualizarAtiva(ofertas);
             return true;
         } catch (e) {
-            this._salvando = false;
-            console.warn('⚠️ Firebase offline — salvo apenas localmente:', e.message);
+            console.error('Falha ao salvar ofertas no Firebase:', e);
             return false;
+        } finally {
+            this._salvando = false;
         }
+    },
+
+    ofertasDoCache() {
+        try {
+            const lista = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
+            return Array.isArray(lista) ? lista : [];
+        } catch { return []; }
     },
 
     _atualizarAtiva(ofertas) {

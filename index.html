@@ -57,11 +57,11 @@
                 });
             }
             // Limpar cache de versões antigas automaticamente
-            if (localStorage.getItem('cacheVersion') !== '1.7') {
+            if (localStorage.getItem('cacheVersion') !== '1.6.2') {
                 ['ofertasMartinello','ofertaAtiva','configTelaEmBreve'].forEach(function(k){
                     try { localStorage.removeItem(k); } catch(e){}
                 });
-                try { localStorage.setItem('cacheVersion','1.7'); } catch(e){}
+                try { localStorage.setItem('cacheVersion','1.6.2'); } catch(e){}
             }
         })();
     </script>
@@ -232,6 +232,25 @@
             50%      { box-shadow:0 8px 25px rgba(208,37,42,.6); }
         }
 
+        /* CATÁLOGO DE OFERTAS ATIVAS */
+        #secaoCatalogo:not([hidden]) { width:100%; }
+        .card { max-width:650px; }
+        .secao-catalogo[hidden] { display:none; }
+        .secao-catalogo { margin-bottom:22px; text-align:left; }
+        .catalogo-cabecalho { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; color:#b51d24; }
+        .catalogo-cabecalho small { font-size:11px; color:#777; font-weight:700; }
+        .catalogo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(135px,1fr)); gap:10px; }
+        .catalogo-item { display:flex; flex-direction:column; align-items:stretch; gap:8px; border:2px solid #e6e6e6; background:#fff; border-radius:15px; padding:8px; cursor:pointer; text-align:left; color:#333; font:700 12px 'Montserrat',sans-serif; transition:transform .15s,border-color .15s; }
+        .catalogo-item:hover { border-color:#d0252a; transform:translateY(-1px); }
+        .catalogo-item:focus-visible { outline:3px solid #d0252a; outline-offset:2px; }
+        .catalogo-item.selecionada { border-color:#d0252a; background:#fff3f4; box-shadow:0 0 0 1px #d0252a; }
+        .catalogo-item img { width:100%; aspect-ratio:4/3; object-fit:contain; border-radius:9px; background:#f3f3f3; }
+        .catalogo-item span { overflow-wrap:anywhere; line-height:1.4; }
+        body.dark-mode .catalogo-item { background:#383838; color:#eee; border-color:#555; }
+        body.dark-mode .catalogo-item.selecionada { border-color:#f46a70; background:#50282b; }
+        body.dark-mode .catalogo-cabecalho { color:#ff9ea2; }
+        body.dark-mode .catalogo-cabecalho small { color:#bbb; }
+
         /* EM BREVE */
         .mensagem-embreve {
             color:#666; margin:15px 0; font-size:16px; line-height:1.5;
@@ -302,6 +321,10 @@
 
 <div class="main-container">
     <div class="card">
+        <section id="secaoCatalogo" class="secao-catalogo" hidden aria-label="Ofertas disponíveis">
+            <div class="catalogo-cabecalho"><strong>ESCOLHA SUA OFERTA</strong><small id="totalCatalogo"></small></div>
+            <div id="catalogoOfertas" class="catalogo-grid"></div>
+        </section>
         <h2 id="tituloPagina">DISPARO EM ANDAMENTO!</h2>
 
         <div class="image-container">
@@ -360,14 +383,14 @@
     <!-- Scripts — carregados no final para garantir ordem em todos os browsers -->
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
-    <script src="shared/config.js"></script>
+    <script src="shared/config.js?v=1.6.2"></script>
     <script src="shared/utils.js"></script>
     <script src="model/firebase-config.js"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js"></script>
-    <script src="model/validators.js"></script>
+    <script src="model/storage.js?v=1.6.2"></script>
+    <script src="model/validators.js?v=1.6.2"></script>
     <script src="view/ui.js"></script>
     <script src="presenter/api.js"></script>
-    <script src="presenter/index-presenter.js"></script>
+    <script src="presenter/index-presenter.js?v=1.6.2"></script>
 </body>
 </html>

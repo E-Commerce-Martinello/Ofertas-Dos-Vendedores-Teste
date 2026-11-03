@@ -113,9 +113,13 @@ const AdminPresenter = {
         document.getElementById('tituloAdmin').textContent = acessos ? '🔐 ACESSOS' : vendedores ? '👥 VENDEDORES' : '⚙️ AGENDADOR';
         document.getElementById('subtituloAdmin').textContent = acessos
             ? 'Gestão de administradores autorizados'
-            : vendedores ? 'Consulta e atualização dos cadastros' : 'Apenas UMA oferta fica ativa por vez';
+            : vendedores ? 'Consulta e atualização dos cadastros' : 'Várias ofertas podem ficar disponíveis ao mesmo tempo';
         if (vendedores && typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.init();
         if (acessos && typeof GerenciarAcessosPresenter !== 'undefined') GerenciarAcessosPresenter.carregar();
+    },
+
+    _esc(valor) {
+        return String(valor ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     },
 
     // ── LISTA DE OFERTAS ─────────────────────
@@ -129,7 +133,15 @@ const AdminPresenter = {
         const temAtiva = this.ofertas.some(o => isOfertaAtiva(o, agora));
         if (banner) banner.style.display = temAtiva ? 'none' : 'block';
 
-        if (!temAtiva) console.warn('⚠️ Nenhuma oferta ativa no momento!');
+        const ativas = this.ofertas.filter(o => isOfertaAtiva(o, agora)).length;
+        const agendadas = this.ofertas.filter(o => new Date(o.dataInicio) > agora).length;
+        const resumo = document.getElementById('resumoCampanhas');
+        if (resumo) {
+            document.getElementById('totalOfertas').textContent = this.ofertas.length;
+            document.getElementById('ofertasAtivas').textContent = ativas;
+            document.getElementById('ofertasAgendadas').textContent = agendadas;
+            document.getElementById('ofertasEncerradas').textContent = Math.max(0, this.ofertas.length - ativas - agendadas);
+        }
 
         if (this.ofertas.length === 0) {
             con.innerHTML = `<div class="empty-state">
@@ -140,8 +152,8 @@ const AdminPresenter = {
             return;
         }
 
-        const sorted = [...this.ofertas].sort((a,b) => a.dataInicio.localeCompare(b.dataInicio));
-        con.innerHTML = sorted.map((o, i) => {
+        const sorted = this.ofertas.map((o,i) => ({o,i})).sort((a,b) => a.o.dataInicio.localeCompare(b.o.dataInicio));
+        con.innerHTML = sorted.map(({o,i}) => {
             const ini   = new Date(o.dataInicio), fim = new Date(o.dataFim);
             const ativa = isOfertaAtiva(o, agora);
             const futura= agora < ini;
@@ -152,11 +164,11 @@ const AdminPresenter = {
             return `<div class="oferta-card ${ativa ? 'ativa' : ''}">
                 <div class="status-badge ${badge}">${label}${cd ? ` · ${cd}` : ''}</div>
                 <div class="oferta-content">
-                    <img src="${o.urlImagem || 'img/produto.png'}" class="oferta-img" onerror="this.src='img/produto.png'">
+                    <img src="${this._esc(o.urlImagem || 'img/produto.png')}" class="oferta-img" onerror="this.src='img/produto.png'">
                     <div class="oferta-info">
-                        <strong>${o.tituloPagina || 'Sem título'}</strong><br>
+                        <strong>${this._esc(o.tituloPagina || 'Sem título')}</strong><br>
                         📅 ${formatarBrasilia(ini)} → ${formatarBrasilia(fim)}<br>
-                        🔗 ${(o.linkProduto||'').slice(0,45)}…
+                        🔗 ${this._esc((o.linkProduto||'').slice(0,45))}…
                     </div>
                     <div class="oferta-actions">
                         <button class="btn-warning" onclick="AdminPresenter.editarOferta(${i})" style="padding:10px 15px;width:auto;">✏️</button>
@@ -250,22 +262,26 @@ const AdminPresenter = {
             dataCriacao: new Date().toISOString(),
         };
 
-        if (idx !== '') this.ofertas[parseInt(idx)] = oferta;
-        else            this.ofertas.push(oferta);
-
-        const ok = await Storage.salvarOfertas(this.ofertas);
+        const novaLista = [...this.ofertas];
+        if (idx !== '') novaLista[parseInt(idx)] = { ...oferta, dataCriacao: this.ofertas[parseInt(idx)].dataCriacao || oferta.dataCriacao };
+        else novaLista.push(oferta);
+        const ok = await Storage.salvarOfertas(novaLista);
+        if (!ok) { UI.erro('Não foi possível gravar no Firebase. Nada foi alterado.'); return; }
+        this.ofertas = novaLista;
         this.renderLista();
         this.cancelarEdicao();
-        ok ? UI.ok('Oferta salva e sincronizada!') : UI.ok('Oferta salva localmente (Firebase offline)');
+        UI.ok('Oferta salva! Ela ficará visível junto às outras durante seu período.');
     },
 
-    excluirOferta(idx) {
-        if (!confirm('Excluir esta oferta?')) return;
-        console.log(`🗑️ Excluindo oferta [${idx}]:`, this.ofertas[idx]?.tituloPagina);
-        this.ofertas.splice(idx, 1);
-        Storage.salvarOfertas(this.ofertas);
+    async excluirOferta(idx) {
+        const oferta = this.ofertas[idx];
+        if (!oferta || !confirm('Excluir esta oferta?')) return;
+        const novaLista = this.ofertas.filter((_,i) => i !== idx);
+        const ok = await Storage.salvarOfertas(novaLista);
+        if (!ok) { UI.erro('Não foi possível excluir no Firebase.'); return; }
+        this.ofertas = novaLista;
         this.renderLista();
-        UI.ok('Oferta excluída!');
+        UI.ok('Oferta excluída.');
     },
 
     // ── PREVIEW EM TEMPO REAL ────────────────

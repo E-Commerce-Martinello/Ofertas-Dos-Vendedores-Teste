@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.6.1</title>
+    <title>Admin Martinello | 1.6.2</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -25,11 +25,11 @@
                 });
             }
             // Limpar cache de versões antigas automaticamente
-            if (localStorage.getItem('cacheVersion') !== '1.7') {
+            if (localStorage.getItem('cacheVersion') !== '1.6.2') {
                 ['ofertasMartinello','ofertaAtiva','configTelaEmBreve'].forEach(function(k){
                     try { localStorage.removeItem(k); } catch(e){}
                 });
-                try { localStorage.setItem('cacheVersion','1.7'); } catch(e){}
+                try { localStorage.setItem('cacheVersion','1.6.2'); } catch(e){}
             }
         })();
     </script>
@@ -67,6 +67,21 @@
         h2 { color:#333; margin:20px 0 15px; font-size:20px; }
         body.dark-mode h2 { color:#ddd; }
 
+        .admin-atalhos { display:flex; justify-content:space-between; align-items:center; margin:0 0 12px; gap:10px; }
+        .voltar-portal,.tema-admin { display:inline-flex; align-items:center; gap:8px; text-decoration:none; font:700 12px 'Montserrat',sans-serif; padding:11px 14px; border-radius:20px; border:1px solid #d0252a; color:#b21e24; background:white; cursor:pointer; }
+        .voltar-portal:hover,.tema-admin:hover { background:#fff1f2; }
+        body.dark-mode .voltar-portal,body.dark-mode .tema-admin { background:#2d2d2d; color:#ffb9bc; border-color:#ff7579; }
+        .resumo-campanhas { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+        @media(min-width:640px){.resumo-campanhas{grid-template-columns:repeat(4,minmax(0,1fr));}}
+        .resumo-campanhas>div { background:#fafafa; border:1px solid #e5e5e5; border-radius:14px; padding:13px; }
+        .resumo-campanhas strong { display:block; font-size:25px; }
+        .resumo-campanhas span { display:block; color:#666; font-size:11px; font-weight:700; }
+        body.dark-mode .resumo-campanhas>div { background:#353535; border-color:#555; }
+        body.dark-mode .resumo-campanhas span { color:#bbb; }
+        body.dark-mode .upload-area { background:#3b282a; border-color:#ff7679; }
+        body.dark-mode .upload-area p { color:#ddd; }
+        body.dark-mode .empty-state { background:#383838; color:#ddd; border-color:#666; }
+        body.dark-mode .oferta-card.ativa { background:#183e2b; }
         /* LOGIN */
         .login-box { text-align:center; padding:30px 15px; }
         .login-box img { max-width:180px; margin-bottom:25px; }
@@ -285,6 +300,10 @@
 </head>
 <body>
 <div class="admin-container">
+    <div class="admin-atalhos">
+        <a href="index.html" class="voltar-portal"><i class="fas fa-arrow-left"></i> VOLTAR AO PORTAL</a>
+        <button type="button" class="tema-admin dark-mode-toggle" onclick="TEMA.toggle()" aria-label="Alternar modo claro ou escuro" title="Alternar tema"><i class="fas fa-moon"></i> <span>TEMA</span></button>
+    </div>
 
     <!-- LOGIN -->
     <div class="admin-card" id="loginBox">
@@ -318,7 +337,7 @@
                     </button>
                 </div>
             </div>
-            <p id="subtituloAdmin" style="color:#888;font-size:13px;margin-top:8px;">Apenas UMA oferta fica ativa por vez</p>
+            <p id="subtituloAdmin" style="color:#888;font-size:13px;margin-top:8px;">Várias ofertas podem ficar disponíveis ao mesmo tempo</p>
         </div>
 
         <!-- NAVEGAÇÃO DO ADMIN -->
@@ -340,9 +359,19 @@
             ⚠️ Nenhuma oferta ativa agora! Os vendedores estão vendo a tela "EM BREVE".
         </div>
 
+        <div id="resumoCampanhas" class="admin-card" aria-label="Resumo de campanhas">
+            <h2>VISÃO GERAL DAS CAMPANHAS</h2>
+            <div class="resumo-campanhas">
+                <div><strong id="totalOfertas">0</strong><span>Total cadastradas</span></div>
+                <div><strong id="ofertasAtivas">0</strong><span>Ativas agora</span></div>
+                <div><strong id="ofertasAgendadas">0</strong><span>Agendadas</span></div>
+                <div><strong id="ofertasEncerradas">0</strong><span>Encerradas</span></div>
+            </div>
+            <p class="vendor-subtext" style="margin-top:12px;">Os indicadores de compartilhamento por oferta serão adicionados quando a coleta de eventos estiver pronta.</p>
+        </div>
         <!-- LISTA -->
         <div class="admin-card">
-            <h2>📋 OFERTAS PROGRAMADAS</h2>
+            <h2>📋 OFERTAS PROGRAMADAS (SIMULTÂNEAS PERMITIDAS)</h2>
             <div id="listaOfertas"></div>
         </div>
 
@@ -354,6 +383,9 @@
             <h2 id="formTitulo">➕ NOVA OFERTA</h2>
             <input type="hidden" id="editandoIdx">
 
+            <div class="info-box">
+                <strong>Várias ofertas simultâneas:</strong> você pode cadastrar campanhas com o mesmo período. Todas aparecerão no portal para escolha do vendedor.
+            </div>
             <div class="info-box">
                 <strong>🕒 Horário de Brasília</strong> — Use sempre o horário de Brasília ao cadastrar.
             </div>
@@ -584,15 +616,15 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
-    <script src="shared/config.js"></script>
+    <script src="shared/config.js?v=1.6.2"></script>
     <script src="shared/utils.js"></script>
     <script src="model/firebase-config.js"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js"></script>
-    <script src="model/validators.js"></script>
+    <script src="model/storage.js?v=1.6.2"></script>
+    <script src="model/validators.js?v=1.6.2"></script>
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.1"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.2"></script>
     <script src="model/google-sheets.js?v=1.6.1"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
