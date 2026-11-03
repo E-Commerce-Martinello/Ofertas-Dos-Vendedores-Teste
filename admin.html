@@ -515,7 +515,7 @@
                     <table class="vendor-table">
                         <thead>
                             <tr>
-                                <th>MATRÍCULA</th><th>NOME</th><th>FILIAL</th><th>CADASTRO</th><th>TELEFONE</th><th>VALIDAÇÃO</th><th>LINK MARTINELLO</th><th>AÇÕES</th>
+                                <th>MATRÍCULA</th><th>NOME</th><th>FILIAL / LOCALIDADE</th><th>CADASTRO</th><th>TELEFONE</th><th>VALIDAÇÃO</th><th>LINK MARTINELLO</th><th>AÇÕES</th>
                             </tr>
                         </thead>
                         <tbody id="corpoTabelaVendedores"><tr><td colspan="8" class="vendor-empty">Conecte a planilha para visualizar os vendedores.</td></tr></tbody>
@@ -549,7 +549,7 @@
         <h2 id="tituloModalEditarVendedor"><i class="fas fa-user-edit"></i> EDITAR CADASTRO</h2>
         <div class="form-group"><label for="editarMatricula">Matrícula / Rubi</label><input type="text" id="editarMatricula" inputmode="numeric"></div>
         <div class="form-group"><label for="editarNomeVendedor">Nome</label><input type="text" id="editarNomeVendedor" maxlength="160"></div>
-        <div class="form-group"><label for="editarFilialVendedor">Filial</label><input type="text" id="editarFilialVendedor" maxlength="120"></div>
+        <div class="form-group"><label for="editarFilialVendedor">Número da filial</label><input type="text" id="editarFilialVendedor" maxlength="6" inputmode="numeric" pattern="[0-9]*" list="listaNumerosFiliais" oninput="VendedoresPresenter.atualizarLocalidadeFilial()"><datalist id="listaNumerosFiliais"></datalist><small id="localidadeFilialVendedor" style="display:block;color:#777;margin-top:6px;">Informe apenas o número da filial.</small></div>
         <div class="form-group"><label for="editarTelefoneVendedor">Telefone / WhatsApp</label><input type="tel" id="editarTelefoneVendedor" inputmode="tel" oninput="VendedoresPresenter.aoAlterarTelefone()"></div>
         <div class="form-group"><label for="editarStatusTelefone">Validação do telefone</label><select id="editarStatusTelefone"><option value="PENDENTE">Pendente de validação</option><option value="VALIDADO">Validado manualmente</option></select></div>
         <div class="form-group"><label>Situação funcional atual</label><div id="editarSituacaoFuncional" class="vendor-help" style="margin:0;">Não informada</div></div>
@@ -575,12 +575,12 @@
     <script src="model/auth.js"></script>
     <script src="view/ui.js"></script>
     <script src="presenter/admin-presenter.js?v=1.5.4"></script>
-    <script src="model/google-sheets.js?v=1.5.4"></script>
+    <script src="model/google-sheets.js?v=1.5.5"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-    <script src="model/vendor-import.js?v=1.5.4"></script>
+    <script src="model/vendor-import.js?v=1.5.5"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
-    <script src="presenter/vendors-presenter.js?v=1.5.4"></script>
+    <script src="presenter/vendors-presenter.js?v=1.5.5"></script>
 </body>
 </html>
