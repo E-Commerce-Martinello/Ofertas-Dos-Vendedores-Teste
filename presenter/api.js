@@ -5,6 +5,8 @@
 const API = {
 
     async rastrear(codigo, navegador) {
+        // Nunca misturar registros de teste com o formulário oficial.
+        if (CONFIG.environment === 'TESTE') return { metodo: 'rastreamento-desativado-no-teste' };
         try {
             const fd = new FormData();
             fd.append(CONFIG.entryIdCodigo,  codigo);

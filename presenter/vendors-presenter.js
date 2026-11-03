@@ -1,11 +1,11 @@
 // ============================================
 // presenter/vendors-presenter.js
 // Consulta, complementa e organiza vendedores e participantes do WhatsApp.
-// A planilha oficial permanece somente leitura; ajustes operacionais ficam no Firebase.
+// Durante a fase de teste, dados auxiliares usam o namespace Firebase *_TESTE*.
 // ============================================
 const VendedoresPresenter = {
     STORAGE_CLIENT_ID: 'adminGoogleClientId',
-    STORAGE_SHEET_ID: 'adminGoogleSpreadsheetId',
+    STORAGE_SHEET_ID: 'adminGoogleSpreadsheetId_TESTE',
     STORAGE_LINK_CHECKER: 'adminLinkCheckerUrl',
     registros: [],
     registrosBase: [],

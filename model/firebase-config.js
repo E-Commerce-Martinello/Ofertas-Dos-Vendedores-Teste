@@ -14,5 +14,8 @@ if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 
-const database   = firebase.database();
-const ofertasRef = database.ref('ofertasMartinello');
+const database = firebase.database();
+// Mantém o teste em caminhos separados dentro do mesmo projeto Firebase.
+// O site oficial continua usando os nós originais sem qualquer alteração.
+const sufixoAmbiente = CONFIG.environment === 'TESTE' ? '_TESTE' : '';
+const ofertasRef = database.ref('ofertasMartinello' + sufixoAmbiente);

@@ -122,6 +122,20 @@
         }
         .dark-mode-toggle:hover { background:rgba(255,255,255,.3); transform:rotate(180deg); }
 
+        /* ACESSO AO ADMIN — atalho discreto para a equipe interna */
+        .admin-access {
+            position:absolute; right:72px; top:50%; transform:translateY(-50%);
+            min-height:40px; padding:0 13px; border-radius:22px;
+            display:inline-flex; align-items:center; justify-content:center; gap:8px;
+            color:#fff; background:rgba(255,255,255,.18);
+            border:1px solid rgba(255,255,255,.32); text-decoration:none;
+            font:700 12px 'Montserrat',sans-serif; letter-spacing:.2px;
+            transition:background .2s, transform .2s, box-shadow .2s;
+        }
+        .admin-access:hover { background:rgba(255,255,255,.3); transform:translateY(-50%) translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.12); }
+        .admin-access:focus-visible, .dark-mode-toggle:focus-visible { outline:3px solid #fff; outline-offset:3px; }
+        .admin-access i { font-size:14px; }
+
         /* MAIN */
         .main-container {
             flex:1; display:flex; align-items:center; justify-content:center; padding:20px;
@@ -261,6 +275,8 @@
         @media (max-width:768px) { .logo-image{height:90px;} h2{font-size:26px;} }
         @media (max-width:480px) {
             .logo-image{height:80px;}
+            .admin-access{right:68px;width:40px;padding:0;border-radius:50%;}
+            .admin-access span{display:none;}
             h2{font-size:24px;}
             h2:after{width:50px;height:3px;margin:8px auto 0;}
             .card{padding:20px 15px;}
@@ -276,8 +292,11 @@
 
 <header class="header">
     <img src="img/logo.png" alt="Martinello" class="logo-image">
-    <button class="dark-mode-toggle" onclick="TEMA.toggle()">
-        <i class="fas fa-moon"></i>
+    <a class="admin-access" href="admin.html" aria-label="Acessar painel administrativo" title="Acesso administrativo">
+        <i class="fas fa-user-shield" aria-hidden="true"></i><span>ADMIN</span>
+    </a>
+    <button class="dark-mode-toggle" onclick="TEMA.toggle()" aria-label="Alternar tema" title="Alternar tema">
+        <i class="fas fa-moon" aria-hidden="true"></i>
     </button>
 </header>
 

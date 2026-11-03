@@ -4,7 +4,7 @@
 // A planilha oficial continua somente leitura; ajustes ficam no Firebase.
 // ============================================
 const VendorManagementService = {
-    basePath: 'gestaoVendedores',
+    basePath: CONFIG.environment === 'TESTE' ? 'gestaoVendedores_TESTE' : 'gestaoVendedores',
 
     async carregar() {
         const snap = await database.ref(this.basePath).once('value');
