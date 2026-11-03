@@ -252,7 +252,9 @@ function respostaPostV153_(requestId, ok, erro, resultado, parentOrigin) {
   const dados = JSON.stringify({ tipo: 'MART_VENDEDORES_API', requestId, ok, erro: erro || '', resultado: resultado || null })
     .replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
   const destino = JSON.stringify(parentOrigin);
-  const html = '<!doctype html><html><head><meta charset="utf-8"></head><body><script>parent.postMessage(' + dados + ', ' + destino + ');</script>Solicitação processada.</body></html>';
+  // HtmlService envolve o conteúdo em iframes internos. O painel GitHub está na janela superior,
+  // então parent.postMessage() alcançaria apenas o wrapper do Google. Use top.postMessage().
+  const html = '<!doctype html><html><head><meta charset="utf-8"></head><body><script>window.top.postMessage(' + dados + ', ' + destino + ');</script>Solicitação processada.</body></html>';
   return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 

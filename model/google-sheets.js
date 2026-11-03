@@ -63,7 +63,9 @@ const GoogleSheetsService = {
                 erro ? reject(erro) : resolve(valor);
             };
             const aoReceber = event => {
-                if (event.source !== iframe.contentWindow) return;
+                // Apps Script HtmlService executa o HTML em iframes internos.
+                // Por isso, event.source pode ser um quadro interno, não o iframe externo do formulário.
+                // A origem Google permitida + requestId aleatório identificam a resposta desta solicitação.
                 let host = '';
                 try { host = new URL(event.origin).hostname.toLowerCase(); } catch (_) { return; }
                 const origemGoogle = host === 'script.google.com' || host.endsWith('.googleusercontent.com');
@@ -74,8 +76,8 @@ const GoogleSheetsService = {
                 else finalizar(new Error(data.erro || 'O Apps Script não conseguiu concluir a operação.'));
             };
             const timer = setTimeout(() => finalizar(
-                new Error('O Apps Script não confirmou a operação. Abra a URL /exec?action=autorizar em uma aba, autorize sua conta Google e tente novamente. Se já autorizou, confira se a implantação foi atualizada.')
-            ), 60000);
+                new Error('A API não devolveu a confirmação. Verifique se a implantação atualizada do Apps Script está publicada e se a origem do site de teste está autorizada. A autorização em uma aba separada, sozinha, não testa a resposta POST.')
+            ), 30000);
             window.addEventListener('message', aoReceber);
             document.body.appendChild(iframe);
             document.body.appendChild(form);
