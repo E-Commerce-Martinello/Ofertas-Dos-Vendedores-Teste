@@ -6,16 +6,22 @@
 const GoogleSheetsService = {
     apiUrl: '',
 
+    obterUrl() {
+        // Usamos primeiro o endereço que já funcionou neste navegador, sem pedir que o usuário cole novamente.
+        // CONFIG fornece um endereço inicial para outros dispositivos.
+        return localStorage.getItem('martVendedoresApiUrl_TESTE') || CONFIG.adminApiUrl || '';
+    },
+
     configurar(apiUrl) {
         const url = String(apiUrl || '').trim();
         if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec(?:\?.*)?$/.test(url)) {
-            throw new Error('Informe a URL /exec do Apps Script de gestão.');
+            throw new Error('A conexão da planilha não está configurada. Verifique o endereço adminApiUrl em shared/config.js.');
         }
         this.apiUrl = url.split('?')[0];
     },
 
     async _post(action, payload = {}) {
-        if (!this.apiUrl) throw new Error('Informe a URL da API da planilha.');
+        if (!this.apiUrl) this.configurar(this.obterUrl());
         const firebaseIdToken = await Auth.idToken();
         return new Promise((resolve, reject) => {
             const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
@@ -88,7 +94,7 @@ const GoogleSheetsService = {
     async testarConexao(apiUrl) {
         this.configurar(apiUrl);
         const resposta = await this._post('listarVendedores', { apenasResumo: true });
-        return resposta.resultado?.resumo || {};
+        return resposta.resultado ? { ...(resposta.resultado.resumo || {}), email: resposta.resultado.email || '', proprietario: resposta.resultado.proprietario === true } : {};
     },
 
     async carregarVendedores(apiUrl) {
@@ -126,6 +132,22 @@ const GoogleSheetsService = {
             inativarAusentes: inativarAusentes === true,
             nomeArquivo: String(nomeArquivo || '').slice(0, 160)
         });
+    },
+
+
+    async listarAdministradores() {
+        const r = await this._post('listarAdministradores');
+        return r.resultado || { administradores: [] };
+    },
+
+    async adicionarAdministrador(email) {
+        const r = await this._post('adicionarAdministrador', { email });
+        return r.resultado || {};
+    },
+
+    async removerAdministrador(email) {
+        const r = await this._post('removerAdministrador', { email });
+        return r.resultado || {};
     },
 
     limparSessao() {

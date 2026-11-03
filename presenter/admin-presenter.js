@@ -13,9 +13,7 @@ const AdminPresenter = {
     async init() {
         Storage.verificarQuota();
         UI.tema.aplicar(Storage.carregarTema());
-        const inputUrl = document.getElementById('apiUrlLogin');
-        const url = localStorage.getItem('martVendedoresApiUrl_TESTE') || '';
-        if (inputUrl) inputUrl.value = url;
+        const url = GoogleSheetsService.obterUrl();
         // Eliminar credenciais e sessões antigas da versão com senha fixa.
         localStorage.removeItem('martVendedoresApiToken_TESTE');
         sessionStorage.removeItem(CONFIG.SESSION_KEY);
@@ -23,8 +21,8 @@ const AdminPresenter = {
         try {
             const usuario = await Auth.iniciar();
             if (usuario && url) {
-                await GoogleSheetsService.testarConexao(url);
-                await this._abrirPainel();
+                const acesso = await GoogleSheetsService.testarConexao(url);
+                await this._abrirPainel(acesso);
             }
         } catch (erro) {
             // A sessão Firebase pode existir, mas a conta precisa ter permissão no Apps Script.
@@ -45,18 +43,16 @@ const AdminPresenter = {
 
     async login() {
         const btn = document.getElementById('btnEntrar');
-        const url = (document.getElementById('apiUrlLogin')?.value || '').trim().split('?')[0];
-        if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) {
-            this._mensagemLogin('Informe a URL /exec do Apps Script de teste.'); return;
-        }
+        const url = GoogleSheetsService.obterUrl();
+        if (!url) { this._mensagemLogin('A conexão não foi configurada. Confira shared/config.js.'); return; }
         if (btn) { btn.disabled = true; btn.textContent = 'VERIFICANDO...'; }
         this._mensagemLogin('');
         try {
             await Auth.entrarGoogle();
             // Exige permissão no servidor antes de mostrar dados internos no painel.
-            await GoogleSheetsService.testarConexao(url);
+            const acesso = await GoogleSheetsService.testarConexao(url);
             localStorage.setItem('martVendedoresApiUrl_TESTE', url);
-            await this._abrirPainel();
+            await this._abrirPainel(acesso);
         } catch (erro) {
             await Auth.sair().catch(() => {});
             this._mensagemLogin(erro.message || 'Acesso não autorizado.');
@@ -71,6 +67,8 @@ const AdminPresenter = {
         if (typeof GoogleSheetsService !== 'undefined') GoogleSheetsService.limparSessao();
         if (typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.limparDados();
         await Auth.sair();
+        document.getElementById('tabAcessos').style.display = 'none';
+        this.mostrarAba('ofertas');
         this.ofertas = [];
         this._mensagemLogin('');
         this._mostrarLogin();
@@ -78,11 +76,19 @@ const AdminPresenter = {
 
     // ── PAINEL ───────────────────────────────
 
-    async _abrirPainel() {
+    async _abrirPainel(acesso = {}) {
         if (this.intervaloStatus) clearInterval(this.intervaloStatus);
         document.getElementById('loginBox').style.display    = 'none';
         document.getElementById('painelAdmin').style.display = 'block';
 
+        const gestor = acesso.proprietario === true;
+        document.getElementById('tabAcessos').style.display = gestor ? '' : 'none';
+        this.mostrarAba('ofertas');
+        if (typeof VendedoresPresenter !== 'undefined') {
+            VendedoresPresenter.init();
+            // Uma consulta automaticamente, sem expor a URL ou exigir conexão manual.
+            VendedoresPresenter.atualizar().catch(erro => console.warn('Falha na atualização automática:', erro));
+        }
         this.ofertas = await Storage.carregarOfertas();
         console.log(`📋 ${this.ofertas.length} oferta(s) carregada(s)`);
         this.renderLista();
@@ -94,18 +100,22 @@ const AdminPresenter = {
     },
 
     mostrarAba(aba) {
+        const acessos = aba === 'acessos' && document.getElementById('tabAcessos').style.display !== 'none';
         const vendedores = aba === 'vendedores';
-        this.abaAtual = vendedores ? 'vendedores' : 'ofertas';
-        document.getElementById('abaOfertas').style.display = vendedores ? 'none' : 'block';
+        this.abaAtual = acessos ? 'acessos' : vendedores ? 'vendedores' : 'ofertas';
+        document.getElementById('abaOfertas').style.display = this.abaAtual === 'ofertas' ? 'block' : 'none';
         document.getElementById('abaVendedores').style.display = vendedores ? 'block' : 'none';
-        document.getElementById('tabOfertas').classList.toggle('active', !vendedores);
+        document.getElementById('abaAcessos').style.display = acessos ? 'block' : 'none';
+        document.getElementById('tabOfertas').classList.toggle('active', this.abaAtual === 'ofertas');
         document.getElementById('tabVendedores').classList.toggle('active', vendedores);
-        document.getElementById('btnNovaOfertaTopo').style.display = vendedores ? 'none' : 'inline-block';
-        document.getElementById('tituloAdmin').textContent = vendedores ? '👥 VENDEDORES' : '⚙️ AGENDADOR';
-        document.getElementById('subtituloAdmin').textContent = vendedores
-            ? 'Consulta da base de vendedores e situação no grupo de WhatsApp.'
-            : 'Apenas UMA oferta fica ativa por vez';
+        document.getElementById('tabAcessos').classList.toggle('active', acessos);
+        document.getElementById('btnNovaOfertaTopo').style.display = this.abaAtual === 'ofertas' ? 'inline-block' : 'none';
+        document.getElementById('tituloAdmin').textContent = acessos ? '🔐 ACESSOS' : vendedores ? '👥 VENDEDORES' : '⚙️ AGENDADOR';
+        document.getElementById('subtituloAdmin').textContent = acessos
+            ? 'Gestão de administradores autorizados'
+            : vendedores ? 'Consulta e atualização dos cadastros' : 'Apenas UMA oferta fica ativa por vez';
         if (vendedores && typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.init();
+        if (acessos && typeof GerenciarAcessosPresenter !== 'undefined') GerenciarAcessosPresenter.carregar();
     },
 
     // ── LISTA DE OFERTAS ─────────────────────

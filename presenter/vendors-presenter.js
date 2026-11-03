@@ -23,12 +23,10 @@ const VendedoresPresenter = {
 
     init() {
         if (!this.inicializado) {
-            const url = document.getElementById('apiVendedoresUrl');
-            if (url) url.value = localStorage.getItem(this.STORAGE_API_URL) || '';
-            this.apiUrl = localStorage.getItem(this.STORAGE_API_URL) || '';
+            this.apiUrl = GoogleSheetsService.obterUrl();
             this.inicializado = true;
         }
-        if (!this.registros.length) this._status('Conecte a API com a conta Google autorizada para carregar a base de teste.');
+        if (!this.registros.length && !this.carregando) this._status('Carregando a base de vendedores...');
     },
 
     _status(mensagem, tipo = 'info') {
@@ -124,13 +122,12 @@ const VendedoresPresenter = {
     },
 
     _validarConfiguracao() {
-        const url = this._texto(document.getElementById('apiVendedoresUrl')?.value) || this.apiUrl;
-        if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec(?:\?.*)?$/.test(url)) {
-            throw new Error('Informe a URL /exec da implantação do Apps Script vinculada à planilha de TESTE.');
+        const url = this.apiUrl || GoogleSheetsService.obterUrl();
+        if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) {
+            throw new Error('A API do site não está configurada. Verifique shared/config.js.');
         }
-        this.apiUrl = url.split('?')[0];
-        localStorage.setItem(this.STORAGE_API_URL, this.apiUrl);
-        return { url: this.apiUrl, token: null };
+        this.apiUrl = url;
+        return { url, token: null };
     },
 
     async conectar() {
@@ -157,9 +154,7 @@ const VendedoresPresenter = {
 
     async _carregar(apiUrl, _naoUsado) {
         this.carregando = true;
-        const botao = document.getElementById('btnConectarSheets');
         const botaoAtualizar = document.getElementById('btnAtualizarVendedores');
-        if (botao) { botao.disabled = true; botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CONECTANDO...'; }
         if (botaoAtualizar) botaoAtualizar.disabled = true;
         this._status('Consultando a aba Vendedores da planilha de TESTE...');
         try {
@@ -193,7 +188,6 @@ const VendedoresPresenter = {
             UI.erro(erro.message || 'Não foi possível conectar à base.');
         } finally {
             this.carregando = false;
-            if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fas fa-plug"></i> CONECTAR E CARREGAR'; }
         }
     },
 

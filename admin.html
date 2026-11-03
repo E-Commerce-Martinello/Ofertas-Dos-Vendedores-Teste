@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.5.4</title>
+    <title>Admin Martinello | 1.6.1</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -46,6 +46,10 @@
         body { background:linear-gradient(135deg,#f5f5f5 0%,#e0e0e0 100%); min-height:100vh; padding:15px; }
         body.dark-mode { background:#1a1a1a; color:white; }
         body.dark-mode .admin-card { background:#2d2d2d; border-color:#444; }
+        #formAdicionarAdmin input { max-width:500px; }
+        .admin-email { overflow-wrap:anywhere; }
+        .admin-remover { cursor:pointer; border:1px solid #d0252a; color:#d0252a; background:transparent; padding:8px 12px; border-radius:10px; font-weight:bold; }
+        .admin-remover:disabled { opacity:.5; cursor:not-allowed; }
         body.dark-mode .form-group input,
         body.dark-mode .form-group textarea { background:#3d3d3d; color:white; border-color:#555; }
         body.dark-mode .oferta-card { background:#333; border-color:#555; }
@@ -289,8 +293,6 @@
             <div class="environment-badge">🧪 AMBIENTE DE TESTE</div>
             <h2>Acesso Restrito</h2>
             <p style="font-size:13px;color:#666;line-height:1.6;margin:12px 0;">Acesso com uma conta Google autorizada. Não há senha compartilhada no site.</p>
-            <label for="apiUrlLogin" style="display:block;text-align:left;font-size:12px;font-weight:700;margin:10px 0 5px;">URL da API de teste (/exec)</label>
-            <input type="url" id="apiUrlLogin" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="url" style="width:100%;">
             <p id="loginStatus" role="alert" style="display:none;color:#a21d20;font-size:12px;margin:12px 0;overflow-wrap:anywhere;"></p>
             <button id="btnEntrar" onclick="login()" style="margin-top:12px;"><i class="fab fa-google"></i> ENTRAR COM GOOGLE</button>
             <p style="margin-top:15px;font-size:12px;color:#888;">A autorização é conferida no Apps Script antes de abrir o painel.</p>
@@ -326,6 +328,9 @@
             </button>
             <button type="button" class="admin-tab" id="tabVendedores" onclick="AdminPresenter.mostrarAba('vendedores')">
                 <i class="fas fa-users"></i> VENDEDORES
+            </button>
+            <button type="button" class="admin-tab" id="tabAcessos" onclick="AdminPresenter.mostrarAba('acessos')" style="display:none;">
+                <i class="fas fa-user-shield"></i> ACESSOS
             </button>
         </nav>
 
@@ -452,18 +457,10 @@
                     A API usa a planilha de TESTE e valida a identidade Google via Firebase Authentication no servidor. Nenhum token permanente é armazenado neste navegador.
                 </div>
 
-                <div class="vendor-config-grid">
-                    <div class="form-group">
-                        <label for="apiVendedoresUrl">URL do Apps Script de gestão (/exec)</label>
-                        <input type="url" id="apiVendedoresUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
-                    </div>
-
-                </div>
                 <div class="vendor-actions">
-                    <button type="button" class="btn-primary" id="btnConectarSheets" onclick="VendedoresPresenter.conectar()"><i class="fas fa-plug"></i> CONECTAR E CARREGAR</button>
                     <button type="button" class="btn-outline" id="btnAtualizarVendedores" onclick="VendedoresPresenter.atualizar()" disabled><i class="fas fa-sync-alt"></i> ATUALIZAR DADOS</button>
                 </div>
-                <div id="statusConexaoSheets" class="vendor-status"><i class="fas fa-info-circle"></i><span>Conecte com sua conta Google autorizada para consultar os vendedores.</span></div>
+                <div id="statusConexaoSheets" class="vendor-status"><i class="fas fa-info-circle"></i><span>Os vendedores serão carregados automaticamente após o acesso.</span></div>
                 <p class="vendor-last-update">A API trabalha exclusivamente com a aba <strong>Vendedores (A:M)</strong>. Telefone alterado volta para <strong>PENDENTE</strong> até ser validado explicitamente.</p>
             </div>
 
@@ -517,7 +514,7 @@
                                 <th>MATRÍCULA</th><th>NOME</th><th>FILIAL / LOCALIDADE</th><th>CADASTRO</th><th>TELEFONE</th><th>VALIDAÇÃO</th><th>LINK MARTINELLO</th><th>AÇÕES</th>
                             </tr>
                         </thead>
-                        <tbody id="corpoTabelaVendedores"><tr><td colspan="8" class="vendor-empty">Conecte a planilha para visualizar os vendedores.</td></tr></tbody>
+                        <tbody id="corpoTabelaVendedores"><tr><td colspan="8" class="vendor-empty">Carregando base de vendedores…</td></tr></tbody>
                     </table>
                 </div>
                 <div class="vendor-pagination">
@@ -539,6 +536,27 @@
                 </div>
             </div>
         </section><!-- /abaVendedores -->
+
+        <section id="abaAcessos" class="aba-conteudo" style="display:none;">
+            <div class="admin-card">
+                <h2><i class="fas fa-user-shield" style="color:#d0252a;"></i> GERENCIAR ADMINISTRADORES</h2>
+                <p class="vendor-subtext">Somente a conta administradora principal pode adicionar ou remover outros administradores. Cada conta deve usar o login Google e também ter permissão de edição na planilha de teste.</p>
+                <div id="statusAcessos" class="vendor-status" role="status">Carregando acessos...</div>
+                <div class="vendor-table-wrap" style="margin-top:15px;">
+                    <table class="vendor-table" style="min-width:440px;">
+                        <thead><tr><th>E-MAIL</th><th>PERMISSÃO</th><th>AÇÃO</th></tr></thead>
+                        <tbody id="listaAdministradores"><tr><td colspan="3">Carregando...</td></tr></tbody>
+                    </table>
+                </div>
+                <form id="formAdicionarAdmin" onsubmit="event.preventDefault();GerenciarAcessosPresenter.adicionar()" style="margin-top:20px;">
+                    <div class="form-group"><label for="novoEmailAdmin">Adicionar administrador</label>
+                        <input type="email" id="novoEmailAdmin" required maxlength="254" placeholder="email@exemplo.com" autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn-primary" id="btnAdicionarAdmin" style="width:auto;margin:0"><i class="fas fa-user-plus"></i> AUTORIZAR E-MAIL</button>
+                </form>
+                <p class="vendor-last-update">Esta permissão é salva no Apps Script e não expõe uma lista de administradores no GitHub. A conta principal não pode ser removida pelo painel.</p>
+            </div>
+        </section><!-- /abaAcessos -->
 
     </div><!-- /painelAdmin -->
 </div>
@@ -572,15 +590,16 @@
     <script src="model/horario.js"></script>
     <script src="model/storage.js"></script>
     <script src="model/validators.js"></script>
-    <script src="model/auth.js?v=1.6.0"></script>
+    <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.0"></script>
-    <script src="model/google-sheets.js?v=1.6.0"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.1"></script>
+    <script src="model/google-sheets.js?v=1.6.1"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="model/vendor-import.js?v=1.6.0"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.0"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.1"></script>
+    <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
 </body>
 </html>

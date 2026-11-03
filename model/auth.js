@@ -1,4 +1,4 @@
-// Login real com Firebase Authentication (Google).
+// Login Google com sessão preservada nas atualizações da página e encerrada ao fechar o navegador; autorização continua no Apps Script.
 // A autorização é validada NOVAMENTE pelo Apps Script no servidor.
 const Auth = {
     async iniciar() {

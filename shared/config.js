@@ -18,6 +18,10 @@ const CONFIG = Object.freeze({
     environmentLabel: 'AMBIENTE DE TESTE',
     googleSpreadsheetId: '127G49HueMod1v-bHP66Ci4X1bpP4sIhRPZRO0JJKxdA',
 
+    // URL da API de teste: endereço de serviço público (NÃO é uma senha).
+    // Se a implantação /exec mudar, altere somente esta linha.
+    adminApiUrl: 'https://script.google.com/macros/s/AKfycbwhjDIBES-sLK0ZVBkdqZkuMXuVw8YLjWKU08ahoN_Oy1_hrMEnyQeHnrLsuvasmNzr/exec',
+
     // Admin
     SESSION_KEY:      'adminSessao',
     MAX_TENTATIVAS:   5,
