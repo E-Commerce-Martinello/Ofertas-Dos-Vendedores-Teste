@@ -1,126 +1,122 @@
 // ============================================
 // model/google-sheets.js
-// Leitura privada da planilha via Google OAuth + Sheets API.
-// Nenhum dado de vendedor é gravado no Firebase ou enviado para outro serviço.
+// Cliente da API privada do Apps Script vinculado à planilha de TESTE.
+// Todas as operações usam POST com token no corpo (não na URL).
 // ============================================
-
 const GoogleSheetsService = {
-    SCOPE: 'https://www.googleapis.com/auth/spreadsheets.readonly',
-    accessToken: null,
-    tokenExpiraEm: 0,
-    tokenClient: null,
-    scriptPromise: null,
+    apiUrl: '',
+    apiToken: '',
 
-    extrairSpreadsheetId(valor) {
-        const texto = String(valor || '').trim();
-        const match = texto.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-        return match ? match[1] : texto;
-    },
-
-    _carregarGoogleIdentity() {
-        if (window.google?.accounts?.oauth2) return Promise.resolve();
-        if (this.scriptPromise) return this.scriptPromise;
-
-        this.scriptPromise = new Promise((resolve, reject) => {
-            let script = document.getElementById('googleIdentityServices');
-            if (!script) {
-                script = document.createElement('script');
-                script.id = 'googleIdentityServices';
-                script.src = 'https://accounts.google.com/gsi/client';
-                script.async = true;
-                script.defer = true;
-                document.head.appendChild(script);
-            }
-            script.addEventListener('load', resolve, { once: true });
-            script.addEventListener('error', () => reject(new Error('Não foi possível carregar o serviço de login do Google.')), { once: true });
-            // Se o script já terminou de carregar entre a checagem e os listeners.
-            if (window.google?.accounts?.oauth2) resolve();
-        });
-        return this.scriptPromise;
-    },
-
-    _obterToken(clientId) {
-        // Quando a biblioteca já está carregada, solicita o token imediatamente no clique do usuário,
-        // preservando a permissão do navegador para abrir a janela OAuth.
-        if (window.google?.accounts?.oauth2) return this._solicitarToken(clientId);
-        return this._carregarGoogleIdentity().then(() => this._solicitarToken(clientId));
-    },
-
-    _solicitarToken(clientId) {
-        if (this.accessToken && Date.now() < this.tokenExpiraEm - 60000) {
-            return Promise.resolve(this.accessToken);
+    configurar(apiUrl, apiToken) {
+        const url = String(apiUrl || '').trim();
+        const token = String(apiToken || '').trim();
+        if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec(?:\?.*)?$/.test(url)) {
+            throw new Error('Informe a URL /exec do Apps Script de gestão.');
         }
+        if (token.length < 30) throw new Error('Informe o token privado gerado pelo Apps Script.');
+        this.apiUrl = url.split('?')[0];
+        this.apiToken = token;
+    },
 
+    _post(action, payload = {}) {
+        if (!this.apiUrl || !this.apiToken) return Promise.reject(new Error('Conecte a API da planilha antes de continuar.'));
         return new Promise((resolve, reject) => {
-            let timeout = setTimeout(() => reject(new Error('A janela de autorização não foi concluída. Clique em conectar e tente novamente.')), 45000);
-            const finalizar = callback => valor => { clearTimeout(timeout); callback(valor); };
-            this.tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: clientId,
-                scope: this.SCOPE,
-                callback: finalizar((resposta) => {
-                    if (resposta.error || !resposta.access_token) {
-                        reject(new Error(resposta.error_description || resposta.error || 'O Google não autorizou o acesso à planilha.'));
-                        return;
-                    }
-                    this.accessToken = resposta.access_token;
-                    this.tokenExpiraEm = Date.now() + (Number(resposta.expires_in || 3600) * 1000);
-                    resolve(this.accessToken);
-                }),
-                error_callback: finalizar((erro) => reject(new Error(erro?.message || 'Não foi possível abrir a janela de autorização do Google.')))
+            const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
+            const iframe = document.createElement('iframe');
+            const form = document.createElement('form');
+            const frameName = `martApiFrame_${requestId.replace(/[^a-zA-Z0-9_]/g, '')}`;
+            let encerrado = false;
+            iframe.name = frameName;
+            iframe.style.display = 'none';
+            iframe.setAttribute('aria-hidden', 'true');
+            form.method = 'POST';
+            form.action = this.apiUrl;
+            form.target = frameName;
+            form.enctype = 'application/x-www-form-urlencoded';
+            form.style.display = 'none';
+
+            const campos = {
+                action,
+                apiToken: this.apiToken,
+                requestId,
+                parentOrigin: window.location.origin,
+                payload: JSON.stringify(payload || {})
+            };
+            Object.entries(campos).forEach(([name, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = String(value);
+                form.appendChild(input);
             });
-            // Sem prompt=consent: o Google pede autorização na primeira vez e reutiliza a concessão existente depois.
-            this.tokenClient.requestAccessToken({ prompt: '' });
+
+            const limpar = () => {
+                window.removeEventListener('message', aoReceber);
+                clearTimeout(timer);
+                form.remove();
+                iframe.remove();
+            };
+            const finalizar = (erro, valor) => {
+                if (encerrado) return;
+                encerrado = true;
+                limpar();
+                erro ? reject(erro) : resolve(valor);
+            };
+            const aoReceber = event => {
+                if (event.source !== iframe.contentWindow) return;
+                let host = '';
+                try { host = new URL(event.origin).hostname.toLowerCase(); } catch (_) { return; }
+                const origemGoogle = host === 'script.google.com' || host.endsWith('.googleusercontent.com');
+                if (!origemGoogle) return;
+                const data = event.data;
+                if (!data || data.tipo !== 'MART_VENDEDORES_API' || data.requestId !== requestId) return;
+                if (data.ok) finalizar(null, data);
+                else finalizar(new Error(data.erro || 'O Apps Script não conseguiu concluir a operação.'));
+            };
+            const timer = setTimeout(() => finalizar(
+                new Error('O Apps Script não confirmou a operação. Abra a URL /exec?action=autorizar em uma aba, autorize sua conta Google e tente novamente. Se já autorizou, confira se a implantação foi atualizada.')
+            ), 60000);
+            window.addEventListener('message', aoReceber);
+            document.body.appendChild(iframe);
+            document.body.appendChild(form);
+            form.submit();
         });
     },
 
-    async carregarBancoDeDados(clientId, spreadsheetId) {
-        const token = await this._obterToken(clientId);
-        // A base atual tem cerca de 750 vendedores; a margem até a linha 5.000 permite crescimento sem baixar dezenas de milhares de linhas de fórmulas vazias.
-        const intervalo = encodeURIComponent("'Banco de Dados'!A1:J5000");
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${intervalo}?valueRenderOption=FORMATTED_VALUE`;
-        const resposta = await fetch(url, {
-            method: 'GET',
-            headers: { Authorization: `Bearer ${token}` }
-        });
-
-        const dados = await resposta.json().catch(() => ({}));
-        if (!resposta.ok) {
-            if (resposta.status === 401) {
-                this.limparSessao();
-                throw new Error('Sua autorização do Google expirou. Clique em CONECTAR E CARREGAR novamente.');
-            }
-            const detalhe = dados?.error?.message || `Erro HTTP ${resposta.status}`;
-            if (resposta.status === 403) {
-                throw new Error(`Acesso negado pelo Google. Confira se a conta conectada tem acesso à planilha e se a Google Sheets API está ativada. (${detalhe})`);
-            }
-            if (resposta.status === 404) {
-                throw new Error('Planilha não encontrada. Confira o link/ID informado e se a aba “Banco de Dados” existe.');
-            }
-            throw new Error(`Falha ao consultar a planilha: ${detalhe}`);
-        }
-        return Array.isArray(dados.values) ? dados.values : [];
+    async testarConexao(apiUrl, apiToken) {
+        this.configurar(apiUrl, apiToken);
+        const resposta = await this._post('listarVendedores', { apenasResumo: true });
+        return resposta.resultado?.resumo || {};
     },
 
-    async carregarParametros(clientId, spreadsheetId) {
-        const token = await this._obterToken(clientId);
-        // A aba contém os participantes (A:C) e a relação de funcionários ativos (F:H).
-        const intervalo = encodeURIComponent("'Parâmetros de Dados'!A1:H1500");
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${intervalo}?valueRenderOption=FORMATTED_VALUE`;
-        const resposta = await fetch(url, {
-            method: 'GET',
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        const dados = await resposta.json().catch(() => ({}));
-        if (!resposta.ok) {
-            const detalhe = dados?.error?.message || `Erro HTTP ${resposta.status}`;
-            throw new Error(`Não foi possível consultar a aba Parâmetros de Dados: ${detalhe}`);
-        }
-        return Array.isArray(dados.values) ? dados.values : [];
+    async carregarVendedores(apiUrl, apiToken) {
+        this.configurar(apiUrl, apiToken);
+        const resposta = await this._post('listarVendedores', {});
+        const linhas = resposta.resultado?.linhas;
+        if (!Array.isArray(linhas)) throw new Error('O Apps Script não retornou a lista de vendedores.');
+        return linhas;
+    },
+
+    async verificarLinks(matriculas) {
+        const ids = [...new Set((matriculas || []).map(v => String(v || '').replace(/\D/g, '')).filter(Boolean))];
+        if (!ids.length) return { resultados: [] };
+        if (ids.length > 30) throw new Error('O verificador aceita até 30 matrículas por lote.');
+        const resposta = await this._post('verificarLinks', { matriculas: ids });
+        return resposta.resultado || { resultados: [] };
+    },
+
+    async salvarVendedor(apiUrl, apiToken, dados) {
+        this.configurar(apiUrl, apiToken);
+        return this._post('salvarVendedor', dados);
+    },
+
+    async criarVendedor(apiUrl, apiToken, dados) {
+        this.configurar(apiUrl, apiToken);
+        return this._post('criarVendedor', dados);
     },
 
     limparSessao() {
-        this.accessToken = null;
-        this.tokenExpiraEm = 0;
-        this.tokenClient = null;
+        this.apiUrl = '';
+        this.apiToken = '';
     }
 };

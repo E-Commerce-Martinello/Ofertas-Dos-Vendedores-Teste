@@ -1,38 +1,38 @@
 // ============================================
 // presenter/vendors-presenter.js
-// Consulta, complementa e organiza vendedores e participantes do WhatsApp.
-// Durante a fase de teste, dados auxiliares usam o namespace Firebase *_TESTE*.
+// Gestão da base oficial Vendedores no Google Sheets via Apps Script privado.
+// Dados oficiais não são gravados no Firebase.
 // ============================================
 const VendedoresPresenter = {
-    STORAGE_CLIENT_ID: 'adminGoogleClientId',
-    STORAGE_SHEET_ID: 'adminGoogleSpreadsheetId_TESTE',
+    STORAGE_API_URL: 'martVendedoresApiUrl_TESTE',
+    STORAGE_API_TOKEN: 'martVendedoresApiToken_TESTE',
     STORAGE_LINK_CHECKER: 'adminLinkCheckerUrl',
+    apiUrl: '',
+    apiToken: '',
     registros: [],
-    registrosBase: [],
     filtrados: [],
-    participantes: [],
-    participantesNaoIdentificados: [],
-    candidatosCadastro: [],
-    ajustes: {},
-    complementos: {},
-    identificacoes: {},
     links: {},
     pagina: 1,
     porPagina: 50,
     inicializado: false,
     carregando: false,
+    salvando: false,
     verificandoLinks: false,
+    modoModal: 'editar',
+    matriculaOriginal: '',
     ultimaAtualizacaoTexto: '',
 
     init() {
         if (!this.inicializado) {
-            document.getElementById('googleClientId').value = localStorage.getItem(this.STORAGE_CLIENT_ID) || '';
-            document.getElementById('googleSheetId').value = localStorage.getItem(this.STORAGE_SHEET_ID) || CONFIG.googleSpreadsheetId || '';
-            const urlVerificador = document.getElementById('urlVerificadorLinks');
-            if (urlVerificador) urlVerificador.value = localStorage.getItem(this.STORAGE_LINK_CHECKER) || '';
+            const url = document.getElementById('apiVendedoresUrl');
+            const token = document.getElementById('apiVendedoresToken');
+            if (url) url.value = localStorage.getItem(this.STORAGE_API_URL) || '';
+            if (token) token.value = localStorage.getItem(this.STORAGE_API_TOKEN) || '';
+            this.apiUrl = localStorage.getItem(this.STORAGE_API_URL) || '';
+            this.apiToken = localStorage.getItem(this.STORAGE_API_TOKEN) || '';
             this.inicializado = true;
         }
-        if (!this.registros.length) this._status('Conecte à planilha para carregar vendedores, participantes do grupo e pendências.');
+        if (!this.registros.length) this._status('Informe a URL e o token do Apps Script de TESTE para carregar a base Vendedores.');
     },
 
     _status(mensagem, tipo = 'info') {
@@ -48,78 +48,32 @@ const VendedoresPresenter = {
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[c]));
     },
-
     _texto(valor) { return String(valor ?? '').trim(); },
-
-    _matricula(valor) {
-        let texto = this._texto(valor);
-        if (/^\d+\.0+$/.test(texto)) texto = texto.replace(/\.0+$/, '');
-        return texto;
+    _digitos(valor) { return this._texto(valor).replace(/\D/g, ''); },
+    _matricula(valor) { return this._digitos(valor); },
+    _normalizarTelefone(valor) {
+        let n = this._digitos(valor);
+        if ((n.length === 10 || n.length === 11) && !n.startsWith('55')) n = `55${n}`;
+        return n;
     },
-
-    _digitos(valor) {
-        let texto = this._texto(valor);
-        if (/^[+-]?(?:\d+\.?\d*|\.\d+)[eE][+-]?\d+$/.test(texto)) {
-            const numero = Number(texto);
-            if (Number.isFinite(numero)) texto = numero.toFixed(0);
-        }
-        return texto.replace(/\D/g, '');
-    },
-
-    _chaveMatricula(valor) { return `m${this._digitos(valor)}`; },
-    _telefoneCanonico(valor) {
-        let digitos = this._digitos(valor);
-        // O mesmo telefone pode aparecer com ou sem o código do país 55.
-        if (digitos.startsWith('55') && (digitos.length === 12 || digitos.length === 13)) digitos = digitos.slice(2);
-        return digitos;
-    },
-    _chaveTelefone(valor) { return `p${this._telefoneCanonico(valor)}`; },
-
-    _classificarTelefone(numero) {
-        const telefone = this._telefoneCanonico(numero);
-        if (!telefone || telefone.length < 8) return 'unknown';
-        const exatos = new Set(this.participantes.map(p => this._telefoneCanonico(p.telefoneDigitos)).filter(Boolean));
-        if (exatos.has(telefone)) return 'in';
-        const final = telefone.slice(-8);
-        const finais = new Set(this.participantes.map(p => this._telefoneCanonico(p.telefoneDigitos)).filter(v => v.length >= 8).map(v => v.slice(-8)));
-        return finais.has(final) ? 'review' : 'out';
-    },
-
-    _classificarZap(status) {
-        const valor = this._texto(status).toLocaleUpperCase('pt-BR');
-        if (valor.startsWith('JÁ ESTÁ')) return 'in';
-        if (valor.startsWith('NÃO ESTÁ')) return 'out';
-        if (valor.startsWith('REVISAR')) return 'review';
-        return 'unknown';
-    },
-
     _exibirTelefone(valor) {
-        let digitos = this._digitos(valor);
+        let n = this._digitos(valor);
         let prefixo = '';
-        if (digitos.startsWith('55') && (digitos.length === 12 || digitos.length === 13)) {
-            prefixo = '+55 ';
-            digitos = digitos.slice(2);
-        }
-        if (digitos.length === 11) return `${prefixo}(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7)}`;
-        if (digitos.length === 10) return `${prefixo}(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+        if (n.startsWith('55') && (n.length === 12 || n.length === 13)) { prefixo = '+55 '; n = n.slice(2); }
+        if (n.length === 11) return `${prefixo}(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`;
+        if (n.length === 10) return `${prefixo}(${n.slice(0, 2)}) ${n.slice(2, 6)}-${n.slice(6)}`;
         return this._texto(valor) || '—';
     },
+    _normalizarCabecalho(valor) { return this._texto(valor).toLocaleLowerCase('pt-BR').replace(/\s+/g, '_'); },
 
     limparDados() {
         this.registros = [];
-        this.registrosBase = [];
         this.filtrados = [];
-        this.participantes = [];
-        this.participantesNaoIdentificados = [];
-        this.candidatosCadastro = [];
-        this.ajustes = {};
-        this.complementos = {};
-        this.identificacoes = {};
         this.links = {};
         this.pagina = 1;
         this.ultimaAtualizacaoTexto = '';
         this.carregando = false;
-        ['painelDadosVendedores','painelGestaoVendedores'].forEach(id => {
+        ['painelDadosVendedores', 'painelGestaoVendedores'].forEach(id => {
             const painel = document.getElementById(id);
             if (painel) painel.style.display = 'none';
         });
@@ -127,217 +81,136 @@ const VendedoresPresenter = {
         if (botao) botao.disabled = true;
     },
 
-    _mapearLinhas(linhas) {
-        if (!Array.isArray(linhas) || linhas.length < 2) return [];
-        const cabecalhos = linhas[0].map(v => this._texto(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase());
-        const indice = (nome, fallback) => {
-            const pos = cabecalhos.indexOf(nome);
-            return pos >= 0 ? pos : fallback;
-        };
-        const col = {
-            filial: indice('FILIAL', 0), codfil: indice('CODFIL', 1), matricula: indice('MATRICULA', 2),
-            nome: indice('NOME', 3), empresa: indice('EMPRESA', 4), zap: indice('ZAP', 5),
-            numero: indice('NUMERO', 6), envioDiario: indice('ENVIO DIARIO', 7),
-            envioEver: indice('ENVIO EVER', 8), contato: indice('ENTRADO EM CTT', 9)
-        };
-        return linhas.slice(1).map(linha => {
-            const valor = i => i < linha.length ? linha[i] : '';
-            const vendedor = {
-                filial: this._texto(valor(col.filial)), codfil: this._texto(valor(col.codfil)),
-                matricula: this._matricula(valor(col.matricula)), nome: this._texto(valor(col.nome)),
-                empresa: this._texto(valor(col.empresa)), zap: this._texto(valor(col.zap)),
-                numero: this._texto(valor(col.numero)), telefoneDigitos: this._digitos(valor(col.numero)),
-                envioDiario: this._texto(valor(col.envioDiario)), envioEver: this._texto(valor(col.envioEver)),
-                contato: this._texto(valor(col.contato)), origem: 'planilha'
+    _mapearVendedores(linhas) {
+        if (!Array.isArray(linhas) || linhas.length < 2) throw new Error('A aba Vendedores está vazia ou não retornou registros.');
+        const headers = linhas[0].map(v => this._normalizarCabecalho(v));
+        const esperados = [
+            'matricula', 'nome', 'filial', 'codigo_filial', 'telefone_original',
+            'telefone_normalizado', 'situacao_funcional', 'status_cadastro',
+            'origem_cadastro', 'criado_em', 'atualizado_em', 'observacoes', 'status_telefone'
+        ];
+        const col = {};
+        esperados.forEach(h => {
+            col[h] = headers.indexOf(h);
+            if (col[h] < 0) throw new Error(`Cabeçalho obrigatório ausente na aba Vendedores: ${h}. Confira se a migração terminou corretamente.`);
+        });
+        return linhas.slice(1).map((linha, idx) => {
+            const get = h => col[h] < linha.length ? this._texto(linha[col[h]]) : '';
+            const situacao = get('situacao_funcional');
+            const statusCadastro = (get('status_cadastro') || 'IMPORTADO').toUpperCase();
+            const situacaoUpper = situacao.toLocaleUpperCase('pt-BR');
+            const telefone = get('telefone_original');
+            const statusTelefone = (get('status_telefone') || 'PENDENTE').toUpperCase();
+            const statusLink = this.links[`m${this._matricula(get('matricula'))}`] || null;
+            const inativoFuncional = /INATIV|DESLIG|DEMIT|REMOVID/.test(situacaoUpper);
+            const ativo = statusCadastro !== 'INATIVO' && !inativoFuncional;
+            return {
+                matricula: get('matricula'),
+                nome: get('nome'),
+                filial: get('filial'),
+                codfil: get('codigo_filial'),
+                numero: telefone,
+                telefoneNormalizado: get('telefone_normalizado') || this._normalizarTelefone(telefone),
+                situacaoFuncional: situacao,
+                statusCadastro,
+                statusTelefone: telefone ? (statusTelefone === 'VALIDADO' ? 'VALIDADO' : 'PENDENTE') : 'PENDENTE',
+                origem: get('origem_cadastro'),
+                criadoEm: get('criado_em'),
+                atualizadoEm: get('atualizado_em'),
+                observacoes: get('observacoes'),
+                ativo,
+                linkStatus: statusLink,
+                sheetRow: idx + 2
             };
-            vendedor.statusZap = this._classificarZap(vendedor.zap);
-            vendedor.ativo = vendedor.empresa.toLocaleUpperCase('pt-BR') === 'OK';
-            return vendedor;
-        }).filter(v => v.matricula || v.nome || v.numero);
+        }).filter(v => v.matricula && v.nome);
     },
 
-    _mapearParametros(linhas) {
-        const participantes = [];
-        const funcionarios = [];
-        let filialAtual = '';
-        let codFilialAtual = '';
-        (linhas || []).slice(1).forEach(linha => {
-            const nomeGrupo = this._texto(linha[0]);
-            const numero = this._texto(linha[1]);
-            const ajustado = this._texto(linha[2]);
-            const telefoneDigitos = this._digitos(ajustado) || this._digitos(numero);
-            if (nomeGrupo && telefoneDigitos) {
-                participantes.push({ nome: nomeGrupo, numero: numero || ajustado, numeroAjustado: ajustado, telefoneDigitos });
-            }
-
-            const status = this._texto(linha[5]).toLocaleUpperCase('pt-BR');
-            const matricula = this._matricula(linha[6]);
-            const nome = this._texto(linha[7]);
-            if (status === 'FILIAL') {
-                const cabecalho = this._texto(linha[6]);
-                const filial = cabecalho.match(/F\d{4}\s+(.+)$/i);
-                const codigo = cabecalho.match(/(F\d{4})/i);
-                filialAtual = filial ? filial[1].trim() : cabecalho;
-                codFilialAtual = codigo ? codigo[1].toUpperCase() : '';
-            } else if (status === 'OK' && matricula && nome) {
-                funcionarios.push({ matricula, nome, filial: filialAtual, codfil: codFilialAtual, origem: 'relacao_atual' });
-            }
-        });
-        return { participantes, funcionarios };
+    _validarConfiguracao() {
+        const url = this._texto(document.getElementById('apiVendedoresUrl')?.value) || this.apiUrl;
+        const token = this._texto(document.getElementById('apiVendedoresToken')?.value) || this.apiToken;
+        if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec(?:\?.*)?$/.test(url)) {
+            throw new Error('Informe a URL /exec da implantação do Apps Script vinculada à planilha de TESTE.');
+        }
+        if (token.length < 30) throw new Error('Informe o token privado gerado na função configurarAdministradorApiVendedoresV153.');
+        this.apiUrl = url.split('?')[0];
+        this.apiToken = token;
+        localStorage.setItem(this.STORAGE_API_URL, this.apiUrl);
+        localStorage.setItem(this.STORAGE_API_TOKEN, this.apiToken);
+        return { url: this.apiUrl, token: this.apiToken };
     },
 
     async conectar() {
         if (this.carregando) return;
-        const clientId = this._texto(document.getElementById('googleClientId').value);
-        const sheetInput = this._texto(document.getElementById('googleSheetId').value) || CONFIG.googleSpreadsheetId;
-        const spreadsheetId = GoogleSheetsService.extrairSpreadsheetId(sheetInput);
-        if (!clientId || !clientId.endsWith('.apps.googleusercontent.com')) {
-            UI.erro('Informe um ID de cliente OAuth válido do Google.'); return;
+        try {
+            const cfg = this._validarConfiguracao();
+            await this._carregar(cfg.url, cfg.token);
+        } catch (erro) {
+            this._status(erro.message || 'Confira a configuração da API.', 'error');
+            UI.erro(erro.message || 'Confira a configuração da API.');
         }
-        if (!spreadsheetId || !/^[a-zA-Z0-9-_]+$/.test(spreadsheetId)) {
-            UI.erro('Informe o link completo ou o ID válido da planilha Google Sheets.'); return;
-        }
-        localStorage.setItem(this.STORAGE_CLIENT_ID, clientId);
-        localStorage.setItem(this.STORAGE_SHEET_ID, spreadsheetId);
-        await this._carregar(clientId, spreadsheetId);
     },
 
     async atualizar() {
         if (this.carregando) return;
-        const clientId = localStorage.getItem(this.STORAGE_CLIENT_ID) || this._texto(document.getElementById('googleClientId').value);
-        const spreadsheetId = localStorage.getItem(this.STORAGE_SHEET_ID) || GoogleSheetsService.extrairSpreadsheetId(this._texto(document.getElementById('googleSheetId').value) || CONFIG.googleSpreadsheetId);
-        if (!clientId || !spreadsheetId) { this._status('Configure e conecte sua planilha primeiro.'); return; }
-        await this._carregar(clientId, spreadsheetId);
+        try {
+            const cfg = this._validarConfiguracao();
+            await this._carregar(cfg.url, cfg.token);
+        } catch (erro) {
+            this._status(erro.message || 'Configure a API primeiro.', 'error');
+            UI.erro(erro.message || 'Configure a API primeiro.');
+        }
     },
 
-    async _carregar(clientId, spreadsheetId) {
+    async _carregar(apiUrl, apiToken) {
         this.carregando = true;
         const botao = document.getElementById('btnConectarSheets');
         const botaoAtualizar = document.getElementById('btnAtualizarVendedores');
         if (botao) { botao.disabled = true; botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CONECTANDO...'; }
         if (botaoAtualizar) botaoAtualizar.disabled = true;
-        this._status('Consultando Banco de Dados, Parâmetros de Dados e ajustes do painel...');
+        this._status('Consultando a aba Vendedores da planilha de TESTE...');
         try {
-            const [linhasBanco, linhasParametros] = await Promise.all([
-                GoogleSheetsService.carregarBancoDeDados(clientId, spreadsheetId),
-                GoogleSheetsService.carregarParametros(clientId, spreadsheetId)
-            ]);
+            const linhas = await GoogleSheetsService.carregarVendedores(apiUrl, apiToken);
+            // O Firebase permanece apenas como repositório auxiliar dos resultados da verificação de links.
             let gestao = {};
-            this.erroFirebaseGestao = '';
             try { gestao = await VendorManagementService.carregar(); }
-            catch (erroGestao) {
-                console.warn('Firebase não permitiu ler os complementos de gestão:', erroGestao);
-                this.erroFirebaseGestao = ' A base de ajustes do Firebase não pôde ser lida; confira as regras de acesso do Realtime Database.';
-            }
-            this.registrosBase = this._mapearLinhas(linhasBanco);
-            if (!this.registrosBase.length) throw new Error('A aba Banco de Dados foi acessada, mas não encontrei linhas de vendedores nas colunas A até J.');
-            const parametros = this._mapearParametros(linhasParametros);
-            this.participantes = parametros.participantes;
-            this._funcionariosFonte = parametros.funcionarios;
-            this.ajustes = gestao.ajustes || {};
-            this.complementos = gestao.complementos || {};
-            this.identificacoes = gestao.participantes || {};
+            catch (erro) { console.warn('Não foi possível carregar os resultados auxiliares de links:', erro); }
             this.links = gestao.links || {};
-            this._reconstruirRegistros(parametros.funcionarios);
+            this.registros = this._mapearVendedores(linhas);
+            if (!this.registros.length) throw new Error('A aba Vendedores foi lida, mas não contém linhas válidas.');
             document.getElementById('painelDadosVendedores').style.display = 'block';
             document.getElementById('painelGestaoVendedores').style.display = 'block';
             if (botaoAtualizar) botaoAtualizar.disabled = false;
             this.pagina = 1;
             this.filtrar();
             this._renderizarGestaoExtra();
-            const horario = new Date().toLocaleString('pt-BR');
-            this.ultimaAtualizacaoTexto = `Dados consultados em ${horario}. A planilha foi lida; complementos e ajustes são salvos separadamente no Firebase.`;
-            document.getElementById('ultimaAtualizacaoVendedores').textContent = this.ultimaAtualizacaoTexto;
-            this._status(`${this.registros.length.toLocaleString('pt-BR')} vendedores/complementos e ${this.participantes.length.toLocaleString('pt-BR')} participantes carregados.${this.erroFirebaseGestao}`, this.erroFirebaseGestao ? 'error' : 'ok');
+            this.ultimaAtualizacaoTexto = `Base Vendedores carregada em ${new Date().toLocaleString('pt-BR')}. ${this.registros.length.toLocaleString('pt-BR')} registros lidos diretamente do Google Sheets.`;
+            const last = document.getElementById('ultimaAtualizacaoVendedores');
+            if (last) last.textContent = this.ultimaAtualizacaoTexto;
+            this._status(`${this.registros.length.toLocaleString('pt-BR')} vendedores carregados. Edições e novos cadastros serão gravados diretamente na aba Vendedores.`, 'ok');
         } catch (erro) {
-            console.error('Erro ao carregar gestão de vendedores:', erro);
+            console.error('Erro ao carregar a base Vendedores:', erro);
             this._status(erro.message || 'Não foi possível carregar os dados.', 'error');
-            UI.erro(erro.message || 'Não foi possível conectar aos dados.');
+            UI.erro(erro.message || 'Não foi possível conectar à base.');
         } finally {
             this.carregando = false;
-            if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fab fa-google"></i> CONECTAR E CARREGAR'; }
+            if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fas fa-plug"></i> CONECTAR E CARREGAR'; }
         }
-    },
-
-    _reconstruirRegistros(funcionarios = []) {
-        const base = this.registrosBase.map(v => {
-            const chave = this._chaveMatricula(v.matricula);
-            const ajuste = this.ajustes[chave] || {};
-            const complemento = this.complementos[chave] || {};
-            const link = this.links[chave] || null;
-            const ajustado = { ...v };
-            let complementoAplicado = false;
-            // Quando um registro complementar passa a existir também na planilha oficial,
-            // aproveita os dados preenchidos manualmente apenas nos campos que vierem vazios.
-            ['nome','filial','codfil','numero'].forEach(campo => {
-                if (ajuste[campo] !== undefined && ajuste[campo] !== '') {
-                    ajustado[campo] = ajuste[campo];
-                } else if ((!ajustado[campo] || ajustado[campo] === '—') && complemento[campo]) {
-                    ajustado[campo] = complemento[campo];
-                    complementoAplicado = true;
-                }
-            });
-            ajustado.telefoneDigitos = this._telefoneCanonico(ajustado.numero);
-            ajustado.ajusteManual = Object.keys(ajuste).some(k => ['nome','filial','codfil','numero'].includes(k));
-            ajustado.complementoAplicado = complementoAplicado;
-            ajustado.ativo = ajuste.ativo === false ? false : (ajuste.ativo === true ? true : v.ativo);
-            // Recalcula a situação usando o telefone efetivamente exibido (inclusive correções manuais).
-            ajustado.statusZap = ajustado.telefoneDigitos ? this._classificarTelefone(ajustado.telefoneDigitos) : this._classificarZap(ajuste.zap || v.zap);
-            ajustado.zap = ajuste.zap || v.zap;
-            ajustado.linkStatus = link;
-            return ajustado;
-        });
-        const matriculasExistentes = new Set(base.map(v => this._digitos(v.matricula)));
-        Object.keys(this.complementos).forEach(chave => {
-            const comp = this.complementos[chave] || {};
-            const matricula = this._matricula(comp.matricula || String(chave).replace(/^m/, ''));
-            if (!matricula || matriculasExistentes.has(this._digitos(matricula)) || comp.ativo === false) return;
-            base.push({
-                filial: this._texto(comp.filial), codfil: this._texto(comp.codfil), matricula,
-                nome: this._texto(comp.nome), empresa: 'COMPLEMENTAR', zap: 'NÃO VERIFICADO',
-                numero: this._texto(comp.numero), telefoneDigitos: this._telefoneCanonico(comp.numero),
-                envioDiario: '', envioEver: '', contato: '', statusZap: this._classificarTelefone(comp.numero),
-                ativo: true, origem: 'complementar', ajusteManual: false,
-                linkStatus: this.links[this._chaveMatricula(matricula)] || null
-            });
-        });
-        this.registros = base;
-
-        const matBase = new Set(this.registrosBase.map(v => this._digitos(v.matricula)));
-        const matComplementos = new Set(Object.values(this.complementos).filter(v => v?.ativo !== false).map(v => this._digitos(v?.matricula)).filter(Boolean));
-        this.candidatosCadastro = (funcionarios || []).filter(v => {
-            const mat = this._digitos(v.matricula);
-            return mat && !matBase.has(mat) && !matComplementos.has(mat);
-        });
-
-        const telefones = new Set();
-        const ultimosOito = new Set();
-        this.registros.forEach(v => {
-            const fone = this._telefoneCanonico(v.numero);
-            if (fone) { telefones.add(fone); if (fone.length >= 8) ultimosOito.add(fone.slice(-8)); }
-        });
-        this.participantesNaoIdentificados = this.participantes.filter(p => {
-            const fone = this._telefoneCanonico(p.telefoneDigitos);
-            if (!fone) return true;
-            return !telefones.has(fone) && !(fone.length >= 8 && ultimosOito.has(fone.slice(-8)));
-        }).map(p => ({ ...p, identificacaoManual: this.identificacoes[this._chaveTelefone(p.telefoneDigitos)] || null }));
     },
 
     filtrar() {
         const termo = this._texto(document.getElementById('buscaVendedor')?.value).toLocaleLowerCase('pt-BR');
-        const filtro = document.getElementById('filtroStatusVendedor')?.value || 'todos';
-        const filtroEmpresa = document.getElementById('filtroEmpresaVendedor')?.value || 'ativos';
+        const filtroAtivo = document.getElementById('filtroEmpresaVendedor')?.value || 'ativos';
+        const filtroTelefone = document.getElementById('filtroStatusVendedor')?.value || 'todos';
         this.filtrados = this.registros.filter(v => {
-            if (filtroEmpresa === 'ativos' && !v.ativo) return false;
+            if (filtroAtivo === 'ativos' && !v.ativo) return false;
+            if (filtroAtivo === 'inativos' && v.ativo) return false;
             const correspondeBusca = !termo || [v.nome, v.matricula, v.numero, v.filial, v.codfil]
                 .some(campo => this._texto(campo).toLocaleLowerCase('pt-BR').includes(termo));
             if (!correspondeBusca) return false;
-            if (filtro === 'fora') return v.statusZap === 'out';
-            if (filtro === 'no-grupo') return v.statusZap === 'in';
-            if (filtro === 'revisar') return v.statusZap === 'review';
-            if (filtro === 'sem-telefone') return !v.telefoneDigitos;
-            if (filtro === 'complementares') return v.origem === 'complementar';
-            if (filtro === 'sem-link') return !v.linkStatus;
+            if (filtroTelefone === 'validado') return v.statusTelefone === 'VALIDADO';
+            if (filtroTelefone === 'pendente') return v.statusTelefone === 'PENDENTE';
+            if (filtroTelefone === 'sem-telefone') return !this._digitos(v.numero);
+            if (filtroTelefone === 'sem-link') return !v.linkStatus;
             return true;
         });
         this.pagina = 1;
@@ -347,28 +220,33 @@ const VendedoresPresenter = {
 
     _renderizarResumo() {
         const ativos = this.registros.filter(v => v.ativo);
-        const contar = status => ativos.filter(v => v.statusZap === status).length;
+        const inativos = this.registros.length - ativos.length;
+        const validados = this.registros.filter(v => v.statusTelefone === 'VALIDADO' && this._digitos(v.numero)).length;
+        const pendentes = this.registros.filter(v => v.statusTelefone !== 'VALIDADO' || !this._digitos(v.numero)).length;
         document.getElementById('kpiTotalAtivos').textContent = ativos.length.toLocaleString('pt-BR');
-        document.getElementById('kpiNoGrupo').textContent = contar('in').toLocaleString('pt-BR');
-        document.getElementById('kpiForaGrupo').textContent = contar('out').toLocaleString('pt-BR');
-        document.getElementById('kpiRevisar').textContent = contar('review').toLocaleString('pt-BR');
-        const elPend = document.getElementById('kpiPendenciasCadastro');
-        if (elPend) elPend.textContent = this.candidatosCadastro.length.toLocaleString('pt-BR');
-        const elNao = document.getElementById('kpiNaoIdentificados');
-        if (elNao) elNao.textContent = this.participantesNaoIdentificados.length.toLocaleString('pt-BR');
+        document.getElementById('kpiTelefoneValidado').textContent = validados.toLocaleString('pt-BR');
+        document.getElementById('kpiTelefonePendente').textContent = pendentes.toLocaleString('pt-BR');
+        document.getElementById('kpiTotalInativos').textContent = inativos.toLocaleString('pt-BR');
+    },
+
+    _statusTelefone(v) {
+        if (!this._digitos(v.numero)) return '<span class="vendor-badge unknown">Sem telefone</span>';
+        return v.statusTelefone === 'VALIDADO'
+            ? '<span class="vendor-badge success">Validado</span>'
+            : '<span class="vendor-badge review">Pendente</span>';
     },
 
     _statusLink(link) {
         if (!link) return '<span class="vendor-badge unknown">Não verificado</span>';
         const status = link.status || 'inconclusivo';
-        const map = {
-            ativo: ['success','Ativo'], inativo: ['inactive','Inativo'],
-            redirecionamento: ['review','Redireciona'], inconclusivo: ['unknown','Inconclusivo'],
-            erro: ['unknown','Erro na consulta']
+        const mapa = {
+            ativo: ['success', 'Ativo'], inativo: ['inactive', 'Inativo'],
+            redirecionamento: ['review', 'Redireciona'], inconclusivo: ['unknown', 'Inconclusivo'],
+            erro: ['unknown', 'Erro na consulta']
         };
-        const [classe,label] = map[status] || map.inconclusivo;
+        const [classe, rotulo] = mapa[status] || mapa.inconclusivo;
         const detalhe = link.httpCode ? `HTTP ${link.httpCode}` : (link.destino || '');
-        return `<span class="vendor-badge ${classe}" title="${this._escapar(detalhe)}">${label}</span>`;
+        return `<span class="vendor-badge ${classe}" title="${this._escapar(detalhe)}">${rotulo}</span>`;
     },
 
     _renderizarTabela() {
@@ -379,27 +257,19 @@ const VendedoresPresenter = {
         const inicio = (this.pagina - 1) * this.porPagina;
         const paginaDados = this.filtrados.slice(inicio, inicio + this.porPagina);
         if (!total) {
-            tbody.innerHTML = '<tr><td colspan="9" class="vendor-empty">Nenhum vendedor encontrado com esses filtros.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="vendor-empty">Nenhum vendedor encontrado com esses filtros.</td></tr>';
         } else {
-            tbody.innerHTML = paginaDados.map(v => {
-                const badge = v.statusZap;
-                const statusLabel = ({ in: 'JÁ ESTÁ (IDÊNTICO)', out: 'NÃO ESTÁ NO GRUPO', review: 'REVISAR TELEFONE' })[badge] || v.zap || 'NÃO IDENTIFICADO';
-                const badgeClass = badge === 'in' ? 'in' : badge === 'out' ? 'out' : badge === 'review' ? 'review' : 'unknown';
-                const contatoRegistrado = ['1','SIM','TRUE','OK','✅'].includes(v.contato.toLocaleUpperCase('pt-BR'));
-                const contato = v.contato ? (contatoRegistrado ? 'Sim' : this._escapar(v.contato)) : '—';
-                const origem = v.origem === 'complementar' ? '<span class="vendor-badge review">Complementar</span>' : (v.ajusteManual ? '<span class="vendor-badge review">Ajustado</span>' : (v.complementoAplicado ? '<span class="vendor-badge review">Dados complementares</span>' : 'Planilha'));
-                return `<tr>
-                    <td>${this._escapar(v.matricula || '—')}</td>
-                    <td>${this._escapar(v.nome || '—')}</td>
+            tbody.innerHTML = paginaDados.map(v => `
+                <tr>
+                    <td>${this._escapar(v.matricula)}</td>
+                    <td>${this._escapar(v.nome)}</td>
                     <td>${this._escapar(v.filial || '—')}</td>
                     <td><span class="vendor-badge ${v.ativo ? 'success' : 'inactive'}">${v.ativo ? 'ATIVO' : 'INATIVO'}</span></td>
                     <td>${this._escapar(this._exibirTelefone(v.numero))}</td>
-                    <td><span class="vendor-badge ${badgeClass}">${this._escapar(statusLabel)}</span></td>
-                    <td>${contato}</td>
+                    <td>${this._statusTelefone(v)}</td>
                     <td>${this._statusLink(v.linkStatus)}</td>
-                    <td><button class="vendor-small-btn" type="button" onclick="VendedoresPresenter.abrirEdicao('${this._escapar(v.matricula)}')"><i class="fas fa-pen"></i> Editar</button><div class="vendor-last-update">${origem}</div></td>
-                </tr>`;
-            }).join('');
+                    <td><button class="vendor-small-btn" type="button" onclick="VendedoresPresenter.abrirEdicao('${this._escapar(v.matricula)}')"><i class="fas fa-pen"></i> Editar</button></td>
+                </tr>`).join('');
         }
         document.getElementById('infoPaginacaoVendedores').textContent = total
             ? `Exibindo ${inicio + 1}–${Math.min(inicio + this.porPagina, total)} de ${total.toLocaleString('pt-BR')} vendedores`
@@ -409,131 +279,122 @@ const VendedoresPresenter = {
     },
 
     _renderizarGestaoExtra() {
-        const corpoPend = document.getElementById('corpoPendenciasCadastro');
-        if (corpoPend) {
-            corpoPend.innerHTML = this.candidatosCadastro.length ? this.candidatosCadastro.map(v => `
-                <tr>
-                    <td>${this._escapar(v.matricula)}</td><td>${this._escapar(v.nome)}</td><td>${this._escapar(v.filial || '—')}</td>
-                    <td><input class="vendor-inline-input" id="foneNovo_${this._escapar(v.matricula)}" inputmode="tel" placeholder="DDD + telefone"></td>
-                    <td><button class="vendor-small-btn primary" type="button" onclick="VendedoresPresenter.finalizarCadastro('${this._escapar(v.matricula)}')">Cadastrar no painel</button></td>
-                </tr>`).join('') : '<tr><td colspan="5" class="vendor-empty">Nenhum novo funcionário pendente de cadastro na comparação atual.</td></tr>';
-        }
-        const corpoNao = document.getElementById('corpoParticipantesNaoIdentificados');
-        if (corpoNao) {
-            corpoNao.innerHTML = this.participantesNaoIdentificados.length ? this.participantesNaoIdentificados.map(p => {
-                const info = p.identificacaoManual || {};
-                const key = this._telefoneCanonico(p.telefoneDigitos);
-                const tipo = info.tipo || '';
-                return `<tr>
-                    <td>${this._escapar(p.nome)}</td><td>${this._escapar(this._exibirTelefone(p.numeroAjustado || p.numero))}</td>
-                    <td><select class="vendor-inline-input" id="tipoParticipante_${key}">
-                        <option value="">A identificar</option><option value="vendedor" ${tipo==='vendedor'?'selected':''}>Vendedor</option>
-                        <option value="gerente" ${tipo==='gerente'?'selected':''}>Gerente</option><option value="funcionario" ${tipo==='funcionario'?'selected':''}>Funcionário</option><option value="outro" ${tipo==='outro'?'selected':''}>Outro</option>
-                    </select></td>
-                    <td><input class="vendor-inline-input" id="descricaoParticipante_${key}" value="${this._escapar(info.identificacao || '')}" placeholder="Nome, setor ou observação"></td>
-                    <td><button class="vendor-small-btn primary" type="button" onclick="VendedoresPresenter.salvarIdentificacao('${key}')">Salvar</button></td>
-                </tr>`;
-            }).join('') : '<tr><td colspan="5" class="vendor-empty">Todos os participantes encontrados possuem correspondência com a base de vendedores.</td></tr>';
-        }
         const last = document.getElementById('ultimaAtualizacaoVendedores');
-        if (last) last.textContent = `${this.ultimaAtualizacaoTexto} Relação de funcionários comparada: ${this.candidatosCadastro.length} pendência(s) de cadastro; ${this.participantesNaoIdentificados.length} participante(s) sem vínculo com a base.`;
+        if (last) last.textContent = this.ultimaAtualizacaoTexto;
         this._renderizarResumo();
+        const status = document.getElementById('statusVerificacaoLinks');
+        if (status && !this.apiUrl) status.textContent = 'Conecte a API da base para habilitar a verificação dos links.';
     },
 
-    async finalizarCadastro(matricula) {
-        const candidato = this.candidatosCadastro.find(v => this._digitos(v.matricula) === this._digitos(matricula));
-        if (!candidato) { UI.erro('Este cadastro já foi processado ou não está mais pendente. Atualize os dados.'); return; }
-        const numero = this._texto(document.getElementById(`foneNovo_${matricula}`)?.value);
-        if (this._digitos(numero).length < 10) { UI.erro('Informe um telefone com DDD e número válido.'); return; }
-        try {
-            await VendorManagementService.salvarComplemento(matricula, {
-                nome: candidato.nome, filial: candidato.filial, codfil: candidato.codfil,
-                numero, ativo: true, origem: 'relacao_atual', observacao: 'Cadastro complementar criado pelo painel.'
-            });
-            this.complementos[this._chaveMatricula(matricula)] = {
-                matricula: this._digitos(matricula), nome: candidato.nome, filial: candidato.filial,
-                codfil: candidato.codfil, numero, ativo: true, origem: 'relacao_atual'
-            };
-            this._reconstruirRegistros(this._obterFuncionariosDaLista());
-            this.filtrar(); this._renderizarGestaoExtra();
-            UI.ok('Cadastro complementar salvo no painel. A planilha oficial não foi alterada.');
-        } catch (e) { console.error(e); UI.erro(`Não foi possível salvar o cadastro: ${e.message || e}`); }
-    },
-
-    _obterFuncionariosDaLista() {
-        // Reconstrói a lista de candidatos a partir da fonte em memória já carregada.
-        return this._funcionariosFonte || [];
-    },
-
-    async salvarIdentificacao(telefone) {
-        const tipo = this._texto(document.getElementById(`tipoParticipante_${telefone}`)?.value);
-        const identificacao = this._texto(document.getElementById(`descricaoParticipante_${telefone}`)?.value);
-        if (!tipo) { UI.erro('Selecione se o participante é vendedor, gerente, funcionário ou outro.'); return; }
-        const participante = this.participantes.find(p => this._digitos(p.telefoneDigitos) === this._digitos(telefone));
-        try {
-            await VendorManagementService.salvarIdentificacao(telefone, {
-                tipo, identificacao, nomeParticipante: participante?.nome || ''
-            });
-            this.identificacoes[this._chaveTelefone(telefone)] = { tipo, identificacao, nomeParticipante: participante?.nome || '' };
-            this._reconstruirRegistros(this._obterFuncionariosDaLista());
-            this._renderizarGestaoExtra();
-            UI.ok('Identificação salva. Ela será mantida nas próximas atualizações da planilha.');
-        } catch (e) { console.error(e); UI.erro(`Não foi possível salvar a identificação: ${e.message || e}`); }
+    abrirNovoCadastro() {
+        this.modoModal = 'novo';
+        this.matriculaOriginal = '';
+        document.getElementById('tituloModalEditarVendedor').innerHTML = '<i class="fas fa-user-plus"></i> NOVO VENDEDOR';
+        document.getElementById('editarMatricula').value = '';
+        document.getElementById('editarMatricula').readOnly = false;
+        document.getElementById('editarNomeVendedor').value = '';
+        document.getElementById('editarFilialVendedor').value = '';
+        document.getElementById('editarCodigoFilialVendedor').value = '';
+        document.getElementById('editarTelefoneVendedor').value = '';
+        document.getElementById('editarStatusTelefone').value = 'PENDENTE';
+        document.getElementById('editarAtivoVendedor').checked = true;
+        document.getElementById('editarObservacoesVendedor').value = '';
+        document.getElementById('btnSalvarVendedor').textContent = 'CADASTRAR VENDEDOR';
+        document.getElementById('editarSituacaoFuncional').textContent = 'Novo cadastro manual';
+        document.getElementById('modalEditarVendedor').style.display = 'flex';
     },
 
     abrirEdicao(matricula) {
-        const vendedor = this.registros.find(v => this._digitos(v.matricula) === this._digitos(matricula));
+        const chave = this._matricula(matricula);
+        const vendedor = this.registros.find(v => this._matricula(v.matricula) === chave);
         if (!vendedor) return;
+        this.modoModal = 'editar';
+        this.matriculaOriginal = chave;
+        document.getElementById('tituloModalEditarVendedor').innerHTML = '<i class="fas fa-user-edit"></i> EDITAR CADASTRO';
         document.getElementById('editarMatricula').value = vendedor.matricula;
+        document.getElementById('editarMatricula').readOnly = true;
         document.getElementById('editarNomeVendedor').value = vendedor.nome || '';
         document.getElementById('editarFilialVendedor').value = vendedor.filial || '';
+        document.getElementById('editarCodigoFilialVendedor').value = vendedor.codfil || '';
         document.getElementById('editarTelefoneVendedor').value = vendedor.numero || '';
+        document.getElementById('editarStatusTelefone').value = vendedor.statusTelefone || 'PENDENTE';
         document.getElementById('editarAtivoVendedor').checked = vendedor.ativo !== false;
+        document.getElementById('editarObservacoesVendedor').value = vendedor.observacoes || '';
+        document.getElementById('btnSalvarVendedor').textContent = 'SALVAR ALTERAÇÕES';
+        document.getElementById('editarSituacaoFuncional').textContent = vendedor.situacaoFuncional || 'Não informada';
         document.getElementById('modalEditarVendedor').style.display = 'flex';
+    },
+
+    aoAlterarTelefone() {
+        const numero = this._normalizarTelefone(document.getElementById('editarTelefoneVendedor').value);
+        const atual = this.registros.find(v => this._matricula(v.matricula) === this.matriculaOriginal);
+        if (this.modoModal === 'novo' || !atual || numero !== this._normalizarTelefone(atual.numero)) {
+            document.getElementById('editarStatusTelefone').value = numero ? 'PENDENTE' : 'PENDENTE';
+        }
     },
 
     fecharEdicao() { document.getElementById('modalEditarVendedor').style.display = 'none'; },
 
     async salvarEdicao() {
-        const matricula = this._digitos(document.getElementById('editarMatricula').value);
+        if (this.salvando) return;
+        const matricula = this._matricula(document.getElementById('editarMatricula').value);
         const nome = this._texto(document.getElementById('editarNomeVendedor').value);
         const filial = this._texto(document.getElementById('editarFilialVendedor').value);
-        const numero = this._texto(document.getElementById('editarTelefoneVendedor').value);
+        const codigoFilial = this._texto(document.getElementById('editarCodigoFilialVendedor').value);
+        const numero = this._digitos(document.getElementById('editarTelefoneVendedor').value);
+        const statusTelefone = this._texto(document.getElementById('editarStatusTelefone').value).toUpperCase();
         const ativo = document.getElementById('editarAtivoVendedor').checked;
-        if (!matricula || !nome) { UI.erro('Matrícula e nome são obrigatórios.'); return; }
-        if (numero && this._digitos(numero).length < 10) { UI.erro('Confira o telefone informado.'); return; }
-        const base = this.registros.find(v => this._digitos(v.matricula) === matricula);
+        const observacoes = this._texto(document.getElementById('editarObservacoesVendedor').value);
+        if (!matricula || !nome || !filial) { UI.erro('Matrícula, nome e filial são obrigatórios.'); return; }
+        if (numero && !([10, 11, 12, 13].includes(numero.length) && (!([12, 13].includes(numero.length)) || numero.startsWith('55')))) {
+            UI.erro('Confira o telefone. Informe DDD e número com 10 ou 11 dígitos.'); return;
+        }
+        if (numero && !['VALIDADO', 'PENDENTE'].includes(statusTelefone)) { UI.erro('Selecione a situação de validação do telefone.'); return; }
+        const cfg = { url: this.apiUrl || localStorage.getItem(this.STORAGE_API_URL), token: this.apiToken || localStorage.getItem(this.STORAGE_API_TOKEN) };
+        if (!cfg.url || !cfg.token) { UI.erro('Conecte a API antes de salvar.'); return; }
+        this.salvando = true;
+        const botao = document.getElementById('btnSalvarVendedor');
+        if (botao) { botao.disabled = true; botao.textContent = 'SALVANDO...'; }
         try {
-            const ajuste = { nome, filial, numero, ativo, codfil: base?.codfil || '' };
-            await VendorManagementService.salvarAjuste(matricula, ajuste);
-            this.ajustes[this._chaveMatricula(matricula)] = ajuste;
-            if (this.complementos[this._chaveMatricula(matricula)]) {
-                await VendorManagementService.salvarComplemento(matricula, { ...this.complementos[this._chaveMatricula(matricula)], nome, filial, numero, ativo });
-                this.complementos[this._chaveMatricula(matricula)] = { ...this.complementos[this._chaveMatricula(matricula)], nome, filial, numero, ativo };
+            if (this.modoModal === 'novo') {
+                await GoogleSheetsService.criarVendedor(cfg.url, cfg.token, {
+                    matricula, nome, filial, codigoFilial, telefone: numero,
+                    statusTelefone: numero ? statusTelefone : 'PENDENTE', statusCadastro: ativo ? 'ATIVO' : 'INATIVO', observacoes
+                });
+                UI.ok('Vendedor cadastrado diretamente na aba Vendedores.');
+            } else {
+                const atual = this.registros.find(v => this._matricula(v.matricula) === matricula);
+                if (!atual) throw new Error('Cadastro não encontrado. Atualize a lista e tente novamente.');
+                const statusCadastro = !ativo ? 'INATIVO' : (atual.statusCadastro === 'INATIVO' ? 'ATIVO' : atual.statusCadastro);
+                await GoogleSheetsService.salvarVendedor(cfg.url, cfg.token, {
+                    matricula, nome, filial, codigoFilial, telefone: numero,
+                    statusTelefone: numero ? statusTelefone : 'PENDENTE', statusCadastro, observacoes
+                });
+                UI.ok('Cadastro atualizado diretamente na aba Vendedores.');
             }
-            this._reconstruirRegistros(this._obterFuncionariosDaLista());
-            this.fecharEdicao(); this.filtrar(); this._renderizarGestaoExtra();
-            UI.ok('Ajuste salvo no painel. A linha original do Google Sheets foi preservada.');
-        } catch (e) { console.error(e); UI.erro(`Não foi possível salvar o ajuste: ${e.message || e}`); }
+            this.fecharEdicao();
+            await this._carregar(cfg.url, cfg.token);
+        } catch (erro) {
+            console.error('Falha ao salvar vendedor:', erro);
+            UI.erro(erro.message || 'Não foi possível salvar o cadastro.');
+        } finally {
+            this.salvando = false;
+            if (botao) { botao.disabled = false; botao.textContent = this.modoModal === 'novo' ? 'CADASTRAR VENDEDOR' : 'SALVAR ALTERAÇÕES'; }
+        }
     },
 
-    salvarUrlVerificador() {
-        const url = this._texto(document.getElementById('urlVerificadorLinks')?.value);
-        if (url && !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec(?:\?.*)?$/.test(url)) {
-            UI.erro('A URL deve ser a URL publicada do Google Apps Script e terminar em /exec.'); return;
-        }
-        localStorage.setItem(this.STORAGE_LINK_CHECKER, url);
-        UI.ok(url ? 'URL do verificador salva neste navegador.' : 'URL do verificador removida.');
-    },
+    salvarUrlVerificador() { UI.ok('A verificação utilizará a mesma URL e o token da API de vendedores.'); },
 
     async verificarProximosLinks() {
         if (this.verificandoLinks) return;
-        const endpoint = this._texto(document.getElementById('urlVerificadorLinks')?.value) || localStorage.getItem(this.STORAGE_LINK_CHECKER) || '';
-        const candidatos = this.registros.filter(v => v.ativo && this._digitos(v.matricula)).filter(v => {
-            const link = this.links[this._chaveMatricula(v.matricula)];
+        const endpoint = this.apiUrl || localStorage.getItem(this.STORAGE_API_URL) || '';
+        const apiToken = this.apiToken || localStorage.getItem(this.STORAGE_API_TOKEN) || '';
+        if (!endpoint || !apiToken) { UI.erro('Conecte a API de vendedores antes de verificar links.'); return; }
+        const candidatos = this.registros.filter(v => v.ativo && this._matricula(v.matricula)).filter(v => {
+            const link = this.links[`m${this._matricula(v.matricula)}`];
             if (!link?.verificadoEm) return true;
             const idade = Date.now() - new Date(link.verificadoEm).getTime();
-            if (['erro','inconclusivo'].includes(link.status)) return idade > 60 * 60 * 1000;
+            if (['erro', 'inconclusivo'].includes(link.status)) return idade > 60 * 60 * 1000;
             return idade > 7 * 24 * 60 * 60 * 1000;
         }).slice(0, 30);
         if (!candidatos.length) { UI.ok('Todos os links dos vendedores ativos foram verificados nos últimos 7 dias.'); return; }
@@ -543,21 +404,20 @@ const VendedoresPresenter = {
         const status = document.getElementById('statusVerificacaoLinks');
         if (status) status.textContent = `Verificando lote com ${candidatos.length} links...`;
         try {
-            const resposta = await LinkCheckerService.verificar(endpoint, candidatos.map(v => v.matricula));
+            const resposta = await LinkCheckerService.verificar(endpoint, candidatos.map(v => v.matricula), apiToken);
             const resultados = resposta.resultados || [];
             await Promise.all(resultados.map(async r => {
                 const dados = { status: r.status || 'inconclusivo', httpCode: r.httpCode || '', destino: r.destino || '', url: r.url || '' };
-                this.links[this._chaveMatricula(r.matricula)] = { ...dados, verificadoEm: new Date().toISOString() };
+                this.links[`m${this._matricula(r.matricula)}`] = { ...dados, verificadoEm: new Date().toISOString() };
                 await VendorManagementService.salvarStatusLink(r.matricula, dados);
             }));
-            this._reconstruirRegistros(this._obterFuncionariosDaLista());
             this.filtrar();
-            if (status) status.textContent = `${resultados.length} links verificados. Clique novamente para verificar o próximo lote.`;
-            UI.ok(`${resultados.length} links verificados e resultados salvos.`);
-        } catch (e) {
-            console.error(e);
-            if (status) status.textContent = e.message || 'Falha na verificação.';
-            UI.erro(e.message || 'Não foi possível verificar os links.');
+            if (status) status.textContent = `${resultados.length} links verificados. Clique novamente para consultar o próximo lote.`;
+            UI.ok(`${resultados.length} links verificados.`);
+        } catch (erro) {
+            console.error(erro);
+            if (status) status.textContent = erro.message || 'Falha na verificação.';
+            UI.erro(erro.message || 'Não foi possível verificar os links.');
         } finally {
             this.verificandoLinks = false;
             if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fas fa-link"></i> VERIFICAR PRÓXIMOS 30'; }

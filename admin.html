@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.4.5</title>
+    <title>Admin Martinello | 1.5.3</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -35,7 +35,6 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script id="googleIdentityServices" src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- Firebase -->
 
@@ -428,65 +427,67 @@
         <section id="abaVendedores" class="aba-conteudo" style="display:none;">
             <div class="admin-card">
                 <h2><i class="fas fa-users" style="color:#d0252a;"></i> BASE DE VENDEDORES</h2>
-                <p style="color:#777;font-size:13px;line-height:1.6;">Consulte a base oficial, compare a relação de funcionários e identifique participantes do WhatsApp sem vínculo. Ajustes operacionais ficam salvos à parte no Firebase, sem alterar fórmulas da planilha.</p>
+                <p style="color:#777;font-size:13px;line-height:1.6;">A consulta, inclusão e edição dos vendedores agora utiliza diretamente a aba <strong>Vendedores</strong> da planilha de TESTE. A base antiga e os dados de WhatsApp não são alterados nesta etapa.</p>
 
                 <div class="vendor-help">
-                    <strong>Conexão privada com o Google Sheets</strong><br>
-                    A planilha é consultada com permissão somente de leitura. A identificação manual de participantes, cadastros complementares e correções feitas no painel são armazenados em uma área separada do Firebase; nenhuma célula ou fórmula da planilha é modificada.
+                    <strong>Conexão protegida pelo Google Apps Script</strong><br>
+                    O script usa o ID fixo da planilha de TESTE e valida a conta Google autorizada. O Google exige escopo de planilhas da conta para a API Web; o código limita as operações ao documento de teste. O token privado fica neste navegador e nunca deve ser colocado no GitHub.
                 </div>
 
                 <div class="vendor-config-grid">
                     <div class="form-group">
-                        <label for="googleClientId">ID do cliente OAuth do Google</label>
-                        <input type="text" id="googleClientId" placeholder="000000000000-abc.apps.googleusercontent.com" autocomplete="off">
+                        <label for="apiVendedoresUrl">URL do Apps Script de gestão (/exec)</label>
+                        <input type="url" id="apiVendedoresUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
                     </div>
                     <div class="form-group">
-                        <label for="googleSheetId">Link ou ID da planilha Google Sheets</label>
-                        <input type="text" id="googleSheetId" placeholder="Cole o link da planilha ou apenas o ID" autocomplete="off">
+                        <label for="apiVendedoresToken">Token privado do administrador</label>
+                        <input type="password" id="apiVendedoresToken" placeholder="Cole o token gerado no Apps Script" autocomplete="new-password">
                     </div>
                 </div>
                 <div class="vendor-actions">
-                    <button type="button" class="btn-primary" id="btnConectarSheets" onclick="VendedoresPresenter.conectar()"><i class="fab fa-google"></i> CONECTAR E CARREGAR</button>
+                    <button type="button" class="btn-primary" id="btnConectarSheets" onclick="VendedoresPresenter.conectar()"><i class="fas fa-plug"></i> CONECTAR E CARREGAR</button>
                     <button type="button" class="btn-outline" id="btnAtualizarVendedores" onclick="VendedoresPresenter.atualizar()" disabled><i class="fas fa-sync-alt"></i> ATUALIZAR DADOS</button>
                 </div>
-                <div id="statusConexaoSheets" class="vendor-status"><i class="fas fa-info-circle"></i><span>Configure o acesso à planilha para carregar os vendedores.</span></div>
-                <p class="vendor-last-update">A integração consulta <strong>Banco de Dados (A:J)</strong> e <strong>Parâmetros de Dados (A:H)</strong>. A conexão Google continua somente leitura.</p>
+                <div id="statusConexaoSheets" class="vendor-status"><i class="fas fa-info-circle"></i><span>Configure o endereço e o token da API da planilha de teste.</span></div>
+                <p class="vendor-last-update">A API trabalha exclusivamente com a aba <strong>Vendedores (A:M)</strong>. Telefone alterado volta para <strong>PENDENTE</strong> até ser validado explicitamente.</p>
             </div>
 
             <div class="admin-card" id="painelDadosVendedores" style="display:none;">
-                <h2>VISÃO GERAL</h2>
-                <div class="vendor-kpis">
-                    <div class="vendor-kpi"><strong id="kpiTotalAtivos">0</strong><span>Vendedores ativos</span></div>
-                    <div class="vendor-kpi"><strong id="kpiNoGrupo">0</strong><span>Já estão no grupo</span></div>
-                    <div class="vendor-kpi"><strong id="kpiForaGrupo">0</strong><span>Fora do grupo</span></div>
-                    <div class="vendor-kpi"><strong id="kpiRevisar">0</strong><span>Revisar telefone</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <h2 style="margin:0;">VISÃO GERAL</h2>
+                    <button type="button" class="btn-primary" onclick="VendedoresPresenter.abrirNovoCadastro()" style="width:auto;margin:0;"><i class="fas fa-user-plus"></i> NOVO VENDEDOR</button>
+                </div>
+                <div class="vendor-kpis" style="margin-top:16px;">
+                    <div class="vendor-kpi"><strong id="kpiTotalAtivos">0</strong><span>Cadastros ativos</span></div>
+                    <div class="vendor-kpi"><strong id="kpiTelefoneValidado">0</strong><span>Telefones validados</span></div>
+                    <div class="vendor-kpi"><strong id="kpiTelefonePendente">0</strong><span>Telefones pendentes</span></div>
+                    <div class="vendor-kpi"><strong id="kpiTotalInativos">0</strong><span>Cadastros inativos</span></div>
                 </div>
 
-                <h2>CONSULTAR VENDEDORES</h2>
+                <h2>CONSULTAR E GERENCIAR VENDEDORES</h2>
                 <div class="vendor-filters">
-                    <input id="buscaVendedor" type="search" placeholder="Buscar por nome, matrícula ou telefone..." oninput="VendedoresPresenter.filtrar()">
+                    <input id="buscaVendedor" type="search" placeholder="Buscar por nome, matrícula, filial ou telefone..." oninput="VendedoresPresenter.filtrar()">
                     <select id="filtroEmpresaVendedor" onchange="VendedoresPresenter.filtrar()">
-                        <option value="ativos">Somente vendedores ativos</option>
-                        <option value="todos">Todos (inclui removidos)</option>
+                        <option value="ativos">Somente cadastros ativos</option>
+                        <option value="todos">Todos os cadastros</option>
+                        <option value="inativos">Somente inativos</option>
                     </select>
                     <select id="filtroStatusVendedor" onchange="VendedoresPresenter.filtrar()">
-                        <option value="todos">Todos os status do grupo</option>
-                        <option value="fora">Não estão no grupo</option>
-                        <option value="no-grupo">Já estão no grupo</option>
-                        <option value="revisar">Revisar telefone</option>
+                        <option value="todos">Todos os telefones</option>
+                        <option value="validado">Telefone validado</option>
+                        <option value="pendente">Telefone pendente</option>
                         <option value="sem-telefone">Sem telefone</option>
-                        <option value="complementares">Cadastros complementares</option>
-                        <option value="sem-link">Link ainda não verificado</option>
+                        <option value="sem-link">Link não verificado</option>
                     </select>
                 </div>
                 <div class="vendor-table-wrap">
                     <table class="vendor-table">
                         <thead>
                             <tr>
-                                <th>MATRÍCULA</th><th>NOME</th><th>FILIAL</th><th>CADASTRO</th><th>TELEFONE</th><th>SITUAÇÃO NO GRUPO</th><th>CONTATO</th><th>LINK MARTINELLO</th><th>AÇÕES</th>
+                                <th>MATRÍCULA</th><th>NOME</th><th>FILIAL</th><th>CADASTRO</th><th>TELEFONE</th><th>VALIDAÇÃO</th><th>LINK MARTINELLO</th><th>AÇÕES</th>
                             </tr>
                         </thead>
-                        <tbody id="corpoTabelaVendedores"><tr><td colspan="9" class="vendor-empty">Carregue a planilha para visualizar os vendedores.</td></tr></tbody>
+                        <tbody id="corpoTabelaVendedores"><tr><td colspan="8" class="vendor-empty">Conecte a planilha para visualizar os vendedores.</td></tr></tbody>
                     </table>
                 </div>
                 <div class="vendor-pagination">
@@ -501,39 +502,10 @@
 
             <div id="painelGestaoVendedores" style="display:none;">
                 <div class="admin-card">
-                    <h2><i class="fas fa-user-plus" style="color:#d0252a;"></i> PENDÊNCIAS DE CADASTRO <span class="vendor-badge review" id="kpiPendenciasCadastro">0</span></h2>
-                    <p class="vendor-subtext">Compara a relação de funcionários ativos em <strong>Parâmetros de Dados (F:H)</strong> com a aba <strong>Banco de Dados</strong>. Quando surgir uma matrícula nova, informe o telefone para criar um cadastro complementar no painel.</p>
-                    <div class="vendor-table-wrap">
-                        <table class="vendor-table management">
-                            <thead><tr><th>MATRÍCULA</th><th>NOME</th><th>FILIAL</th><th>TELEFONE / WHATSAPP</th><th>AÇÃO</th></tr></thead>
-                            <tbody id="corpoPendenciasCadastro"><tr><td colspan="5" class="vendor-empty">Carregue a planilha para comparar as relações.</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="admin-card">
-                    <h2><i class="fas fa-user-tag" style="color:#d0252a;"></i> PARTICIPANTES SEM VÍNCULO COM A BASE <span class="vendor-badge review" id="kpiNaoIdentificados">0</span></h2>
-                    <p class="vendor-subtext">Lista contatos encontrados em <strong>Parâmetros de Dados (A:C)</strong> que ainda não correspondem a um telefone da base. Classifique manualmente como vendedor, gerente, funcionário ou outro e registre uma observação. Essa identificação fica salva mesmo quando a lista do WhatsApp for atualizada; ela não cria automaticamente um cadastro de vendedor.</p>
-                    <div class="vendor-table-wrap">
-                        <table class="vendor-table management">
-                            <thead><tr><th>NOME NO WHATSAPP</th><th>TELEFONE</th><th>IDENTIFICAÇÃO</th><th>OBSERVAÇÃO / NOME</th><th>AÇÃO</th></tr></thead>
-                            <tbody id="corpoParticipantesNaoIdentificados"><tr><td colspan="5" class="vendor-empty">Carregue os parâmetros para localizar participantes.</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="admin-card">
                     <h2><i class="fas fa-link" style="color:#d0252a;"></i> VERIFICAÇÃO DOS LINKS MARTINELLO</h2>
-                    <p class="vendor-subtext">O site Martinello é consultado por um pequeno serviço Google Apps Script. A verificação é feita em lotes de até 30 vendedores para evitar excesso de consultas. Os resultados ficam salvos no Firebase e aparecem na tabela principal.</p>
-                    <div class="vendor-checker-config">
-                        <div class="form-group" style="margin:0;">
-                            <label for="urlVerificadorLinks">URL do Apps Script publicado (/exec)</label>
-                            <input type="url" id="urlVerificadorLinks" placeholder="https://script.google.com/macros/s/.../exec">
-                        </div>
-                        <button type="button" class="btn-outline" onclick="VendedoresPresenter.salvarUrlVerificador()">SALVAR URL</button>
-                        <button type="button" class="btn-primary" id="btnVerificarLinks" onclick="VendedoresPresenter.verificarProximosLinks()" style="width:auto;margin:0;"><i class="fas fa-link"></i> VERIFICAR PRÓXIMOS 30</button>
-                    </div>
-                    <p class="vendor-last-update" id="statusVerificacaoLinks">Configure a URL do Apps Script para habilitar a verificação.</p>
+                    <p class="vendor-subtext">Consulta os links dos vendedores ativos em lotes de até 30. A verificação utiliza a mesma API privada da planilha; os resultados auxiliares permanecem no Firebase de TESTE nesta fase.</p>
+                    <button type="button" class="btn-primary" id="btnVerificarLinks" onclick="VendedoresPresenter.verificarProximosLinks()" style="width:auto;margin:0;"><i class="fas fa-link"></i> VERIFICAR PRÓXIMOS 30</button>
+                    <p class="vendor-last-update" id="statusVerificacaoLinks">Conecte a API para habilitar a verificação.</p>
                 </div>
             </div>
         </section><!-- /abaVendedores -->
@@ -544,14 +516,18 @@
 <div class="vendor-modal" id="modalEditarVendedor" role="dialog" aria-modal="true" aria-labelledby="tituloModalEditarVendedor" onclick="if(event.target===this)VendedoresPresenter.fecharEdicao()">
     <div class="vendor-modal-card">
         <h2 id="tituloModalEditarVendedor"><i class="fas fa-user-edit"></i> EDITAR CADASTRO</h2>
-        <input type="hidden" id="editarMatricula">
-        <div class="form-group"><label for="editarNomeVendedor">Nome</label><input type="text" id="editarNomeVendedor"></div>
-        <div class="form-group"><label for="editarFilialVendedor">Filial</label><input type="text" id="editarFilialVendedor"></div>
-        <div class="form-group"><label for="editarTelefoneVendedor">Telefone / WhatsApp</label><input type="tel" id="editarTelefoneVendedor" inputmode="tel"></div>
-        <label class="vendor-checkbox"><input type="checkbox" id="editarAtivoVendedor" checked> Considerar ativo neste painel</label>
-        <p class="vendor-subtext">As alterações são salvas como complemento no Firebase e prevalecem na visualização do site. A linha original do Google Sheets não é modificada.</p>
+        <div class="form-group"><label for="editarMatricula">Matrícula / Rubi</label><input type="text" id="editarMatricula" inputmode="numeric"></div>
+        <div class="form-group"><label for="editarNomeVendedor">Nome</label><input type="text" id="editarNomeVendedor" maxlength="160"></div>
+        <div class="form-group"><label for="editarFilialVendedor">Filial</label><input type="text" id="editarFilialVendedor" maxlength="120"></div>
+        <div class="form-group"><label for="editarCodigoFilialVendedor">Código da filial</label><input type="text" id="editarCodigoFilialVendedor" maxlength="30"></div>
+        <div class="form-group"><label for="editarTelefoneVendedor">Telefone / WhatsApp</label><input type="tel" id="editarTelefoneVendedor" inputmode="tel" oninput="VendedoresPresenter.aoAlterarTelefone()"></div>
+        <div class="form-group"><label for="editarStatusTelefone">Validação do telefone</label><select id="editarStatusTelefone"><option value="PENDENTE">Pendente de validação</option><option value="VALIDADO">Validado manualmente</option></select></div>
+        <div class="form-group"><label>Situação funcional atual</label><div id="editarSituacaoFuncional" class="vendor-help" style="margin:0;">Não informada</div></div>
+        <label class="vendor-checkbox"><input type="checkbox" id="editarAtivoVendedor" checked> Cadastro ativo no painel</label>
+        <div class="form-group" style="margin-top:12px;"><label for="editarObservacoesVendedor">Observações</label><textarea id="editarObservacoesVendedor" rows="2" maxlength="500"></textarea></div>
+        <p class="vendor-subtext">As alterações serão gravadas diretamente na aba Vendedores. A matrícula não pode ser alterada em um cadastro existente. Ao trocar o telefone, a validação volta automaticamente para PENDENTE.</p>
         <div class="vendor-modal-actions">
-            <button type="button" class="btn-primary" onclick="VendedoresPresenter.salvarEdicao()">SALVAR AJUSTES</button>
+            <button type="button" class="btn-primary" id="btnSalvarVendedor" onclick="VendedoresPresenter.salvarEdicao()">SALVAR ALTERAÇÕES</button>
             <button type="button" class="btn-outline" onclick="VendedoresPresenter.fecharEdicao()">CANCELAR</button>
         </div>
     </div>
@@ -568,10 +544,10 @@
     <script src="model/validators.js"></script>
     <script src="model/auth.js"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.4.5"></script>
-    <script src="model/google-sheets.js?v=1.4.5"></script>
-    <script src="model/vendor-management.js?v=1.4.5"></script>
-    <script src="model/link-checker.js?v=1.4.5"></script>
-    <script src="presenter/vendors-presenter.js?v=1.4.5"></script>
+    <script src="presenter/admin-presenter.js?v=1.5.3"></script>
+    <script src="model/google-sheets.js?v=1.5.3"></script>
+    <script src="model/vendor-management.js?v=1.5.3"></script>
+    <script src="model/link-checker.js?v=1.5.3"></script>
+    <script src="presenter/vendors-presenter.js?v=1.5.3"></script>
 </body>
 </html>
