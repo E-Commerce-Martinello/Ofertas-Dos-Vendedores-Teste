@@ -51,14 +51,18 @@ const AdminPresenter = {
         if (btn) { btn.disabled = true; btn.textContent = 'VERIFICANDO...'; }
         this._mensagemLogin('');
         try {
-            await Auth.entrarGoogle();
+            const usuario = await Auth.entrarGoogle();
+            if (!usuario) { this._mensagemLogin('Aguardando retorno da autenticação Google…'); return; }
+            this._mensagemLogin('Conta Google autenticada. Verificando autorização da API…');
             // Exige permissão no servidor antes de mostrar dados internos no painel.
             const acesso = await GoogleSheetsService.testarConexao(url);
             localStorage.setItem('martVendedoresApiUrl_TESTE', url);
             await this._abrirPainel(acesso);
         } catch (erro) {
-            await Auth.sair().catch(() => {});
-            this._mensagemLogin(erro.message || 'Acesso não autorizado.');
+            // Não desfazer um login Google válido por timeout do Apps Script.
+            // O painel permanece oculto até autorização real do servidor.
+            const msg = erro.message || 'Acesso não autorizado.';
+            this._mensagemLogin(Auth.usuarioAtual() ? 'Login Google concluído, mas a API não liberou o acesso: ' + msg : msg);
         } finally {
             if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fab fa-google"></i> ENTRAR COM GOOGLE'; }
         }
@@ -88,7 +92,19 @@ const AdminPresenter = {
         document.getElementById('painelAdmin').style.display = 'block';
 
         const gestor = acesso.proprietario === true;
+        this.ehPrincipal = gestor;
         document.getElementById('tabAcessos').style.display = gestor ? '' : 'none';
+        const avisoAdmin = document.getElementById('avisoPermissaoOfertas');
+        if (avisoAdmin) {
+            avisoAdmin.hidden = true;
+            if (!gestor) {
+                try {
+                    const uid = Auth.usuarioAtual()?.uid;
+                    const snap = uid ? await database.ref('adminUids_TESTE/' + uid).once('value') : null;
+                    if (!snap?.val()) avisoAdmin.hidden = false;
+                } catch (e) { avisoAdmin.hidden = false; }
+            }
+        }
         this.mostrarAba('ofertas');
         if (typeof VendedoresPresenter !== 'undefined') {
             VendedoresPresenter.init();
@@ -136,6 +152,7 @@ const AdminPresenter = {
         if (dashboard) DashboardPresenter.atualizar();
         if (contatos) ContatosPresenter.init();
         if (acessos) GerenciarAcessosPresenter.carregar();
+        document.querySelector('.admin-container')?.classList.toggle('admin-container-contacts', contatos);
         if (pendencias) PendenciasPresenter.renderizar();
         if (vendedores && typeof WhatsAppPresenter !== 'undefined' && !WhatsAppPresenter.grupoCarregado && !WhatsAppPresenter.carregando) WhatsAppPresenter.carregar();
     },

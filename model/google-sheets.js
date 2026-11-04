@@ -120,6 +120,16 @@ const GoogleSheetsService = {
         return resposta.resultado || { resultados: [] };
     },
 
+    async listarConfigContatos() {
+        const r = await this._post('listarConfigContatos');
+        return r.resultado || {};
+    },
+
+    async salvarConfigContatos(linkGrupo, mensagemConvite) {
+        const r = await this._post('salvarConfigContatos', {linkGrupo, mensagemConvite});
+        return r.resultado || {};
+    },
+
     async listarContatosRecentes() {
         const resposta = await this._post('listarContatosRecentes');
         return resposta.resultado || { contatos: [] };

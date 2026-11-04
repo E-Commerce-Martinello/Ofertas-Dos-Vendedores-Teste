@@ -8,6 +8,53 @@ const ContatosPresenter = {
   contatosRecentes: [],
   contatosCarregados: false,
   bannerCache: null,
+  configCarregada: false,
+  configCarregando: false,
+  mensagemPadrao: 'Olá, [NOME]! Temos um grupo para compartilhar ofertas e novidades da Martinello. Gostaríamos de convidar você a participar: [LINK_GRUPO]',
+  _statusConfig(msg, erro=false) {
+    const el = document.getElementById('contatosConfigStatus');
+    if (el) { el.textContent = msg; el.className = erro ? 'contatos-config-status erro' : 'contatos-config-status'; }
+  },
+  async carregarConfig() {
+    if (this.configCarregada || this.configCarregando) return;
+    this.configCarregando = true;
+    this._statusConfig('Carregando convite salvo…');
+    try {
+      const dados = await GoogleSheetsService.listarConfigContatos();
+      const link = document.getElementById('contatosLinkGrupo');
+      const modelo = document.getElementById('contatosConviteModelo');
+      if (link) link.value = dados.linkGrupo || '';
+      if (modelo) modelo.value = dados.mensagemConvite || this.mensagemPadrao;
+      this.configCarregada = true;
+      this._statusConfig(dados.linkGrupo ? 'Convite salvo na planilha e pronto para usar.' : 'Configure o convite uma vez e salve na planilha.');
+      this.renderizarFila();
+    } catch (erro) {
+      this._statusConfig('Não foi possível carregar as configurações: ' + (erro.message || erro), true);
+    } finally {this.configCarregando=false;}
+  },
+  async salvarConfig() {
+    const link = document.getElementById('contatosLinkGrupo')?.value.trim() || '';
+    const mensagem = document.getElementById('contatosConviteModelo')?.value.trim() || '';
+    if (!/^https:\/\/chat\.whatsapp\.com\/[a-zA-Z0-9]+(?:\?[a-zA-Z0-9_=&%-]+)?$/.test(link)) {
+      this._statusConfig('Informe o link válido de convite do grupo.', true); return;
+    }
+    if (mensagem.length < 10 || mensagem.length > 1000 || !mensagem.includes('[LINK_GRUPO]')) {
+      this._statusConfig('A mensagem deve conter [LINK_GRUPO] e ter até 1.000 caracteres.', true); return;
+    }
+    const btn = document.getElementById('btnSalvarConfigContatos');
+    if (btn) btn.disabled = true;
+    this._statusConfig('Salvando no Google Sheets…');
+    try {
+      await GoogleSheetsService.salvarConfigContatos(link, mensagem);
+      this.configCarregada = true;
+      this._statusConfig('Convite salvo. Será carregado automaticamente nos próximos acessos.');
+      this.renderizarFila();
+      UI.ok('Mensagem e link do grupo salvos na planilha.');
+    } catch (erro) {
+      this._statusConfig('Não foi possível salvar: ' + (erro.message || erro), true);
+    } finally { if (btn) btn.disabled = false; }
+  },
+
   _esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c])); },
   _rubi(v) { return String(v ?? '').replace(/\D/g, ''); },
   _status(msg, sucesso=false) {
@@ -47,6 +94,7 @@ const ContatosPresenter = {
     if (filiais.includes(atual)) select.value = atual;
   },
   init() {
+    this.carregarConfig();
     if (!this.contatosCarregados && !this.carregando && Auth.usuarioAtual()) {
       this.carregando=true;
       GoogleSheetsService.listarContatosRecentes().then(res => {
@@ -272,6 +320,8 @@ const ContatosPresenter = {
     this.contatosCarregados=false;
     this.bannerCache=null;
     const a=document.getElementById('contatosLinkGrupo');if(a)a.value='';
+    const m=document.getElementById('contatosConviteModelo');if(m)m.value=this.mensagemPadrao;
+    this.configCarregada=false;this.configCarregando=false;
     const b=document.getElementById('contatosBuscar');if(b)b.value='';
   }
 };

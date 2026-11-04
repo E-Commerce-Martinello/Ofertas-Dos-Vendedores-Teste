@@ -118,6 +118,41 @@
         body.dark-mode .vendor-quiet-btn,body.dark-mode .vendor-pagination button{border-color:#555;color:#e8e8e8;}
         body.dark-mode .vendor-pagination{border-color:#444;}
         @media(max-width:650px){.vendor-link-filters{grid-template-columns:1fr;}.vendor-filters>input{grid-column:span 1;}.vendor-link-actions button{flex:1 1 100%;}}
+    
+        /* v1.6.9 — contatos com hierarquia clara e sem rolagem lateral */
+        .contatos-layout {display:grid;grid-template-columns:minmax(330px,0.95fr) minmax(0,1.25fr);gap:16px;align-items:start;}
+        .contatos-painel,.contatos-fila-card {min-width:0;margin:0!important;}
+        .contatos-layout .admin-card h2 {font-size:18px;margin-bottom:9px;}
+        .contatos-painel .contatos-grid {grid-template-columns:1fr 1fr;gap:10px;}
+        .contatos-painel .contatos-grid .form-group:nth-child(1) {grid-column:1/-1;}
+        .contatos-toolbar {padding:12px 0;border-top:1px solid #e6e6e6;gap:8px;}
+        .contatos-toolbar span {font-weight:700;margin-right:auto;}
+        .contatos-toolbar button {font-size:11px;padding:9px 11px;}
+        .contatos-painel #contatosElegiveis {max-height:380px;overflow-y:auto;overscroll-behavior:contain;}
+        .contatos-painel #contatosElegiveis .contatos-linha {padding:9px 11px;border-radius:10px;}
+        .contatos-fila-card #contatosFila {max-height:900px;overflow-y:auto;}
+        .contatos-config {border:1px solid #e1e1e1;border-radius:12px;padding:13px 14px;margin:6px 0 12px;}
+        .contatos-config>summary {cursor:pointer;font-weight:700;display:flex;align-items:center;gap:9px;}
+        .contatos-config>summary span {margin-left:auto;font-size:11px;font-weight:500;color:#777;}
+        .contatos-config[open]>summary {margin-bottom:13px;}
+        .contatos-config .form-group {margin-bottom:10px;}
+        .contatos-config input,.contatos-config textarea {width:100%;min-width:0;max-width:100%;color:inherit;background:transparent;border:1px solid #c9c9c9;border-radius:10px;padding:11px;}
+        .contatos-config-rodape {display:flex;justify-content:flex-end;}
+        .contatos-config-rodape button {width:auto;margin:0;padding:10px 14px;font-size:12px;}
+        .contatos-config-status {font-size:12px;color:#28764d;line-height:1.5;margin:6px 0 12px;}
+        .contatos-config-status.erro {color:#b6202a;}
+        .contatos-fila-card .contatos-linha {padding:12px;gap:9px;}
+        .contatos-fila-card .contatos-acoes {gap:6px;}
+        .contatos-fila-card .contatos-acoes button {font-size:10px;padding:8px 10px;}
+        body.dark-mode .contatos-toolbar {border-color:#4e4e4e;}
+        body.dark-mode .contatos-config {border-color:#555;}
+        body.dark-mode .contatos-config input,body.dark-mode .contatos-config textarea {border-color:#666;}
+        body.dark-mode .contatos-config>summary span {color:#bbb;}
+        body.dark-mode .contatos-config-status {color:#91d4a7;}
+        body.dark-mode .contatos-config-status.erro {color:#ff9da4;}
+        @media(max-width:1040px) {.contatos-layout {grid-template-columns:1fr;}.contatos-painel #contatosElegiveis {max-height:320px;}}
+        @media(max-width:590px) {.contatos-painel .contatos-grid {grid-template-columns:1fr;}.contatos-painel .contatos-grid .form-group:nth-child(1) {grid-column:auto;}.contatos-config>summary span {display:none;}.contatos-toolbar button {flex:1 1 45%;}.contatos-fila-card #contatosFila {max-height:none;}}
+
     </style>
 
     <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
@@ -813,20 +848,26 @@
 
 
         <section id="abaContatos" class="aba-conteudo" style="display:none;">
-          <div class="admin-card">
+          <div class="contatos-layout">
+          <div class="admin-card contatos-painel">
             <h2><i class="fab fa-whatsapp" style="color:#168b57"></i> CONTATOS PERSONALIZADOS EM LOTE</h2>
-            <p class="vendor-subtext">Selecione até 20 vendedores com telefone validado, sem conflitos e identificados como <strong>fora do grupo</strong>. As mensagens são preparadas individualmente, mas cada envio exige confirmação manual no WhatsApp. No celular, a opção de compartilhamento nativo tenta enviar imagem e texto juntos, mas é necessário escolher a conversa e confirmar o envio no WhatsApp.</p>
+            <p class="vendor-subtext">Escolha uma oferta e selecione até 20 vendedores elegíveis. Cada envio continua manual e individual.</p>
             <div id="contatosAviso" class="vendor-status" role="status">Carregando dados...</div>
             <div class="contatos-grid">
               <div class="form-group"><label for="contatosOferta">Oferta ativa</label><select id="contatosOferta" onchange="ContatosPresenter.atualizarOferta()"><option value="">Selecione uma oferta ativa</option></select></div>
               <div class="form-group"><label for="contatosFilial">Filial</label><select id="contatosFilial" onchange="ContatosPresenter.renderizar()"><option value="">Todas as filiais</option></select></div>
               <div class="form-group"><label for="contatosBuscar">Buscar vendedor</label><input id="contatosBuscar" type="search" placeholder="Nome ou Rubi" oninput="ContatosPresenter.renderizar()"></div>
-              <div class="form-group"><label for="contatosLinkGrupo">Link de convite do grupo</label><input id="contatosLinkGrupo" type="url" placeholder="https://chat.whatsapp.com/..." oninput="ContatosPresenter.renderizarFila()"><small>Utilizado apenas nesta sessão, não é gravado no GitHub ou Firebase.</small></div>
             </div>
-            <div class="form-group"><label for="contatosConviteModelo">Mensagem de convite (separada da oferta)</label>
-              <textarea id="contatosConviteModelo" rows="3" maxlength="1000" oninput="ContatosPresenter.renderizarFila()">Olá, [NOME]! Temos um grupo para compartilhar ofertas e novidades da Martinello. Gostaríamos de convidar você a participar: [LINK_GRUPO]</textarea>
-              <small>Variáveis disponíveis: [NOME], [RUBI], [FILIAL], [LINK_GRUPO].</small>
-            </div>
+            <details class="contatos-config" id="contatosConfigPainel">
+              <summary><i class="fas fa-cog"></i> Link e mensagem do grupo <span>Configuração reutilizável</span></summary>
+              <div class="form-group"><label for="contatosLinkGrupo">Link de convite do grupo</label><input id="contatosLinkGrupo" type="url" placeholder="https://chat.whatsapp.com/..." oninput="ContatosPresenter.renderizarFila()"></div>
+              <div class="form-group"><label for="contatosConviteModelo">Mensagem de convite (separada da oferta)</label>
+                <textarea id="contatosConviteModelo" rows="3" maxlength="1000" oninput="ContatosPresenter.renderizarFila()">Olá, [NOME]! Temos um grupo para compartilhar ofertas e novidades da Martinello. Gostaríamos de convidar você a participar: [LINK_GRUPO]</textarea>
+                <small>Variáveis: [NOME], [RUBI], [FILIAL] e [LINK_GRUPO].</small>
+              </div>
+              <div class="contatos-config-rodape"><button type="button" id="btnSalvarConfigContatos" class="btn-primary" onclick="ContatosPresenter.salvarConfig()"><i class="fas fa-save"></i> SALVAR CONVITE</button></div>
+            </details>
+            <p class="contatos-config-status" id="contatosConfigStatus" role="status">O convite será carregado da planilha.</p>
             <div class="contatos-toolbar">
               <span id="contatosContador">0 selecionados</span>
               <button type="button" class="btn-outline" onclick="ContatosPresenter.selecionarAte20()">SELECIONAR ATÉ 20</button>
@@ -834,17 +875,18 @@
             </div>
             <div id="contatosElegiveis" class="contatos-lista" role="list"></div>
           </div>
-          <div class="admin-card">
+          <div class="admin-card contatos-fila-card">
             <h2>FILA DE PREPARAÇÃO</h2>
             <p class="vendor-subtext">No celular, use Compartilhar imagem + texto e selecione o WhatsApp. Confira se o texto foi incluído na legenda; alguns aparelhos podem exigir colá-lo. No computador, abra a conversa e anexe o banner manualmente. Apenas após concluir o contato use <strong>Marcar como abordado</strong>; esse registro é uma confirmação manual sua.</p>
             <div id="contatosFila" class="contatos-lista" role="list"><p class="vendor-empty">Selecione vendedores para preparar as mensagens.</p></div>
           </div>
+          </div><!-- /contatos-layout -->
         </section><!-- /abaContatos -->
 
         <section id="abaAcessos" class="aba-conteudo" style="display:none;">
             <div class="admin-card">
                 <h2><i class="fas fa-user-shield" style="color:#d0252a;"></i> GERENCIAR ADMINISTRADORES</h2>
-                <p class="vendor-subtext">Somente a conta administradora principal pode adicionar ou remover outros administradores. Cada conta deve usar o login Google e também ter permissão de edição na planilha de teste.</p>
+                <p class="vendor-subtext">A conta principal controla os acessos. Administradores adicionais não precisam receber permissão direta na planilha. Após o primeiro login deles, a conta principal poderá liberar a edição das ofertas pelo Firebase.</p>
                 <div id="statusAcessos" class="vendor-status" role="status">Carregando acessos...</div>
                 <div class="vendor-table-wrap" style="margin-top:15px;">
                     <table class="vendor-table" style="min-width:440px;">
@@ -934,6 +976,6 @@
     <script src="presenter/pendencias-presenter.js?v=1.6.6"></script>
     <script src="presenter/whatsapp-presenter.js?v=1.6.8"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
-    <script src="presenter/contatos-presenter.js?v=1.6.8"></script>
+    <script src="presenter/contatos-presenter.js?v=1.6.9"></script>
 </body>
 </html>
