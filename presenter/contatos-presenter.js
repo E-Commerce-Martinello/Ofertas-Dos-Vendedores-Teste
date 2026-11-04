@@ -7,6 +7,7 @@ const ContatosPresenter = {
   maximo: 20,
   contatosRecentes: [],
   contatosCarregados: false,
+  bannerCache: null,
   _esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c])); },
   _rubi(v) { return String(v ?? '').replace(/\D/g, ''); },
   _status(msg, sucesso=false) {
@@ -127,12 +128,37 @@ const ContatosPresenter = {
     })[k]);
     return { n, ofertaTexto, conviteTexto, grupo, imagem: oferta.urlImagem || 'img/produto.png' };
   },
+  _prepararBanner(origem) {
+    if (!origem) return;
+    if (this.bannerCache?.origem === origem) return;
+    const cache = { origem, arquivo:null, erro:null };
+    this.bannerCache = cache;
+    // Carregar antes do clique: navigator.share precisa ser chamado durante o gesto do usuário.
+    (async () => {
+      const resposta = await fetch(origem);
+      if (!resposta.ok) throw new Error('Banner indisponível');
+      const blob = await resposta.blob();
+      if (!blob.type.startsWith('image/')) throw new Error('O banner não é uma imagem compatível');
+      const tipo = ['image/jpeg','image/png','image/webp'].includes(blob.type) ? blob.type : 'image/png';
+      if (tipo !== blob.type) throw new Error('Formato não disponível para compartilhamento. Utilize abrir banner.');
+      const extensao = tipo==='image/jpeg'?'jpg':tipo==='image/webp'?'webp':'png';
+      cache.arquivo = new File([blob], `oferta-martinello.${extensao}`, { type:tipo });
+    })().catch(e => {cache.erro = e.message || 'Falha ao preparar banner';})
+      .finally(() => {if (this.bannerCache===cache) this.renderizarFila();});
+  },
   renderizarFila() {
     const destino = document.getElementById('contatosFila');
     const oferta = this._oferta();
     const participantes = [...this.selecionados].map(id => VendedoresPresenter.registros.find(v => this._rubi(v.matricula)===id)).filter(Boolean);
     if (!participantes.length) { destino.innerHTML='<p class="vendor-empty">Selecione vendedores para preparar as mensagens.</p>';return; }
     if (!oferta) { destino.innerHTML='<p class="vendor-empty">Selecione uma oferta ativa para preparar a fila.</p>';return; }
+    this._prepararBanner(oferta.urlImagem || 'img/produto.png');
+    let podeCompartilhar = false;
+    try { podeCompartilhar = !!(navigator.share && navigator.canShare && this.bannerCache?.arquivo
+      && navigator.canShare({files:[this.bannerCache.arquivo]})); }
+    catch (_) { podeCompartilhar = false; }
+    const avisoShare = this.bannerCache?.erro ? 'Banner indisponível: utilize Abrir banner.' :
+      this.bannerCache?.arquivo ? (podeCompartilhar ? 'Compartilhe pelo menu nativo e selecione WhatsApp e a conversa.' : 'Seu navegador não oferece compartilhamento de arquivos. Use o envio manual.') : 'Preparando banner para compartilhar…';
     destino.innerHTML = participantes.map(v => {
       const rubi=this._rubi(v.matricula);
       const linkGrupoOk=!!this._linkGrupo();
@@ -142,12 +168,13 @@ const ContatosPresenter = {
         && new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Cuiaba',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(c.confirmadoEm)) === hoje);
       return `<article class="contatos-linha" role="listitem"><div class="contatos-conteudo"><strong>${this._esc(v.nome)}</strong>
         <small>Rubi ${rubi} · ${this._esc(VendedoresPresenter._exibirTelefone(v.numero))} · ${linkGrupoOk?'Convite configurado':'Informe o link do grupo para habilitar o convite'}</small>
-        <small>O WhatsApp abre com texto preenchido; anexe o banner separadamente.</small></div>
+        <small>${this._esc(avisoShare)} Não é possível selecionar o destinatário automaticamente pelo compartilhamento nativo.</small></div>
         <div class="contatos-acoes">
           <button type="button" class="btn-outline" data-acao="copiar" data-rubi="${rubi}">COPIAR OFERTA</button>
           <button type="button" class="btn-outline" data-acao="imagem" data-rubi="${rubi}">COPIAR BANNER</button>
           <button type="button" class="btn-outline" data-acao="abrirImagem" data-rubi="${rubi}">ABRIR BANNER</button>
-          <button type="button" class="btn-primary" data-acao="oferta" data-rubi="${rubi}">ABRIR OFERTA</button>
+          <button type="button" class="btn-primary" data-acao="nativo" data-rubi="${rubi}" ${podeCompartilhar?'':'disabled'} title="Abre o compartilhamento do aparelho; escolha WhatsApp e o destinatário">IMAGEM + TEXTO (CELULAR)</button>
+          <button type="button" class="btn-outline" data-acao="oferta" data-rubi="${rubi}">ABRIR WHATSAPP</button>
           <button type="button" class="btn-outline" data-acao="convite" data-rubi="${rubi}" ${linkGrupoOk?'':'disabled'}>ABRIR CONVITE</button>
           <button type="button" class="btn-outline" data-acao="registrar" data-rubi="${rubi}" ${abordadoHoje?'disabled':''}>${abordadoHoje?'ABORDADO HOJE':'MARCAR ABORDADO'}</button>
         </div></article>`;
@@ -164,6 +191,20 @@ const ContatosPresenter = {
     }
     const msgs=this._mensagens(v,oferta);
     if (!msgs) { UI.erro('Telefone não está válido.');return; }
+    if (acao==='nativo') {
+      const arquivo = this.bannerCache?.arquivo;
+      if (!arquivo || !navigator.canShare?.({files:[arquivo]}) || !navigator.share) {
+        UI.erro('O compartilhamento de imagem não está disponível neste navegador. Abra o WhatsApp e anexe o banner manualmente.');
+        return;
+      }
+      try {
+        await navigator.share({files:[arquivo], text:msgs.ofertaTexto, title:'Oferta Martinello'});
+        UI.ok('O compartilhamento foi aberto. Confira a imagem e a legenda no WhatsApp antes de enviar.');
+      } catch (e) {
+        if (e.name !== 'AbortError') UI.erro('Não foi possível compartilhar. Utilize os botões Copiar oferta e Copiar banner.');
+      }
+      return;
+    }
     if (acao==='oferta' || acao==='convite') {
       if (acao==='convite' && !msgs.grupo) { UI.erro('Informe um link válido de convite do WhatsApp.');return; }
       // O clique gera uma única conversa; o envio nunca é automatizado.
@@ -229,6 +270,7 @@ const ContatosPresenter = {
     this.selecionados.clear();
     this.contatosRecentes=[];
     this.contatosCarregados=false;
+    this.bannerCache=null;
     const a=document.getElementById('contatosLinkGrupo');if(a)a.value='';
     const b=document.getElementById('contatosBuscar');if(b)b.value='';
   }

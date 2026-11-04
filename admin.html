@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.6.7 TESTE</title>
+    <title>Admin Martinello | 1.6.8 TESTE</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -86,6 +86,38 @@
         .contatos-conteudo {flex:1 1 220px;min-width:0;}
         body.dark-mode .contatos-linha {border-color:#5b5b5b;}
         body.dark-mode .contatos-linha small {color:#bbb;}
+
+        /* v1.6.8 — filtros claros, seção de links independente e hierarquia mais leve */
+        .vendor-section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:20px 0 12px;}
+        .vendor-section-head h2{margin:0;}
+        .vendor-quiet-btn{width:auto!important;margin:0!important;border:1px solid #dedede;background:transparent;color:inherit;border-radius:10px;padding:10px 13px;font-weight:700;cursor:pointer;font-size:12px;}
+        .vendor-quiet-btn:hover{border-color:#ce292e;color:#ce292e;}
+        .vendor-quiet-btn:disabled{opacity:.5;cursor:not-allowed;}
+        .vendor-link-panel{margin:16px 0;}
+        .vendor-link-tools{margin:0!important;background:#fafafa;}
+        .vendor-link-actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;}
+        .vendor-link-actions button{width:auto;margin:0;padding:11px 15px;font-size:12px;}
+        .vendor-link-filters{display:grid;grid-template-columns:minmax(170px,1fr) minmax(180px,1.3fr);gap:10px;margin:10px 0;}
+        .vendor-link-filters select,.vendor-link-filters input{width:100%;min-width:0;padding:11px;border:1px solid #dedede;border-radius:10px;background:white;color:#292929;}
+        .vendor-links-lista{display:grid;gap:6px;margin:10px 0;}
+        .vendor-link-row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;min-width:0;padding:10px 12px;border:1px solid #e6e6e6;border-radius:10px;background:white;font-size:12px;}
+        .vendor-link-row strong{overflow-wrap:anywhere;}
+        .vendor-link-row small{display:block;color:#7a7a7a;line-height:1.5;margin-top:2px;overflow-wrap:anywhere;}
+        .vendor-link-row .vendor-badge{margin-left:auto;}
+        .vendor-centered-actions{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;}
+        .vendor-entry-meta{display:none;}
+        .vendor-entry-actions button{width:auto!important;}
+        .vendor-entry{gap:10px;}
+        .vendor-filters>input{grid-column:span 2;}
+        .vendor-pagination{padding:10px 2px;border-top:1px solid #ededed;}
+        .vendor-pagination button{background:transparent;color:inherit;border:1px solid #dedede;}
+        body.dark-mode .vendor-link-tools{background:#282828;border-color:#505050;}
+        body.dark-mode .vendor-link-row{background:#343434;border-color:#515151;}
+        body.dark-mode .vendor-link-row small{color:#c2c2c2;}
+        body.dark-mode .vendor-link-filters select,body.dark-mode .vendor-link-filters input{background:#383838;border-color:#626262;color:#f2f2f2;}
+        body.dark-mode .vendor-quiet-btn,body.dark-mode .vendor-pagination button{border-color:#555;color:#e8e8e8;}
+        body.dark-mode .vendor-pagination{border-color:#444;}
+        @media(max-width:650px){.vendor-link-filters{grid-template-columns:1fr;}.vendor-filters>input{grid-column:span 1;}.vendor-link-actions button{flex:1 1 100%;}}
     </style>
 
     <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
@@ -608,18 +640,6 @@
                 <p class="vendor-last-update">A API trabalha exclusivamente com a aba <strong>Vendedores (A:M)</strong>. Telefone alterado volta para <strong>PENDENTE</strong> até ser validado explicitamente.</p>
             </div>
 
-            <div class="admin-card" id="painelImportacaoFuncionarios" style="display:none;">
-                <h2><i class="fas fa-file-import" style="color:#d0252a;"></i> IMPORTAR RELATÓRIO DE FUNCIONÁRIOS</h2>
-                <p class="vendor-subtext">Envie o relatório original da empresa (.XLS, .XLSX ou .ODS). O navegador extrai somente matrícula, nome, filial e situação; CPF, RG, nascimento e outros campos não são enviados nem armazenados.</p>
-                <input type="file" id="arquivoRelatorioFuncionarios" accept=".xls,.xlsx,.xlsm,.ods,.csv" style="display:none" onchange="VendorImportPresenter.aoSelecionarArquivo(this)">
-                <div class="vendor-actions">
-                    <button type="button" class="btn-outline" id="btnEscolherRelatorio" onclick="document.getElementById('arquivoRelatorioFuncionarios').click()"><i class="fas fa-folder-open"></i> ESCOLHER RELATÓRIO</button>
-                    <button type="button" class="btn-primary" id="btnAnalisarRelatorio" onclick="VendorImportPresenter.analisar()" disabled><i class="fas fa-search"></i> ANALISAR RELATÓRIO</button>
-                </div>
-                <div id="arquivoRelatorioSelecionado" class="vendor-status"><i class="fas fa-info-circle"></i><span>Nenhum arquivo selecionado.</span></div>
-                <div id="painelPreviaImportacao" style="display:none;margin-top:16px;"></div>
-            </div>
-
             <div class="admin-card" id="painelDadosVendedores" style="display:none;">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                     <h2 style="margin:0;">VISÃO GERAL</h2>
@@ -636,9 +656,44 @@
                     <div class="vendor-kpi"><strong id="kpiGrupoPendente">—</strong><span>Não verificáveis</span></div>
                 </div>
 
-                <h2>CONSULTAR E GERENCIAR VENDEDORES</h2>
+            <div id="painelGestaoVendedores" style="display:none;" class="vendor-link-panel">
+                <details class="vendor-tools vendor-link-tools" id="painelLinks">
+                    <summary><span><i class="fas fa-link"></i> LINKS MARTINELLO</span><span class="vendor-tools-help">Verificações e resultados</span></summary>
+                    <p class="vendor-subtext">Resultados ficam no Google Sheets. Resposta HTTP, redirecionamento e falha de consulta não confirmam, por si só, que a matrícula está inativa.</p>
+                    <div class="vendor-link-actions">
+                      <button type="button" class="btn-outline" id="btnVerificarPendentes" onclick="VendedoresPresenter.verificarLinksEmLote('pendentes')"><i class="fas fa-search"></i> VERIFICAR NÃO VERIFICADOS</button>
+                      <button type="button" class="btn-primary" id="btnVerificarTodos" onclick="VendedoresPresenter.verificarLinksEmLote('todos')"><i class="fas fa-sync-alt"></i> VERIFICAÇÃO GERAL</button>
+                      <button type="button" class="vendor-quiet-btn" id="btnCancelarLinks" onclick="VendedoresPresenter.cancelarVerificacaoLinks()" hidden>PARAR</button>
+                    </div>
+                    <p class="vendor-last-update" id="statusVerificacaoLinks" role="status" aria-live="polite">Escolha uma verificação. O sistema consulta em lotes de até 30.</p>
+                    <div class="vendor-link-filters">
+                      <select id="filtroLinkGeral" aria-label="Filtrar status do link" onchange="VendedoresPresenter.filtrarLinks()">
+                        <option value="alertas">Links que precisam de atenção</option>
+                        <option value="sem-link">Não verificados</option>
+                        <option value="redirecionamento">Redirecionam</option>
+                        <option value="inativo">Possíveis inativos</option>
+                        <option value="erro">Erros de consulta</option>
+                        <option value="inconclusivo">Inconclusivos</option>
+                        <option value="ativo">Responderam (HTTP 2xx)</option>
+                        <option value="todos">Todos os links</option>
+                      </select>
+                      <input type="search" id="buscaLinkGeral" aria-label="Buscar link por vendedor ou matrícula" placeholder="Buscar vendedor ou Rubi..." oninput="VendedoresPresenter.filtrarLinks()">
+                    </div>
+                    <div id="resumoLinks" class="vendor-last-update"></div>
+                    <div id="listaLinks" class="vendor-links-lista" role="list" aria-live="polite"></div>
+                    <div class="vendor-actions vendor-centered-actions">
+                      <button type="button" id="btnMaisLinks" class="vendor-quiet-btn" onclick="VendedoresPresenter.mostrarMaisLinks()" hidden>Mostrar mais links</button>
+                      <button type="button" id="btnMenosLinks" class="vendor-quiet-btn" onclick="VendedoresPresenter.mostrarMenosLinks()" hidden>Mostrar menos</button>
+                    </div>
+                </details>
+            </div>
+
+                <div class="vendor-section-head">
+                    <h2>CONSULTAR E GERENCIAR VENDEDORES</h2>
+                    <button class="vendor-quiet-btn" type="button" onclick="VendedoresPresenter.limparFiltros()"><i class="fas fa-undo-alt"></i> Limpar filtros</button>
+                </div>
                 <div class="vendor-filters">
-                    <input id="buscaVendedor" type="search" placeholder="Buscar por nome, matrícula, filial ou telefone..." oninput="VendedoresPresenter.filtrar()">
+                    <input id="buscaVendedor" type="search" aria-label="Buscar vendedor por nome, Rubi ou número de telefone" placeholder="Nome, Rubi ou número de telefone (com ou sem pontuação)..." oninput="VendedoresPresenter.filtrar()">
                     <select id="filtroEmpresaVendedor" aria-label="Filtrar situação do cadastro" onchange="VendedoresPresenter.filtrar()">
                         <option value="ativos">Somente cadastros ativos</option>
                         <option value="todos">Todos os cadastros</option>
@@ -652,15 +707,13 @@
                         <option value="validado">Telefone validado</option>
                         <option value="pendente">Telefone pendente</option>
                         <option value="sem-telefone">Sem telefone</option>
-                        <option value="sem-link">Link não verificado</option>
                     </select>
                     <select id="filtroGrupoVendedor" aria-label="Filtrar participação no grupo" onchange="VendedoresPresenter.filtrar()">
-                        <option value="">Todos no WhatsApp</option>
+                        <option value="">Todas as situações do grupo</option>
                         <option value="grupo">No grupo</option>
                         <option value="fora">Fora do grupo</option>
                         <option value="conflito">Número duplicado</option>
                         <option value="revisar">Possível DDD diferente</option>
-                        <option value="pendente">Telefone pendente</option>
                         <option value="sem_dados">Lista do grupo não carregada</option>
                     </select>
                 </div>
@@ -669,21 +722,13 @@
                 <div class="vendor-pagination">
                     <span id="infoPaginacaoVendedores">Nenhum registro</span>
                     <div style="display:flex;gap:8px;">
-                        <button type="button" id="paginaAnteriorVendedores" onclick="VendedoresPresenter.mudarPagina(-1)" disabled>ANTERIOR</button>
-                        <button type="button" id="paginaProximaVendedores" onclick="VendedoresPresenter.mudarPagina(1)" disabled>PRÓXIMA</button>
+                        <button type="button" id="paginaAnteriorVendedores" onclick="VendedoresPresenter.mudarPagina(-1)" disabled>MOSTRAR MENOS</button>
+                        <button type="button" id="paginaProximaVendedores" onclick="VendedoresPresenter.mudarPagina(1)" disabled>MOSTRAR MAIS 15</button>
                     </div>
                 </div>
                 <p class="vendor-last-update" id="ultimaAtualizacaoVendedores"></p>
             </div>
 
-            <div id="painelGestaoVendedores" style="display:none;">
-                <div class="admin-card">
-                    <h2><i class="fas fa-link" style="color:#d0252a;"></i> VERIFICAÇÃO DOS LINKS MARTINELLO</h2>
-                    <p class="vendor-subtext">Consulta links em lotes de até 30 e registra os resultados na aba <strong>Verificacao_Links</strong> do Google Sheets. Redirecionamentos e erros de consulta não são interpretados automaticamente como vendedores inativos.</p>
-                    <button type="button" class="btn-primary" id="btnVerificarLinks" onclick="VendedoresPresenter.verificarProximosLinks()" style="width:auto;margin:0;"><i class="fas fa-link"></i> VERIFICAR PRÓXIMOS 30</button>
-                    <p class="vendor-last-update" id="statusVerificacaoLinks">Conecte a API para habilitar a verificação.</p>
-                </div>
-            </div>
         <details class="vendor-tools" id="gestaoParticipantesGrupo">
             <summary><i class="fab fa-whatsapp"></i> IMPORTAR LISTA DO WHATSAPP E REVISAR EXCEÇÕES <span class="vendor-tools-help">Abrir ferramentas</span></summary>
             <p class="vendor-subtext">A lista única de vendedores acima é a visão principal. Aqui você atualiza a origem WhatsApp e identifica participantes externos ou situações ambíguas.</p>
@@ -720,7 +765,8 @@
                 <div class="vendor-kpis">
                     <div class="vendor-kpi"><strong id="whatsappTotal">0</strong><span>Participantes</span></div>
                     <div class="vendor-kpi"><strong id="whatsappVendedores">0</strong><span>Vendedores identificados</span></div>
-                    <div class="vendor-kpi"><strong id="whatsappRevisar">0</strong><span>Revisar</span></div>
+                    <div class="vendor-kpi"><strong id="whatsappRevisar">0</strong><span>Outras revisões</span></div>
+                    <div class="vendor-kpi"><strong id="whatsappInativos">0</strong><span>Inativos no grupo</span></div>
                     <div class="vendor-kpi"><strong id="whatsappDesconhecidos">0</strong><span>Não identificados</span></div>
                 </div>
                 <div class="vendor-filters" style="grid-template-columns:2fr 1fr">
@@ -729,16 +775,33 @@
                         <option value="">Todos que precisam ser identificados</option>
 
                         <option value="identificado">Gerentes / outros</option>
-                        <option value="revisar">Precisam de revisão</option>
+                        <option value="revisar">Outras revisões</option>
+                        <option value="inativo">Inativos no grupo · avaliar remoção</option>
                         <option value="desconhecido">Não identificados</option>
                     </select>
                 </div>
                 <div id="whatsappLinhas" class="vendor-cards" role="list"><p class="vendor-empty">Nenhum participante carregado.</p></div>
                 <div class="vendor-pagination"><span id="whatsappPagina"></span><div>
-                    <button type="button" id="whatsappAnterior" onclick="WhatsAppPresenter.mover(-1)" disabled>ANTERIOR</button>
-                    <button type="button" id="whatsappProxima" onclick="WhatsAppPresenter.mover(1)" disabled>PRÓXIMA</button>
+                    <button type="button" id="whatsappAnterior" onclick="WhatsAppPresenter.mover(-1)" disabled>MOSTRAR MENOS</button>
+                    <button type="button" id="whatsappProxima" onclick="WhatsAppPresenter.mover(1)" disabled>MOSTRAR MAIS 15</button>
                 </div></div>
+                <p class="vendor-subtext"><strong>Inativos identificados:</strong> a lista sinaliza que precisam de avaliação para eventual remoção do grupo. Ela não remove pessoas automaticamente do WhatsApp.</p>
                 <p class="vendor-last-update">Identificações manuais ficam na aba Identificacoes_Manuais. Caso o número desapareça da próxima importação, a identificação continua guardada para futuras conferências.</p>
+            </div>
+
+        </details>
+        <details class="vendor-tools" id="gestaoImportacaoFuncionarios">
+          <summary><span><i class="fas fa-file-import"></i> IMPORTAR RELATÓRIO DE FUNCIONÁRIOS</span><span class="vendor-tools-help">Abrir ferramenta</span></summary>
+            <div class="admin-card" id="painelImportacaoFuncionarios" style="display:none;">
+                <h2><i class="fas fa-file-import" style="color:#d0252a;"></i> IMPORTAR RELATÓRIO DE FUNCIONÁRIOS</h2>
+                <p class="vendor-subtext">Envie o relatório original da empresa (.XLS, .XLSX ou .ODS). O navegador extrai somente matrícula, nome, filial e situação; CPF, RG, nascimento e outros campos não são enviados nem armazenados.</p>
+                <input type="file" id="arquivoRelatorioFuncionarios" accept=".xls,.xlsx,.xlsm,.ods,.csv" style="display:none" onchange="VendorImportPresenter.aoSelecionarArquivo(this)">
+                <div class="vendor-actions">
+                    <button type="button" class="btn-outline" id="btnEscolherRelatorio" onclick="document.getElementById('arquivoRelatorioFuncionarios').click()"><i class="fas fa-folder-open"></i> ESCOLHER RELATÓRIO</button>
+                    <button type="button" class="btn-primary" id="btnAnalisarRelatorio" onclick="VendorImportPresenter.analisar()" disabled><i class="fas fa-search"></i> ANALISAR RELATÓRIO</button>
+                </div>
+                <div id="arquivoRelatorioSelecionado" class="vendor-status"><i class="fas fa-info-circle"></i><span>Nenhum arquivo selecionado.</span></div>
+                <div id="painelPreviaImportacao" style="display:none;margin-top:16px;"></div>
             </div>
 
         </details>
@@ -752,7 +815,7 @@
         <section id="abaContatos" class="aba-conteudo" style="display:none;">
           <div class="admin-card">
             <h2><i class="fab fa-whatsapp" style="color:#168b57"></i> CONTATOS PERSONALIZADOS EM LOTE</h2>
-            <p class="vendor-subtext">Selecione até 20 vendedores com telefone validado, sem conflitos e identificados como <strong>fora do grupo</strong>. As mensagens são preparadas individualmente, mas cada envio exige confirmação manual no WhatsApp. O banner é preparado separadamente.</p>
+            <p class="vendor-subtext">Selecione até 20 vendedores com telefone validado, sem conflitos e identificados como <strong>fora do grupo</strong>. As mensagens são preparadas individualmente, mas cada envio exige confirmação manual no WhatsApp. No celular, a opção de compartilhamento nativo tenta enviar imagem e texto juntos, mas é necessário escolher a conversa e confirmar o envio no WhatsApp.</p>
             <div id="contatosAviso" class="vendor-status" role="status">Carregando dados...</div>
             <div class="contatos-grid">
               <div class="form-group"><label for="contatosOferta">Oferta ativa</label><select id="contatosOferta" onchange="ContatosPresenter.atualizarOferta()"><option value="">Selecione uma oferta ativa</option></select></div>
@@ -773,7 +836,7 @@
           </div>
           <div class="admin-card">
             <h2>FILA DE PREPARAÇÃO</h2>
-            <p class="vendor-subtext">Primeiro abra o WhatsApp com o texto da oferta, anexe o banner manualmente e envie. Depois abra a mensagem separada de convite. Apenas após concluir o contato use <strong>Marcar como abordado</strong>; esse registro é uma confirmação manual sua.</p>
+            <p class="vendor-subtext">No celular, use Compartilhar imagem + texto e selecione o WhatsApp. Confira se o texto foi incluído na legenda; alguns aparelhos podem exigir colá-lo. No computador, abra a conversa e anexe o banner manualmente. Apenas após concluir o contato use <strong>Marcar como abordado</strong>; esse registro é uma confirmação manual sua.</p>
             <div id="contatosFila" class="contatos-lista" role="list"><p class="vendor-empty">Selecione vendedores para preparar as mensagens.</p></div>
           </div>
         </section><!-- /abaContatos -->
@@ -866,11 +929,11 @@
     <script src="model/vendor-import.js?v=1.6.4.1"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.7"></script>
-    <script src="model/whatsapp.js?v=1.6.6"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.8"></script>
+    <script src="model/whatsapp.js?v=1.6.8"></script>
     <script src="presenter/pendencias-presenter.js?v=1.6.6"></script>
-    <script src="presenter/whatsapp-presenter.js?v=1.6.6"></script>
+    <script src="presenter/whatsapp-presenter.js?v=1.6.8"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
-    <script src="presenter/contatos-presenter.js?v=1.6.7"></script>
+    <script src="presenter/contatos-presenter.js?v=1.6.8"></script>
 </body>
 </html>

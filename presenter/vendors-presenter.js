@@ -12,7 +12,10 @@ const VendedoresPresenter = {
     filtrados: [],
     links: {},
     pagina: 1,
-    porPagina: 50,
+    porPagina: 15,
+    linksExibidos: 12,
+    linksFiltrados: [],
+    cancelarLinks: false,
     inicializado: false,
     carregando: false,
     salvando: false,
@@ -74,6 +77,8 @@ const VendedoresPresenter = {
         this.grupoTelefones = new Set();
         this.grupoDuplicados = new Set();
         this.pagina = 1;
+        this.linksExibidos = 12;
+        this.linksFiltrados = [];
         this.ultimaAtualizacaoTexto = '';
         this.carregando = false;
         ['painelDadosVendedores', 'painelGestaoVendedores'].forEach(id => {
@@ -283,19 +288,30 @@ const VendedoresPresenter = {
             if (filtroAtivo === 'ativos' && !v.ativo) return false;
             if (filtroAtivo === 'inativos' && v.ativo) return false;
             if (filtroFilial && this._texto(v.filial).toLocaleLowerCase('pt-BR') !== filtroFilial) return false;
-            const correspondeBusca = !termo || [v.nome, v.matricula, v.numero, v.filial, v.localidadeFilial, v.codfil]
+            const digitosBusca = this._digitos(termo);
+            const foneOficial = this._digitos(v.numero);
+            const fonePadronizado = GrupoWhatsAppModel.telefone(v.numero);
+            const nomeOuNumero = [v.nome, v.matricula, v.filial, v.localidadeFilial]
                 .some(campo => this._texto(campo).toLocaleLowerCase('pt-BR').includes(termo));
+            const buscaTelefone = digitosBusca.length >= 3 && [foneOficial, fonePadronizado, `55${fonePadronizado}`]
+                .some(fone => fone && fone.includes(digitosBusca));
+            const correspondeBusca = !termo || nomeOuNumero || buscaTelefone;
             if (!correspondeBusca) return false;
             if (filtroGrupo && this._situacaoGrupo(v).codigo !== filtroGrupo) return false;
             if (filtroTelefone === 'validado') return v.statusTelefone === 'VALIDADO';
             if (filtroTelefone === 'pendente') return v.statusTelefone === 'PENDENTE';
             if (filtroTelefone === 'sem-telefone') return !this._digitos(v.numero);
-            if (filtroTelefone === 'sem-link') return !v.linkStatus;
             return true;
         });
         this.pagina = 1;
         this._renderizarResumo();
         this._renderizarTabela();
+    },
+
+    limparFiltros() {
+        const padroes = {buscaVendedor:'', filtroEmpresaVendedor:'ativos', filtroFilialVendedor:'', filtroStatusVendedor:'todos', filtroGrupoVendedor:''};
+        Object.entries(padroes).forEach(([id, valor]) => { const el = document.getElementById(id); if (el) el.value = valor; });
+        this.filtrar();
     },
 
     _renderizarResumo() {
@@ -341,8 +357,9 @@ const VendedoresPresenter = {
         const total = this.filtrados.length;
         const paginas = Math.max(1, Math.ceil(total / this.porPagina));
         this.pagina = Math.min(this.pagina, paginas);
-        const inicio = (this.pagina - 1) * this.porPagina;
-        const linhas = this.filtrados.slice(inicio, inicio + this.porPagina);
+        const inicio = 0;
+        const quantidade = this.pagina * this.porPagina;
+        const linhas = this.filtrados.slice(0, quantidade);
         destino.innerHTML = linhas.map(v => {
             const grupo = this._situacaoGrupo(v);
             const rubi = this._escapar(v.matricula);
@@ -366,7 +383,7 @@ const VendedoresPresenter = {
         destino.querySelectorAll('[data-rubi]').forEach(b => b.addEventListener('click', () => this.abrirEdicao(b.dataset.rubi)));
         destino.querySelectorAll('[data-contato]').forEach(b => b.addEventListener('click', () => ContatosPresenter.abrirVendedor(b.dataset.contato)));
         document.getElementById('infoPaginacaoVendedores').textContent = total
-            ? `Exibindo ${inicio + 1}–${Math.min(inicio + this.porPagina, total)} de ${total.toLocaleString('pt-BR')} vendedores`
+            ? `Exibindo ${linhas.length} de ${total.toLocaleString('pt-BR')} vendedores`
             : 'Nenhum registro';
         document.getElementById('paginaAnteriorVendedores').disabled = this.pagina <= 1;
         document.getElementById('paginaProximaVendedores').disabled = this.pagina >= paginas;
@@ -376,6 +393,7 @@ const VendedoresPresenter = {
         const last = document.getElementById('ultimaAtualizacaoVendedores');
         if (last) last.textContent = this.ultimaAtualizacaoTexto;
         this._renderizarResumo();
+        this.filtrarLinks();
         const status = document.getElementById('statusVerificacaoLinks');
         if (status && !this.apiUrl) status.textContent = 'Conecte a API da base para habilitar a verificação dos links.';
     },
@@ -487,47 +505,105 @@ const VendedoresPresenter = {
 
     salvarUrlVerificador() { UI.ok('A verificação utilizará a mesma URL e o token da API de vendedores.'); },
 
-    async verificarProximosLinks() {
+    // A consulta de links é independente dos filtros de telefone e WhatsApp.
+    filtrarLinks() {
+        const filtro = document.getElementById('filtroLinkGeral')?.value || 'alertas';
+        const busca = this._texto(document.getElementById('buscaLinkGeral')?.value).toLocaleLowerCase('pt-BR');
+        const digitos = this._digitos(busca);
+        const ativos = this.registros.filter(v => v.ativo);
+        this.linksFiltrados = ativos.filter(v => {
+            const status = v.linkStatus?.status || 'sem-link';
+            if (filtro === 'alertas' && !['inativo','redirecionamento','erro','inconclusivo'].includes(status)) return false;
+            if (filtro !== 'todos' && filtro !== 'alertas' && filtro !== status) return false;
+            return !busca || v.nome.toLocaleLowerCase('pt-BR').includes(busca) || (digitos && this._matricula(v.matricula).includes(digitos));
+        });
+        this.linksExibidos = 12;
+        this._renderizarLinks();
+    },
+
+    _renderizarLinks() {
+        const destino = document.getElementById('listaLinks');
+        if (!destino) return;
+        const lista = this.linksFiltrados.slice(0, this.linksExibidos);
+        destino.innerHTML = lista.map(v => {
+            const rubi = this._escapar(v.matricula);
+            const estado = this._statusLink(v.linkStatus);
+            const detalhe = v.linkStatus?.verificadoEm
+                ? `Última consulta: ${this._escapar(String(v.linkStatus.verificadoEm).slice(0, 19).replace('T',' '))}`
+                : 'Ainda não consultado';
+            return `<article class="vendor-link-row" role="listitem"><div><strong>${this._escapar(v.nome)}</strong>
+                <small>Rubi ${rubi} · Filial ${this._escapar(v.filial)} · ${detalhe}</small></div>
+                ${estado}</article>`;
+        }).join('') || '<p class="vendor-empty">Nenhum link encontrado com esse filtro.</p>';
+        const resumo = document.getElementById('resumoLinks');
+        if (resumo) resumo.textContent = `Exibindo ${lista.length} de ${this.linksFiltrados.length} links · ${this.registros.filter(v => v.ativo && !v.linkStatus?.verificadoEm).length} ativos ainda não verificados`;
+        const mais = document.getElementById('btnMaisLinks');
+        const menos = document.getElementById('btnMenosLinks');
+        if (mais) mais.hidden = lista.length >= this.linksFiltrados.length;
+        if (menos) menos.hidden = this.linksExibidos <= 12;
+    },
+    mostrarMaisLinks() { this.linksExibidos += 12; this._renderizarLinks(); },
+    mostrarMenosLinks() { this.linksExibidos = 12; this._renderizarLinks(); document.getElementById('painelLinks')?.scrollIntoView({block:'nearest', behavior:'smooth'}); },
+    cancelarVerificacaoLinks() { this.cancelarLinks = true; },
+
+    // Chama a API privada em lotes de até 30. Nunca considera um redirect como prova de inatividade.
+    async verificarLinksEmLote(modo = 'pendentes') {
         if (this.verificandoLinks) return;
-        const endpoint = this.apiUrl || localStorage.getItem(this.STORAGE_API_URL) || '';
-        if (!endpoint || !Auth.usuarioAtual()) { UI.erro('Conecte a API de vendedores antes de verificar links.'); return; }
-        const candidatos = this.registros.filter(v => v.ativo && this._matricula(v.matricula)).filter(v => {
-            const link = this.links[`m${this._matricula(v.matricula)}`];
-            if (!link?.verificadoEm) return true;
-            const idade = Date.now() - new Date(link.verificadoEm).getTime();
-            if (['erro', 'inconclusivo'].includes(link.status)) return idade > 60 * 60 * 1000;
-            return idade > 7 * 24 * 60 * 60 * 1000;
-        }).slice(0, 30);
-        if (!candidatos.length) { UI.ok('Todos os links dos vendedores ativos foram verificados nos últimos 7 dias.'); return; }
+        const endpoint = this.apiUrl || GoogleSheetsService.obterUrl();
+        if (!endpoint || !Auth.usuarioAtual()) { UI.erro('Entre com sua conta administrativa antes de consultar os links.'); return; }
+        const candidatos = this.registros.filter(v => v.ativo && this._matricula(v.matricula))
+            .filter(v => modo === 'todos' || !this.links[`m${this._matricula(v.matricula)}`]?.verificadoEm);
+        if (!candidatos.length) { UI.ok('Nenhum vendedor ativo pendente de verificação.'); return; }
+        if (modo === 'todos' && !confirm(`Rever TODOS os ${candidatos.length} links ativos? A consulta será feita em lotes de 30 e pode levar algum tempo.`)) return;
         this.verificandoLinks = true;
-        const botao = document.getElementById('btnVerificarLinks');
-        if (botao) { botao.disabled = true; botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> VERIFICANDO...'; }
+        this.cancelarLinks = false;
+        const botoes = ['btnVerificarPendentes','btnVerificarTodos'].map(id => document.getElementById(id));
+        botoes.forEach(b => { if (b) b.disabled = true; });
+        const parar = document.getElementById('btnCancelarLinks');
+        if (parar) parar.hidden = false;
         const status = document.getElementById('statusVerificacaoLinks');
-        if (status) status.textContent = `Verificando lote com ${candidatos.length} links...`;
+        let concluidos = 0;
         try {
-            const resposta = await LinkCheckerService.verificar(endpoint, candidatos.map(v => v.matricula));
-            const resultados = resposta.resultados || [];
-            await Promise.all(resultados.map(async r => {
-                const dados = { status: r.status || 'inconclusivo', httpCode: r.httpCode || '', destino: r.destino || '', url: r.url || '', verificadoEm: r.verificadoEm || new Date().toISOString() };
-                this.links[`m${this._matricula(r.matricula)}`] = dados;
-            }));
-            this.registros.forEach(v => { v.linkStatus = this.links[`m${this._matricula(v.matricula)}`] || null; });
-            this.filtrar();
-            if (status) status.textContent = `${resultados.length} links verificados e registrados no Google Sheets. Clique novamente para consultar o próximo lote.`;
-            UI.ok(`${resultados.length} links verificados.`);
+            for (let i = 0; i < candidatos.length && !this.cancelarLinks; i += 30) {
+                const lote = candidatos.slice(i, i+30);
+                if (status) status.textContent = `Verificando ${Math.min(i+30,candidatos.length)} de ${candidatos.length} links. Resultado parcial: ${concluidos} concluídos.`;
+                const resposta = await LinkCheckerService.verificar(endpoint, lote.map(v => v.matricula));
+                const resultados = resposta.resultados || [];
+                if (!Array.isArray(resultados) || !resultados.length) throw new Error('A API não retornou resultados para o lote.');
+                resultados.forEach(r => {
+                    const chave = `m${this._matricula(r.matricula)}`;
+                    this.links[chave] = {
+                        status: r.status || 'inconclusivo', httpCode:r.httpCode || '',
+                        destino:r.destino || '', url:r.url || '', verificadoEm:r.verificadoEm || new Date().toISOString()
+                    };
+                });
+                concluidos += resultados.length;
+                this.registros.forEach(v => { v.linkStatus = this.links[`m${this._matricula(v.matricula)}`] || null; });
+                // Preserva o filtro e repinta apenas a lista de links, sem reposicionar o usuário.
+                this.filtrarLinks();
+                this._renderizarTabela();
+            }
+            if (status) status.textContent = this.cancelarLinks
+                ? `Verificação interrompida: ${concluidos} de ${candidatos.length} consultados e salvos no Sheets.`
+                : `Verificação concluída: ${concluidos} de ${candidatos.length} consultados e salvos no Sheets.`;
+            UI.ok(`${concluidos} links consultados. Confira os resultados por categoria.`);
         } catch (erro) {
-            console.error(erro);
-            if (status) status.textContent = erro.message || 'Falha na verificação.';
-            UI.erro(erro.message || 'Não foi possível verificar os links.');
+            console.error('Verificação de links:', erro);
+            if (status) status.textContent = `Processo parou após ${concluidos} links. ${erro.message || 'Falha na consulta.'}`;
+            UI.erro('A verificação foi interrompida. Os lotes anteriores foram preservados no Sheets.');
         } finally {
             this.verificandoLinks = false;
-            if (botao) { botao.disabled = false; botao.innerHTML = '<i class="fas fa-link"></i> VERIFICAR PRÓXIMOS 30'; }
+            this.cancelarLinks = false;
+            botoes.forEach(b => { if (b) b.disabled = false; });
+            if (parar) parar.hidden = true;
         }
     },
+    verificarProximosLinks() { return this.verificarLinksEmLote('pendentes'); },
 
     mudarPagina(direcao) {
         const paginas = Math.max(1, Math.ceil(this.filtrados.length / this.porPagina));
         this.pagina = Math.min(paginas, Math.max(1, this.pagina + direcao));
         this._renderizarTabela();
+        if (direcao < 0) document.getElementById('corpoTabelaVendedores')?.scrollIntoView({block:'start', behavior:'smooth'});
     }
 };

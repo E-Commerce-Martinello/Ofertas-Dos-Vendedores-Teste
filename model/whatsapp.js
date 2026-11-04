@@ -98,16 +98,26 @@ const GrupoWhatsAppModel = {
       if (oficiais.length === 1 && oficiais[0].matricula !== vendedorRubi.matricula) {
         return { situacao:'revisar', tipo:'REVISAR', matricula:rubiAtribuido, vendedor:vendedorRubi, motivo:'Rubi e telefone validado apontam para vendedores diferentes' };
       }
+      if (!vendedorRubi.ativo) {
+        return { situacao:'inativo', tipo:'INATIVO', matricula:rubiAtribuido, vendedor:vendedorRubi,
+          motivo:'Cadastro inativo identificado pelo Rubi · avaliar remoção do grupo (não automática)' };
+      }
       if (vendedorRubi.statusTelefone === 'VALIDADO' && this.telefone(vendedorRubi.numero) !== telefone) {
         return { situacao:'revisar', tipo:'REVISAR', matricula:rubiAtribuido, vendedor:vendedorRubi, motivo:'Rubi reconhecido, mas telefone diferente do validado' };
-      }
-      if (!vendedorRubi.ativo) {
-        return { situacao:'revisar', tipo:'REVISAR', matricula:rubiAtribuido, vendedor:vendedorRubi, motivo:'Matrícula identificada, mas cadastro inativo' };
       }
       return { situacao:'vendedor', tipo:'VENDEDOR', matricula:vendedorRubi.matricula, vendedor:vendedorRubi,
         motivo: vendedorRubi.statusTelefone==='VALIDADO' ? 'Rubi e telefone conferem' : 'Identificado pelo Rubi — telefone ainda pendente no cadastro' };
     }
+    if (!rubiAtribuido && oficiais.length === 0) {
+      const antigos = vendedores.filter(v => !v.ativo && v.statusTelefone === 'VALIDADO' && this.telefone(v.numero) === telefone);
+      if (antigos.length === 1) return { situacao:'inativo', tipo:'INATIVO', matricula:antigos[0].matricula, vendedor:antigos[0],
+        motivo:'Telefone pertence a vendedor inativo · avaliar remoção do grupo (não automática)' };
+      if (antigos.length > 1) return { situacao:'revisar', tipo:'REVISAR', matricula:'', vendedor:null,
+        motivo:'Telefone associado a múltiplos cadastros inativos' };
+    }
     if (oficiais.length === 1) {
+      if (!oficiais[0].ativo) return { situacao:'inativo', tipo:'INATIVO', matricula:oficiais[0].matricula, vendedor:oficiais[0],
+        motivo:'Telefone corresponde a vendedor inativo · avaliar remoção do grupo (não automática)' };
       return { situacao:'vendedor', tipo:'VENDEDOR', matricula:oficiais[0].matricula, vendedor:oficiais[0], motivo:'Telefone validado corresponde à base' };
     }
     if (/(?:^|\s|-)GERENTE(?:\s|$)/i.test(nomeGrupo)) {
