@@ -1,11 +1,14 @@
-// Martinello 1.6.4 — leitura local e classificação assistida do grupo.
-// Não altera cadastro nem telefone da aba Vendedores.
+// Martinello 1.6.5 — números de celulares brasileiros no formato DDD + 9 + 8 dígitos.
+// Identificação não altera o vendedor sem autorização explícita do administrador.
 const GrupoWhatsAppModel = {
   digitos(v) { return String(v ?? '').replace(/\D/g, ''); },
   telefone(v) {
     let n = this.digitos(v);
-    if ([10,11].includes(n.length)) n = '55' + n;
-    return /^55\d{10,11}$/.test(n) ? n : '';
+    // O número exportado pode ter 55 e/ou omitir o nono dígito.
+    if ((n.length === 12 || n.length === 13) && n.startsWith('55')) n = n.slice(2);
+    if (/^[1-9][0-9][6-9]\d{7}$/.test(n)) n = n.slice(0, 2) + '9' + n.slice(2);
+    // Evita classificar telefones fixos e números sem DDD como celulares.
+    return /^[1-9][0-9]9\d{8}$/.test(n) ? n : '';
   },
   rubiNoNome(nome) {
     const match = String(nome || '').match(/\((\d{2,8})\)/);
@@ -28,7 +31,7 @@ const GrupoWhatsAppModel = {
       if (!fone || !nome || /^[=+@-]/.test(nome)) { erros.push(`Linha ${idx+1}: nome ou telefone inválido.`); return; }
       if (conhecidos.has(fone)) { duplicados++; return; }
       conhecidos.add(fone);
-      validos.push({ telefone:fone, nome:nome.slice(0,180) });
+      validos.push({ telefone:fone, telefoneOriginal: (fb ? b : a).slice(0,35), nome:nome.slice(0,180) });
     });
     return { registros: validos, erros, duplicados };
   },
@@ -67,7 +70,7 @@ const GrupoWhatsAppModel = {
         }
         if (vistos.has(telefone)) {duplicados++; continue;}
         vistos.add(telefone);
-        registros.push({telefone,nome:nome.slice(0,180)});
+        registros.push({telefone,telefoneOriginal:rawPhone.slice(0,35),nome:nome.slice(0,180)});
       }
     });
     if (!encontrouCabecalho) throw new Error('Não encontrei as colunas displayName e mobile (ou Nome e Telefone).');

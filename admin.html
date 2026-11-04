@@ -663,7 +663,7 @@
         <section id="abaWhatsapp" class="aba-conteudo" style="display:none;">
             <div class="admin-card">
                 <h2><i class="fab fa-whatsapp" style="color:#168b57"></i> PARTICIPANTES DO GRUPO</h2>
-                <p class="vendor-subtext">Importe uma lista pelo painel ou aproveite a aba antiga <strong>Parâmetros de Dados</strong>. O sistema associa por Rubi ou telefone validado, mas <strong>nunca altera automaticamente o telefone de um vendedor</strong>.</p>
+                <p class="vendor-subtext">Importe uma lista pelo painel ou aproveite a aba antiga <strong>Parâmetros de Dados</strong>. O sistema reconhece Rubi e telefone validado. Telefones do grupo são padronizados para <strong>DDD + 9 + 8 dígitos</strong>; o cadastro oficial só muda com sua confirmação.</p>
                 <h3>Importar participantes</h3>
                 <p class="vendor-subtext"><strong>Recomendado:</strong> envie o arquivo exportado do WhatsApp, sem modificar. O painel utiliza somente o nome exibido e o número; não grava as demais colunas.</p>
                 <input type="file" id="whatsappArquivo" accept=".xlsx,.xls,.ods,.csv" hidden onchange="WhatsAppPresenter.selecionarArquivo(this)">
@@ -685,7 +685,7 @@
                     <p id="whatsappPreviaAvisos" class="vendor-subtext" style="color:#a35505"></p>
                     <button class="btn-primary" id="whatsappConfirmarImportacao" type="button" onclick="WhatsAppPresenter.importar()" style="width:auto"><i class="fas fa-check"></i> CONFIRMAR SUBSTITUIÇÃO DA LISTA</button>
                 </div>
-                <div class="vendor-actions"><button class="btn-outline" type="button" onclick="WhatsAppPresenter.carregar()"><i class="fas fa-sync-alt"></i> ATUALIZAR LISTA</button></div>
+                <div class="vendor-actions"><button class="btn-outline" type="button" onclick="WhatsAppPresenter.carregar()"><i class="fas fa-sync-alt"></i> ATUALIZAR LISTA</button><button class="btn-outline" type="button" onclick="WhatsAppPresenter.normalizarExistentes()"><i class="fas fa-phone"></i> PADRONIZAR NÚMEROS JÁ IMPORTADOS</button></div>
                 <div id="whatsappStatus" class="vendor-status" role="status">Acesse esta aba para carregar a lista.</div>
             </div>
             <div class="admin-card">
@@ -772,12 +772,13 @@
             </select>
         </div>
         <div class="form-group" id="whatsappMatriculaBloco" hidden><label for="whatsappMatricula">Matrícula / Rubi</label>
-            <input type="text" id="whatsappMatricula" inputmode="numeric" maxlength="8" placeholder="Matrícula oficial"></div>
+            <input type="text" id="whatsappMatricula" inputmode="numeric" maxlength="8" placeholder="Matrícula oficial" oninput="WhatsAppPresenter.mostrarComparacao()"></div>
         <div class="form-group"><label for="whatsappObservacao">Observação opcional</label>
             <input type="text" id="whatsappObservacao" maxlength="220" placeholder="Informação de apoio"></div>
-        <p class="vendor-subtext">A identificação não altera o telefone nem o status de validação do cadastro oficial.</p>
+        <div id="whatsappComparacao" class="vendor-help" role="status" style="margin:10px 0">Informe o Rubi para comparar os telefones.</div><p class="vendor-subtext">Você pode apenas identificar o participante ou, depois de conferir, atualizar o telefone do vendedor. A alteração oficial exige confirmação e gera auditoria.</p>
         <div class="vendor-modal-actions">
-            <button class="btn-primary" id="whatsappSalvar" type="button" onclick="WhatsAppPresenter.salvar()">SALVAR</button>
+            <button class="btn-primary" id="whatsappSalvar" type="button" onclick="WhatsAppPresenter.salvar()">APENAS ASSOCIAR</button>
+            <button class="btn-primary" id="whatsappAtualizarTelefone" type="button" onclick="WhatsAppPresenter.salvar(false,true)" hidden>ASSOCIAR E ATUALIZAR TELEFONE</button>
             <button class="btn-outline" type="button" onclick="WhatsAppPresenter.salvar(true)">REMOVER IDENTIFICAÇÃO</button>
             <button class="btn-outline" type="button" onclick="WhatsAppPresenter.fechar()">CANCELAR</button>
         </div>
@@ -799,16 +800,16 @@
     <script src="view/ui.js"></script>
     <script src="presenter/admin-presenter.js?v=1.6.4"></script>
     <script src="presenter/dashboard-presenter.js?v=1.6.4"></script>
-    <script src="model/google-sheets.js?v=1.6.4"></script>
+    <script src="model/google-sheets.js?v=1.6.5"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="model/vendor-import.js?v=1.6.4.1"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
     <script src="presenter/vendors-presenter.js?v=1.6.4"></script>
-    <script src="model/whatsapp.js?v=1.6.4.1"></script>
+    <script src="model/whatsapp.js?v=1.6.5"></script>
     <script src="presenter/pendencias-presenter.js?v=1.6.4"></script>
-    <script src="presenter/whatsapp-presenter.js?v=1.6.4.1"></script>
+    <script src="presenter/whatsapp-presenter.js?v=1.6.5"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
 </body>
 </html>

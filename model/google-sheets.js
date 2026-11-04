@@ -80,7 +80,7 @@ const GoogleSheetsService = {
             };
             // A importação pode atualizar centenas de linhas e o mapa de filiais.
             // Damos mais tempo a ela sem alterar o prazo normal das consultas.
-            const prazoMs = ['importarFuncionarios','importarWhatsApp'].includes(action) ? 120000 : 30000;
+            const prazoMs = ['importarFuncionarios','importarWhatsApp','normalizarWhatsApp'].includes(action) ? 120000 : 30000;
             const timer = setTimeout(() => finalizar(
                 new Error('A API não devolveu a confirmação. Verifique se a implantação atualizada do Apps Script está publicada e se a origem do site de teste está autorizada. A autorização em uma aba separada, sozinha, não testa a resposta POST.')
             ), prazoMs);
@@ -155,6 +155,10 @@ const GoogleSheetsService = {
     },
     async importarWhatsApp(dados) {
         const r = await this._post('importarWhatsApp', dados);
+        return r.resultado || {};
+    },
+    async normalizarWhatsApp(dados) {
+        const r = await this._post('normalizarWhatsApp', dados);
         return r.resultado || {};
     },
     async salvarIdentificacaoWhatsApp(dados) {
