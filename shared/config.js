@@ -24,7 +24,7 @@ const CONFIG = Object.freeze({
 
     // Registro público: cole aqui a URL /exec do Apps Script SEPARADO de eventos.
     // Não reutilize a API administrativa. A URL é pública, não é segredo.
-    portalEventsApiUrl: '',
+    portalEventsApiUrl: 'https://script.google.com/macros/s/AKfycbw8oVDx9lR68YvX2avFb0zK7f1JyMp2RpB3C5T4RfCDP9s0VJsq-2tKgrzMV38PloxRWA/exec',
 
     // Admin
     SESSION_KEY:      'adminSessao',
