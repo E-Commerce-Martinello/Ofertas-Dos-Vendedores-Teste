@@ -1,4 +1,4 @@
-// Painel de utilização — dados privados do Firebase, perfil de filial da base Sheets.
+// Painel de utilização — registros e perfis consultados no Google Sheets.
 const DashboardPresenter = {
     eventos: [],
     periodo: '30',
@@ -102,14 +102,22 @@ const DashboardPresenter = {
         const btn = document.getElementById('dashboardAtualizar');
         this.carregando = true;
         btn.disabled = true;
-        status.textContent = 'Carregando registros privados do Firebase...';
+        status.textContent = 'Consultando a aba Eventos_Portal no Google Sheets...';
         try {
             if (!Auth.usuarioAtual() || Auth.usuarioAtual().isAnonymous) throw new Error('Entre com uma conta Google administradora.');
-            this.eventos = await AnalyticsService.consultar(this.periodo);
+            const consulta = await GoogleSheetsService.consultarEventosPortal(this.periodo);
+            this.eventos = consulta.eventos;
             this.ultimoCarregamento = Date.now();
             this.atualizarFiltroOfertas();
             this.renderizar();
-            status.textContent = `${this.eventos.length} registro(s) carregado(s). Medição indicativa: não confirma envio pelo WhatsApp.`;
+            status.textContent = `${this.eventos.length} registro(s) carregado(s) do Sheets. Medição indicativa: não confirma envio pelo WhatsApp.`;
+            if (consulta.truncado) status.textContent += ' Atenção: histórico limitado na consulta. Use um período menor.';
+            if (CONFIG.environment === 'TESTE' && this.eventos.length === 0) {
+                try {
+                    const d = JSON.parse(localStorage.getItem('martTelemetriaDiagnostico_TESTE') || 'null');
+                    if (d?.status) status.textContent += ` Última tentativa neste navegador: ${d.status} — ${d.detalhe}`;
+                } catch (_) {}
+            }
         } catch (e) {
             this.eventos = [];
             this.atualizarFiltroOfertas();

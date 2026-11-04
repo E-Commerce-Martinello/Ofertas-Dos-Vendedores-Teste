@@ -105,6 +105,16 @@ const GoogleSheetsService = {
         return { linhas, filiais: Array.isArray(resposta.resultado?.filiais) ? resposta.resultado.filiais : [] };
     },
 
+    async consultarEventosPortal(periodo = '30') {
+        const resposta = await this._post('listarEventosPortal', { periodo: String(periodo) });
+        const dados = resposta.resultado || {};
+        return {
+            eventos: Array.isArray(dados.eventos) ? dados.eventos : [],
+            truncado: dados.truncado === true,
+            totalLinhas: Number(dados.totalLinhas || 0)
+        };
+    },
+
     async verificarLinks(matriculas) {
         const ids = [...new Set((matriculas || []).map(v => String(v || '').replace(/\D/g, '')).filter(Boolean))];
         if (!ids.length) return { resultados: [] };

@@ -17,8 +17,8 @@ const IndexPresenter = {
             input.value = cod;
             this._atualizarBordaMatricula(input);
         }
-        // Inicia uma sessão anônima somente para registrar interações, sem bloquear o portal.
-        AnalyticsService.prepararPortal().catch(e => console.warn('Medição indisponível:', e));
+        // O registro agora usa um coletor público limitado (Google Sheets).
+        // Não requer login Firebase dos vendedores.
         this._renderCarregando();
         const cache = Storage.ofertasDoCache();
         if (cache.length) this._aplicarOfertas(cache);
@@ -182,9 +182,12 @@ const IndexPresenter = {
             const link = `${CONFIG.urlBase}${cod}?redir=${encodeURIComponent(oferta.linkProduto)}`;
             const msg = formatarTexto(oferta.textoOferta, link, cod);
             // A telemetria é indicativa e não pode bloquear o compartilhamento.
-            // Uma interação por oferta/minuto/navegador é contabilizada.
-            AnalyticsService.registrarInicio(oferta, cod).catch(e => console.warn('Falha de telemetria:', e));
+            // Uma tentativa por oferta, matrícula e janela de dez minutos/navegador.
+            const registro = AnalyticsService.registrarInicio(oferta, cod)
+                .catch(e => { console.warn('Telemetria: erro inesperado:', e); return false; });
             await API.rastrear(cod, getBrowserName());
+            // Aguarda no máximo um instante pelo despacho, sem bloquear o WhatsApp.
+            await Promise.race([registro, new Promise(resolve => setTimeout(resolve, 1200))]);
             await API.compartilhar(msg, oferta.urlImagem || 'img/produto.png');
         } catch (e) {
             console.error('Falha na preparação do compartilhamento:', e);
