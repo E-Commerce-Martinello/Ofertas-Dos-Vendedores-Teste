@@ -20,7 +20,50 @@ const GoogleSheetsService = {
         this.apiUrl = url.split('?')[0];
     },
 
+    // Ponte HTTPS opcional para celulares: evita formulários em iframes invisíveis.
+    // Nunca armazena o token nem a base de vendedores no gateway.
+    obterProxy() {
+        const valor = String(CONFIG.adminProxyUrl || '').trim();
+        if (!valor) return '';
+        const url = new URL(valor);
+        if (url.protocol !== 'https:' || !url.hostname.endsWith('.workers.dev')) {
+            throw new Error('Endereço do gateway inválido. Use a URL HTTPS .workers.dev do seu Cloudflare Worker.');
+        }
+        return url.href.replace(/\/$/, '');
+    },
+
+    async _postProxy(action, payload = {}) {
+        const url = this.obterProxy();
+        const token = await Auth.idToken();
+        const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const controller = new AbortController();
+        const longo = ['importarFuncionarios','importarWhatsApp','normalizarWhatsApp','verificarLinks'].includes(action);
+        const timer = setTimeout(() => controller.abort(), longo ? 120000 : 45000);
+        try {
+            const resposta = await fetch(url, {
+                method: 'POST', mode: 'cors', cache: 'no-store', credentials: 'omit',
+                headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
+                body: JSON.stringify({ action, firebaseIdToken: token, requestId, payload })
+            });
+            let dados;
+            try { dados = await resposta.json(); }
+            catch (_) { throw new Error(`O gateway respondeu em formato inesperado (HTTP ${resposta.status}).`); }
+            if (!resposta.ok) throw new Error(dados.erro || `Falha na conexão com o gateway (HTTP ${resposta.status}).`);
+            if (dados.tipo !== 'MART_VENDEDORES_API' || dados.requestId !== requestId)
+                throw new Error('O gateway não devolveu a confirmação esperada.');
+            if (!dados.ok) throw new Error(dados.erro || 'A conta não foi autorizada pelo Apps Script.');
+            return dados;
+        } catch (erro) {
+            if (erro.name === 'AbortError') throw new Error('O gateway demorou para responder. A operação pode ter sido processada; confira a planilha antes de tentar novamente.');
+            if (erro instanceof TypeError) throw new Error('Não foi possível alcançar o gateway HTTPS. Confira sua URL e a implantação do Worker.');
+            throw erro;
+        } finally { clearTimeout(timer); }
+    },
+
     async _post(action, payload = {}) {
+        // O gateway é optativo. Sem ele, mantemos a comunicação anterior do desktop.
+        if (this.obterProxy()) return this._postProxy(action, payload);
+
         if (!this.apiUrl) this.configurar(this.obterUrl());
         const firebaseIdToken = await Auth.idToken();
         return new Promise((resolve, reject) => {
@@ -82,7 +125,7 @@ const GoogleSheetsService = {
             // Damos mais tempo a ela sem alterar o prazo normal das consultas.
             const prazoMs = ['importarFuncionarios','importarWhatsApp','normalizarWhatsApp','verificarLinks'].includes(action) ? 120000 : 30000;
             const timer = setTimeout(() => finalizar(
-                new Error('A API não devolveu a confirmação. Verifique se a implantação atualizada do Apps Script está publicada e se a origem do site de teste está autorizada. A autorização em uma aba separada, sozinha, não testa a resposta POST.')
+                new Error('A API não respondeu ao formulário incorporado. Se o login Google funcionou, seu navegador pode estar bloqueando o iframe do Apps Script. No celular, configure o gateway HTTPS indicado nas instruções; no computador, confirme a implantação e o endereço da API.')
             ), prazoMs);
             window.addEventListener('message', aoReceber);
             document.body.appendChild(iframe);

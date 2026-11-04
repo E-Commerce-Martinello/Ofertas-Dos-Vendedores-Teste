@@ -5,6 +5,7 @@ const ContatosPresenter = {
   carregando: false,
   registros: [],
   maximo: 20,
+  limiteLista: 12,
   contatosRecentes: [],
   contatosCarregados: false,
   bannerCache: null,
@@ -124,12 +125,20 @@ const ContatosPresenter = {
     else this._status(`${candidatos.length} vendedores elegíveis: ativos, telefone validado, sem número repetido e fora do grupo.`, true);
     document.getElementById('contatosContador').textContent = `${this.selecionados.size} de ${this.maximo} selecionados`;
     const destino = document.getElementById('contatosElegiveis');
-    destino.innerHTML = lista.slice(0,120).map(v => {
+    destino.innerHTML = lista.slice(0,this.limiteLista).map(v => {
       const id=this._rubi(v.matricula);
       return `<label class="contatos-linha" role="listitem"><input type="checkbox" data-selecionar="${id}" ${this.selecionados.has(id)?'checked':''}>
         <span class="contatos-conteudo"><strong>${this._esc(v.nome)}</strong><small>Rubi ${this._esc(id)} · Filial ${this._esc(v.filial)} · ${this._esc(VendedoresPresenter._exibirTelefone(v.numero))}</small></span></label>`;
     }).join('') || '<p class="vendor-empty">Nenhum vendedor elegível com esse filtro. Revise os telefones e a lista de participantes.</p>';
-    if (lista.length > 120) destino.insertAdjacentHTML('beforeend', `<p class="vendor-subtext">Exibindo os primeiros 120 de ${lista.length} resultados. Use a pesquisa ou a filial para refinar.</p>`);
+    const rodape = document.getElementById('contatosListaRodape');
+    if (rodape) {
+      const exibidos = Math.min(lista.length, this.limiteLista);
+      rodape.innerHTML = lista.length > 0
+        ? `<span>${exibidos} de ${lista.length} vendedores exibidos</span>` +
+          (lista.length > exibidos ? '<button type="button" class="vendor-quiet-btn" onclick="ContatosPresenter.mostrarMais()">Mostrar mais 12</button>' :
+            (this.limiteLista > 12 ? '<button type="button" class="vendor-quiet-btn" onclick="ContatosPresenter.recolherLista()">Mostrar menos</button>' : ''))
+        : '';
+    }
     destino.querySelectorAll('[data-selecionar]').forEach(el=>el.addEventListener('change',()=>{
       if (el.checked && this.selecionados.size >= this.maximo) {
         el.checked = false; UI.erro(`Selecione no máximo ${this.maximo} vendedores por lote.`); return;
@@ -141,6 +150,9 @@ const ContatosPresenter = {
     }));
     this.renderizarFila();
   },
+  mostrarMais() { this.limiteLista += 12; this.renderizar(); },
+  recolherLista() { this.limiteLista = 12; this.renderizar(); },
+  filtrarLista() { this.limiteLista = 12; this.renderizar(); },
   selecionarAte20() {
     for (const v of this._filtrados()) {
       if (this.selecionados.size>=this.maximo) break;
@@ -316,6 +328,7 @@ const ContatosPresenter = {
   },
   limpar() {
     this.selecionados.clear();
+    this.limiteLista=12;
     this.contatosRecentes=[];
     this.contatosCarregados=false;
     this.bannerCache=null;

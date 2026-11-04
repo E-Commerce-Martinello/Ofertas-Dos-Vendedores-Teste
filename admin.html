@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.6.8 TESTE</title>
+    <title>Admin Martinello | 1.6.9.1 TESTE</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -153,6 +153,42 @@
         @media(max-width:1040px) {.contatos-layout {grid-template-columns:1fr;}.contatos-painel #contatosElegiveis {max-height:320px;}}
         @media(max-width:590px) {.contatos-painel .contatos-grid {grid-template-columns:1fr;}.contatos-painel .contatos-grid .form-group:nth-child(1) {grid-column:auto;}.contatos-config>summary span {display:none;}.contatos-toolbar button {flex:1 1 45%;}.contatos-fila-card #contatosFila {max-height:none;}}
 
+
+        /* v1.6.9.1 — Contatos no mesmo padrão visual de Vendedores */
+        #abaContatos .contatos-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
+        #abaContatos .contatos-painel,#abaContatos .contatos-fila-card { width:100%; min-width:0; padding:22px; }
+        #abaContatos .contatos-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+        #abaContatos .contatos-grid .form-group:first-child { grid-column:auto; }
+        #abaContatos .contatos-grid .form-group { margin:0 0 10px; }
+        #abaContatos .contatos-grid select,#abaContatos .contatos-grid input { width:100%; min-width:0; }
+        #abaContatos .contatos-toolbar { margin:14px 0 10px; padding:12px 0; align-items:center; }
+        #abaContatos .contatos-toolbar button { border-radius:10px; }
+        #abaContatos #contatosElegiveis,#abaContatos #contatosFila { max-height:none; overflow:visible; }
+        #abaContatos .contatos-lista { display:grid; gap:8px; }
+        #abaContatos .contatos-linha { background:#fff; border:1px solid #e5e5e5; border-radius:13px; box-shadow:none; padding:13px 15px; }
+        #abaContatos .contatos-linha:hover { border-color:#d0d0d0; }
+        #abaContatos .contatos-linha:has(input:checked) { border-color:#d0252a; background:#fffafa; }
+        #abaContatos .contatos-conteudo { flex:1 1 220px; }
+        #abaContatos .contatos-linha strong { font-size:13px; font-weight:800; }
+        #abaContatos .contatos-linha small { font-size:11px; line-height:1.5; margin-top:4px; }
+        #abaContatos .contatos-acoes { gap:7px; }
+        #abaContatos .contatos-acoes button { padding:9px 12px; font-size:11px; border-radius:10px; }
+        #abaContatos .contatos-config { margin-top:12px; border-color:#e5e5e5; }
+        .contatos-lista-rodape { display:flex; gap:12px; justify-content:space-between; align-items:center; padding:12px 2px 2px; font-size:12px; color:#777; }
+        #abaContatos .contatos-fila-card .vendor-subtext { max-width:940px; }
+        body.dark-mode #abaContatos .contatos-linha { background:#323232; border-color:#515151; }
+        body.dark-mode #abaContatos .contatos-linha:has(input:checked) { background:#422b2c; border-color:#c74247; }
+        body.dark-mode .contatos-lista-rodape { color:#bbb; }
+        @media(max-width:920px) { #abaContatos .contatos-grid {grid-template-columns:repeat(2,minmax(0,1fr));} }
+        @media(max-width:590px) {
+          #abaContatos .contatos-painel,#abaContatos .contatos-fila-card { padding:16px; }
+          #abaContatos .contatos-grid {grid-template-columns:minmax(0,1fr);}
+          #abaContatos .contatos-toolbar { gap:7px; }
+          #abaContatos .contatos-toolbar span {flex:1 1 100%;}
+          #abaContatos .contatos-toolbar button {flex:1 1 calc(50% - 7px);}
+          #abaContatos .contatos-acoes button {flex:1 1 auto;}
+          .contatos-lista-rodape {align-items:flex-start;flex-wrap:wrap;}
+        }
     </style>
 
     <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
@@ -855,8 +891,8 @@
             <div id="contatosAviso" class="vendor-status" role="status">Carregando dados...</div>
             <div class="contatos-grid">
               <div class="form-group"><label for="contatosOferta">Oferta ativa</label><select id="contatosOferta" onchange="ContatosPresenter.atualizarOferta()"><option value="">Selecione uma oferta ativa</option></select></div>
-              <div class="form-group"><label for="contatosFilial">Filial</label><select id="contatosFilial" onchange="ContatosPresenter.renderizar()"><option value="">Todas as filiais</option></select></div>
-              <div class="form-group"><label for="contatosBuscar">Buscar vendedor</label><input id="contatosBuscar" type="search" placeholder="Nome ou Rubi" oninput="ContatosPresenter.renderizar()"></div>
+              <div class="form-group"><label for="contatosFilial">Filial</label><select id="contatosFilial" onchange="ContatosPresenter.filtrarLista()"><option value="">Todas as filiais</option></select></div>
+              <div class="form-group"><label for="contatosBuscar">Buscar vendedor</label><input id="contatosBuscar" type="search" placeholder="Nome ou Rubi" oninput="ContatosPresenter.filtrarLista()"></div>
             </div>
             <details class="contatos-config" id="contatosConfigPainel">
               <summary><i class="fas fa-cog"></i> Link e mensagem do grupo <span>Configuração reutilizável</span></summary>
@@ -874,6 +910,7 @@
               <button type="button" class="btn-outline" onclick="ContatosPresenter.limparSelecao()">LIMPAR SELEÇÃO</button>
             </div>
             <div id="contatosElegiveis" class="contatos-lista" role="list"></div>
+            <div id="contatosListaRodape" class="contatos-lista-rodape" aria-live="polite"></div>
           </div>
           <div class="admin-card contatos-fila-card">
             <h2>FILA DE PREPARAÇÃO</h2>
@@ -963,9 +1000,9 @@
     <script src="model/validators.js?v=1.6.4"></script>
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.7"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.9.1"></script>
     <script src="presenter/dashboard-presenter.js?v=1.6.4"></script>
-    <script src="model/google-sheets.js?v=1.6.7"></script>
+    <script src="model/google-sheets.js?v=1.6.9.1"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="model/vendor-import.js?v=1.6.4.1"></script>
@@ -976,6 +1013,6 @@
     <script src="presenter/pendencias-presenter.js?v=1.6.6"></script>
     <script src="presenter/whatsapp-presenter.js?v=1.6.8"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
-    <script src="presenter/contatos-presenter.js?v=1.6.9"></script>
+    <script src="presenter/contatos-presenter.js?v=1.6.9.1"></script>
 </body>
 </html>

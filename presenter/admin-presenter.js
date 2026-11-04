@@ -30,7 +30,8 @@ const AdminPresenter = {
         } catch (erro) {
             // A sessão Firebase pode existir, mas a conta precisa ter permissão no Apps Script.
             this._mensagemLogin(erro.message || 'Não foi possível validar a conta.');
-            await Auth.sair().catch(() => {});
+            // Mantém a sessão Google se apenas a API falhar. Não libera o painel.
+            if (!Auth.usuarioAtual()) await Auth.sair().catch(() => {});
         }
     },
 
@@ -51,7 +52,7 @@ const AdminPresenter = {
         if (btn) { btn.disabled = true; btn.textContent = 'VERIFICANDO...'; }
         this._mensagemLogin('');
         try {
-            const usuario = await Auth.entrarGoogle();
+            const usuario = Auth.usuarioAtual() || await Auth.entrarGoogle();
             if (!usuario) { this._mensagemLogin('Aguardando retorno da autenticação Google…'); return; }
             this._mensagemLogin('Conta Google autenticada. Verificando autorização da API…');
             // Exige permissão no servidor antes de mostrar dados internos no painel.
