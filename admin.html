@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.6.3</title>
+    <title>Admin Martinello | 1.6.7 TESTE</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -68,6 +68,24 @@
             .vendor-entry-actions { grid-column:auto; }
             .vendor-filters > input { grid-column:auto; }
             .vendor-tools-help {display:none;} }
+
+        /* 1.6.7 — fila de contatos: sem tabelas com rolagem horizontal */
+        .contatos-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:12px;}
+        .contatos-grid .form-group {min-width:0;margin-bottom:12px;}
+        .contatos-grid input,.contatos-grid select {width:100%;max-width:100%;}
+        .contatos-toolbar {display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:15px 0;}
+        .contatos-toolbar button {width:auto;margin:0;}
+        .contatos-lista {display:grid;gap:10px;}
+        .contatos-linha {display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:13px;border:1px solid #ddd;border-radius:13px;min-width:0;}
+        .contatos-linha strong,.contatos-linha small {display:block;overflow-wrap:anywhere;}
+        .contatos-linha small {color:#777;line-height:1.6;}
+        .contatos-acoes {display:flex;flex-wrap:wrap;gap:8px;}
+        .contatos-acoes button {padding:9px 11px;width:auto;min-width:0;margin:0;border-radius:10px;cursor:pointer;}
+        .contatos-acoes button:disabled {opacity:.5;cursor:not-allowed;}
+        .contatos-linha input[type=checkbox] {width:18px;height:18px;flex:none;}
+        .contatos-conteudo {flex:1 1 220px;min-width:0;}
+        body.dark-mode .contatos-linha {border-color:#5b5b5b;}
+        body.dark-mode .contatos-linha small {color:#bbb;}
     </style>
 
     <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
@@ -408,6 +426,9 @@
             <button type="button" class="admin-tab" id="tabVendedores" onclick="AdminPresenter.mostrarAba('vendedores')">
                 <i class="fas fa-users"></i> VENDEDORES
             </button>
+            <button type="button" class="admin-tab" id="tabContatos" onclick="AdminPresenter.mostrarAba('contatos')">
+                <i class="fab fa-whatsapp"></i> CONTATOS
+            </button>
             <button type="button" class="admin-tab" id="tabAcessos" onclick="AdminPresenter.mostrarAba('acessos')" style="display:none;">
                 <i class="fas fa-user-shield"></i> ACESSOS
             </button>
@@ -658,7 +679,7 @@
             <div id="painelGestaoVendedores" style="display:none;">
                 <div class="admin-card">
                     <h2><i class="fas fa-link" style="color:#d0252a;"></i> VERIFICAÇÃO DOS LINKS MARTINELLO</h2>
-                    <p class="vendor-subtext">Consulta os links dos vendedores ativos em lotes de até 30. A verificação utiliza a mesma API privada da planilha; os resultados auxiliares permanecem no Firebase de TESTE nesta fase.</p>
+                    <p class="vendor-subtext">Consulta links em lotes de até 30 e registra os resultados na aba <strong>Verificacao_Links</strong> do Google Sheets. Redirecionamentos e erros de consulta não são interpretados automaticamente como vendedores inativos.</p>
                     <button type="button" class="btn-primary" id="btnVerificarLinks" onclick="VendedoresPresenter.verificarProximosLinks()" style="width:auto;margin:0;"><i class="fas fa-link"></i> VERIFICAR PRÓXIMOS 30</button>
                     <p class="vendor-last-update" id="statusVerificacaoLinks">Conecte a API para habilitar a verificação.</p>
                 </div>
@@ -726,6 +747,36 @@
 
 
 
+
+
+        <section id="abaContatos" class="aba-conteudo" style="display:none;">
+          <div class="admin-card">
+            <h2><i class="fab fa-whatsapp" style="color:#168b57"></i> CONTATOS PERSONALIZADOS EM LOTE</h2>
+            <p class="vendor-subtext">Selecione até 20 vendedores com telefone validado, sem conflitos e identificados como <strong>fora do grupo</strong>. As mensagens são preparadas individualmente, mas cada envio exige confirmação manual no WhatsApp. O banner é preparado separadamente.</p>
+            <div id="contatosAviso" class="vendor-status" role="status">Carregando dados...</div>
+            <div class="contatos-grid">
+              <div class="form-group"><label for="contatosOferta">Oferta ativa</label><select id="contatosOferta" onchange="ContatosPresenter.atualizarOferta()"><option value="">Selecione uma oferta ativa</option></select></div>
+              <div class="form-group"><label for="contatosFilial">Filial</label><select id="contatosFilial" onchange="ContatosPresenter.renderizar()"><option value="">Todas as filiais</option></select></div>
+              <div class="form-group"><label for="contatosBuscar">Buscar vendedor</label><input id="contatosBuscar" type="search" placeholder="Nome ou Rubi" oninput="ContatosPresenter.renderizar()"></div>
+              <div class="form-group"><label for="contatosLinkGrupo">Link de convite do grupo</label><input id="contatosLinkGrupo" type="url" placeholder="https://chat.whatsapp.com/..." oninput="ContatosPresenter.renderizarFila()"><small>Utilizado apenas nesta sessão, não é gravado no GitHub ou Firebase.</small></div>
+            </div>
+            <div class="form-group"><label for="contatosConviteModelo">Mensagem de convite (separada da oferta)</label>
+              <textarea id="contatosConviteModelo" rows="3" maxlength="1000" oninput="ContatosPresenter.renderizarFila()">Olá, [NOME]! Temos um grupo para compartilhar ofertas e novidades da Martinello. Gostaríamos de convidar você a participar: [LINK_GRUPO]</textarea>
+              <small>Variáveis disponíveis: [NOME], [RUBI], [FILIAL], [LINK_GRUPO].</small>
+            </div>
+            <div class="contatos-toolbar">
+              <span id="contatosContador">0 selecionados</span>
+              <button type="button" class="btn-outline" onclick="ContatosPresenter.selecionarAte20()">SELECIONAR ATÉ 20</button>
+              <button type="button" class="btn-outline" onclick="ContatosPresenter.limparSelecao()">LIMPAR SELEÇÃO</button>
+            </div>
+            <div id="contatosElegiveis" class="contatos-lista" role="list"></div>
+          </div>
+          <div class="admin-card">
+            <h2>FILA DE PREPARAÇÃO</h2>
+            <p class="vendor-subtext">Primeiro abra o WhatsApp com o texto da oferta, anexe o banner manualmente e envie. Depois abra a mensagem separada de convite. Apenas após concluir o contato use <strong>Marcar como abordado</strong>; esse registro é uma confirmação manual sua.</p>
+            <div id="contatosFila" class="contatos-lista" role="list"><p class="vendor-empty">Selecione vendedores para preparar as mensagens.</p></div>
+          </div>
+        </section><!-- /abaContatos -->
 
         <section id="abaAcessos" class="aba-conteudo" style="display:none;">
             <div class="admin-card">
@@ -807,18 +858,19 @@
     <script src="model/validators.js?v=1.6.4"></script>
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.6"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.7"></script>
     <script src="presenter/dashboard-presenter.js?v=1.6.4"></script>
-    <script src="model/google-sheets.js?v=1.6.5"></script>
+    <script src="model/google-sheets.js?v=1.6.7"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="model/vendor-import.js?v=1.6.4.1"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.6"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.7"></script>
     <script src="model/whatsapp.js?v=1.6.6"></script>
     <script src="presenter/pendencias-presenter.js?v=1.6.6"></script>
     <script src="presenter/whatsapp-presenter.js?v=1.6.6"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
+    <script src="presenter/contatos-presenter.js?v=1.6.7"></script>
 </body>
 </html>

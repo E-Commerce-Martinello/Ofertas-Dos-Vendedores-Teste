@@ -70,6 +70,7 @@ const AdminPresenter = {
         if (typeof GoogleSheetsService !== 'undefined') GoogleSheetsService.limparSessao();
         if (typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.limparDados();
         if (typeof DashboardPresenter !== 'undefined') DashboardPresenter.limpar();
+        if (typeof ContatosPresenter !== 'undefined') ContatosPresenter.limpar();
         if (typeof WhatsAppPresenter !== 'undefined') { WhatsAppPresenter.participantes=[]; WhatsAppPresenter.identificacoes=[]; WhatsAppPresenter.previa=null; WhatsAppPresenter.grupoCarregado=false; }
         await Auth.sair();
         document.getElementById('tabAcessos').style.display = 'none';
@@ -109,21 +110,23 @@ const AdminPresenter = {
         if (aba === 'whatsapp' || aba === 'pendencias') aba = 'vendedores';
         const vendedores = aba === 'vendedores';
         const dashboard = aba === 'dashboard';
+        const contatos = aba === 'contatos';
         const pendencias = false; // Pendências agora são um filtro da lista única.
         const whatsapp = false; // A gestão do grupo está integrada à aba Vendedores.
-        this.abaAtual = acessos ? 'acessos' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : pendencias ? 'pendencias' : whatsapp ? 'whatsapp' : 'ofertas';
-        ['ofertas','vendedores','dashboard','pendencias','whatsapp','acessos'].forEach(nome => {
+        this.abaAtual = acessos ? 'acessos' : contatos ? 'contatos' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : pendencias ? 'pendencias' : whatsapp ? 'whatsapp' : 'ofertas';
+        ['ofertas','vendedores','dashboard','contatos','pendencias','whatsapp','acessos'].forEach(nome => {
             const el = document.getElementById('aba'+nome[0].toUpperCase()+nome.slice(1));
             if (el) el.style.display = this.abaAtual === nome ? 'block' : 'none';
             const tab = document.getElementById('tab'+nome[0].toUpperCase()+nome.slice(1));
             if (tab) tab.classList.toggle('active',this.abaAtual === nome);
         });
         document.getElementById('btnNovaOfertaTopo').style.display = this.abaAtual === 'ofertas' ? 'inline-block' : 'none';
-        const titulos={ofertas:'⚙️ AGENDADOR',dashboard:'📊 DASHBOARD',vendedores:'👥 VENDEDORES',
+        const titulos={ofertas:'⚙️ AGENDADOR',dashboard:'📊 DASHBOARD',vendedores:'👥 VENDEDORES',contatos:'💬 CONTATOS',
                        pendencias:'📋 PENDÊNCIAS',whatsapp:'💬 WHATSAPP',acessos:'🔐 ACESSOS'};
         const descricoes={ofertas:'Várias ofertas podem ficar disponíveis ao mesmo tempo',
                           dashboard:'Acompanhamento de compartilhamentos iniciados',
                           vendedores:'Cadastros, participação no grupo e importações em uma lista única',
+                          contatos:'Seleção de vendedores e preparação manual de mensagens',
                           pendencias:'Telefones ainda não validados',
                           whatsapp:'Participantes do grupo e identificações',
                           acessos:'Gestão de administradores autorizados'};
@@ -131,6 +134,7 @@ const AdminPresenter = {
         document.getElementById('subtituloAdmin').textContent = descricoes[this.abaAtual];
         if (vendedores) VendedoresPresenter.init();
         if (dashboard) DashboardPresenter.atualizar();
+        if (contatos) ContatosPresenter.init();
         if (acessos) GerenciarAcessosPresenter.carregar();
         if (pendencias) PendenciasPresenter.renderizar();
         if (vendedores && typeof WhatsAppPresenter !== 'undefined' && !WhatsAppPresenter.grupoCarregado && !WhatsAppPresenter.carregando) WhatsAppPresenter.carregar();

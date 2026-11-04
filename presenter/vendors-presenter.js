@@ -170,11 +170,13 @@ const VendedoresPresenter = {
             const linhas = base.linhas;
             this.filiais = Object.fromEntries((base.filiais || [])
                 .filter(v => Array.isArray(v) && v.length >= 2 && /^\d+$/.test(String(v[0]))));
-            // O Firebase permanece apenas como repositório auxiliar dos resultados da verificação de links.
-            let gestao = {};
-            try { gestao = await VendorManagementService.carregar(); }
-            catch (erro) { console.warn('Não foi possível carregar os resultados auxiliares de links:', erro); }
-            this.links = gestao.links || {};
+            // Resultados de verificação ficam somente na aba Verificacao_Links do Sheets.
+            let consultaLinks = { resultados: [] };
+            try { consultaLinks = await GoogleSheetsService.listarLinks(); }
+            catch (erro) { console.warn('Não foi possível ler os status de links do Sheets:', erro); }
+            this.links = Object.fromEntries((consultaLinks.resultados || [])
+                .filter(x => /^\d+$/.test(String(x.matricula || '')))
+                .map(x => [`m${this._matricula(x.matricula)}`, x]));
             this.registros = this._mapearVendedores(linhas);
             if (!this.registros.length) throw new Error('A aba Vendedores foi lida, mas não contém linhas válidas.');
             this._atualizarFiltroFilial();
@@ -188,6 +190,7 @@ const VendedoresPresenter = {
             this.filtrar();
             this._renderizarGestaoExtra();
             if (typeof PendenciasPresenter !== 'undefined') PendenciasPresenter.renderizar();
+            if (typeof ContatosPresenter !== 'undefined' && AdminPresenter.abaAtual === 'contatos') ContatosPresenter.init();
             if (typeof WhatsAppPresenter !== 'undefined') {
                 if (WhatsAppPresenter.grupoCarregado) this.atualizarGrupo();
                 else if (!WhatsAppPresenter.carregando) WhatsAppPresenter.carregar();
@@ -250,6 +253,7 @@ const VendedoresPresenter = {
             .filter(([, matriculas]) => matriculas.size > 1).map(([telefone]) => telefone));
         this.filtrar();
         if (typeof PendenciasPresenter !== 'undefined') PendenciasPresenter.renderizar();
+        if (typeof ContatosPresenter !== 'undefined' && AdminPresenter.abaAtual === 'contatos') ContatosPresenter.init();
     },
 
     _situacaoGrupo(v) {
@@ -322,7 +326,7 @@ const VendedoresPresenter = {
         if (!link) return '<span class="vendor-badge unknown">Não verificado</span>';
         const status = link.status || 'inconclusivo';
         const mapa = {
-            ativo: ['success', 'Ativo'], inativo: ['inactive', 'Inativo'],
+            ativo: ['success', 'Respondeu (2xx)'], inativo: ['inactive', 'Possível inativo'],
             redirecionamento: ['review', 'Redireciona'], inconclusivo: ['unknown', 'Inconclusivo'],
             erro: ['unknown', 'Erro na consulta']
         };
@@ -355,10 +359,12 @@ const VendedoresPresenter = {
                 <div class="vendor-entry-field"><span class="field-label">Situação no grupo</span>
                     <span class="vendor-badge ${grupo.classe}">${this._escapar(grupo.texto)}</span></div>
                 <div class="vendor-entry-actions"><button class="vendor-small-btn" type="button" data-rubi="${rubi}">
-                    <i class="fas fa-pen"></i> Editar</button></div>
+                    <i class="fas fa-pen"></i> Editar</button>
+                    ${grupo.codigo === 'fora' && v.statusTelefone === 'VALIDADO' && v.ativo ? `<button class="vendor-small-btn" type="button" data-contato="${rubi}"><i class="fab fa-whatsapp"></i> Contatar</button>` : ''}</div>
             </article>`;
         }).join('') || '<p class="vendor-empty">Nenhum vendedor encontrado com esses filtros.</p>';
         destino.querySelectorAll('[data-rubi]').forEach(b => b.addEventListener('click', () => this.abrirEdicao(b.dataset.rubi)));
+        destino.querySelectorAll('[data-contato]').forEach(b => b.addEventListener('click', () => ContatosPresenter.abrirVendedor(b.dataset.contato)));
         document.getElementById('infoPaginacaoVendedores').textContent = total
             ? `Exibindo ${inicio + 1}–${Math.min(inicio + this.porPagina, total)} de ${total.toLocaleString('pt-BR')} vendedores`
             : 'Nenhum registro';
@@ -502,12 +508,12 @@ const VendedoresPresenter = {
             const resposta = await LinkCheckerService.verificar(endpoint, candidatos.map(v => v.matricula));
             const resultados = resposta.resultados || [];
             await Promise.all(resultados.map(async r => {
-                const dados = { status: r.status || 'inconclusivo', httpCode: r.httpCode || '', destino: r.destino || '', url: r.url || '' };
-                this.links[`m${this._matricula(r.matricula)}`] = { ...dados, verificadoEm: new Date().toISOString() };
-                await VendorManagementService.salvarStatusLink(r.matricula, dados);
+                const dados = { status: r.status || 'inconclusivo', httpCode: r.httpCode || '', destino: r.destino || '', url: r.url || '', verificadoEm: r.verificadoEm || new Date().toISOString() };
+                this.links[`m${this._matricula(r.matricula)}`] = dados;
             }));
+            this.registros.forEach(v => { v.linkStatus = this.links[`m${this._matricula(v.matricula)}`] || null; });
             this.filtrar();
-            if (status) status.textContent = `${resultados.length} links verificados. Clique novamente para consultar o próximo lote.`;
+            if (status) status.textContent = `${resultados.length} links verificados e registrados no Google Sheets. Clique novamente para consultar o próximo lote.`;
             UI.ok(`${resultados.length} links verificados.`);
         } catch (erro) {
             console.error(erro);
