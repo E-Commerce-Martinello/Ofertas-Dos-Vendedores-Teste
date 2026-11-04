@@ -222,6 +222,7 @@
         @keyframes slideOut{ from{transform:translateX(0);opacity:1} to{transform:translateX(110%);opacity:0} }
 
         /* ABAS DO ADMIN */
+        [hidden] { display:none !important; }
         .admin-tabs { display:flex; gap:10px; flex-wrap:wrap; margin:0 0 18px; }
         .admin-tab { flex:1; min-width:150px; border:1px solid #ddd; border-radius:14px; padding:13px 16px; background:#fff; color:#555; font-weight:800; cursor:pointer; transition:.2s; }
         .admin-tab i { margin-right:7px; }
@@ -376,6 +377,12 @@
             </button>
             <button type="button" class="admin-tab" id="tabVendedores" onclick="AdminPresenter.mostrarAba('vendedores')">
                 <i class="fas fa-users"></i> VENDEDORES
+            </button>
+            <button type="button" class="admin-tab" id="tabPendencias" onclick="AdminPresenter.mostrarAba('pendencias')">
+                <i class="fas fa-clipboard-list"></i> PENDÊNCIAS
+            </button>
+            <button type="button" class="admin-tab" id="tabWhatsapp" onclick="AdminPresenter.mostrarAba('whatsapp')">
+                <i class="fab fa-whatsapp"></i> WHATSAPP
             </button>
             <button type="button" class="admin-tab" id="tabAcessos" onclick="AdminPresenter.mostrarAba('acessos')" style="display:none;">
                 <i class="fas fa-user-shield"></i> ACESSOS
@@ -629,6 +636,78 @@
             </div>
         </section><!-- /abaVendedores -->
 
+        <section id="abaPendencias" class="aba-conteudo" style="display:none;">
+            <div class="admin-card">
+                <h2><i class="fas fa-clipboard-list" style="color:#d0252a"></i> TELEFONES PENDENTES</h2>
+                <p class="vendor-subtext">Somente vendedores ativos com telefone não validado. Use <strong>EDITAR</strong> para completar o cadastro. Nenhuma informação é duplicada no Firebase.</p>
+                <div class="vendor-kpis">
+                    <div class="vendor-kpi"><strong id="pendenciasTotal">0</strong><span>Total pendente</span></div>
+                    <div class="vendor-kpi"><strong id="pendenciasSemNumero">0</strong><span>Sem telefone</span></div>
+                    <div class="vendor-kpi"><strong id="pendenciasAConferir">0</strong><span>Telefone a conferir</span></div>
+                </div>
+                <div class="vendor-filters" style="grid-template-columns:2fr 1fr;">
+                    <input id="pendenciasBusca" type="search" placeholder="Pesquisar nome, matrícula ou telefone..." oninput="PendenciasPresenter.pagina=1;PendenciasPresenter.renderizar()">
+                    <select id="pendenciasFilial" onchange="PendenciasPresenter.pagina=1;PendenciasPresenter.renderizar()"><option value="">Todas as filiais</option></select>
+                </div>
+                <div class="vendor-table-wrap"><table class="vendor-table" style="min-width:680px">
+                    <thead><tr><th>RUBI</th><th>NOME</th><th>FILIAL</th><th>TELEFONE</th><th>STATUS</th><th>AÇÃO</th></tr></thead>
+                    <tbody id="pendenciasLista"><tr><td colspan="6">Carregando...</td></tr></tbody>
+                </table></div>
+                <div class="vendor-pagination"><span id="pendenciasPagina"></span><div>
+                    <button id="pendenciasAnterior" type="button" onclick="PendenciasPresenter.paginaMudar(-1)" disabled>ANTERIOR</button>
+                    <button id="pendenciasProxima" type="button" onclick="PendenciasPresenter.paginaMudar(1)" disabled>PRÓXIMA</button>
+                </div></div>
+            </div>
+        </section><!-- /abaPendencias -->
+
+        <section id="abaWhatsapp" class="aba-conteudo" style="display:none;">
+            <div class="admin-card">
+                <h2><i class="fab fa-whatsapp" style="color:#168b57"></i> PARTICIPANTES DO GRUPO</h2>
+                <p class="vendor-subtext">Importe uma lista pelo painel ou aproveite a aba antiga <strong>Parâmetros de Dados</strong>. O sistema associa por Rubi ou telefone validado, mas <strong>nunca altera automaticamente o telefone de um vendedor</strong>.</p>
+                <h3>Importar participantes</h3>
+                <p class="vendor-subtext">Para colar diretamente, use uma pessoa por linha no formato <strong>Nome;Telefone</strong> (ou separado por TAB). Confira a prévia antes de substituir a lista atual.</p>
+                <textarea id="whatsappColar" rows="4" placeholder="LUCAS - (12345) NOME - VENDEDOR;65999999999&#10;FILIAL - GERENTE;65988888888" style="width:100%;padding:12px;border:2px solid #ddd;border-radius:10px;background:transparent;color:inherit"></textarea>
+                <div class="vendor-actions">
+                    <button class="btn-outline" type="button" onclick="WhatsAppPresenter.preverTexto()"><i class="fas fa-search"></i> ANALISAR TEXTO</button>
+                    <button class="btn-outline" type="button" onclick="WhatsAppPresenter.preverParametros()"><i class="fas fa-table"></i> LER PARÂMETROS DE DADOS</button>
+                </div>
+                <div id="whatsappPrevia" hidden style="margin:14px 0;padding:14px;border:1px solid #ddd;border-radius:12px">
+                    <p id="whatsappPreviaTexto"></p>
+                    <button class="btn-primary" type="button" onclick="WhatsAppPresenter.importar()" style="width:auto"><i class="fas fa-check"></i> CONFIRMAR SUBSTITUIÇÃO DA LISTA</button>
+                </div>
+                <div class="vendor-actions"><button class="btn-outline" type="button" onclick="WhatsAppPresenter.carregar()"><i class="fas fa-sync-alt"></i> ATUALIZAR LISTA</button></div>
+                <div id="whatsappStatus" class="vendor-status" role="status">Acesse esta aba para carregar a lista.</div>
+            </div>
+            <div class="admin-card">
+                <h2>CONFERÊNCIA E IDENTIFICAÇÃO</h2>
+                <div class="vendor-kpis">
+                    <div class="vendor-kpi"><strong id="whatsappTotal">0</strong><span>Participantes</span></div>
+                    <div class="vendor-kpi"><strong id="whatsappVendedores">0</strong><span>Vendedores identificados</span></div>
+                    <div class="vendor-kpi"><strong id="whatsappRevisar">0</strong><span>Revisar</span></div>
+                    <div class="vendor-kpi"><strong id="whatsappDesconhecidos">0</strong><span>Não identificados</span></div>
+                </div>
+                <div class="vendor-filters" style="grid-template-columns:2fr 1fr">
+                    <input id="whatsappBusca" type="search" placeholder="Buscar nome, telefone, matrícula..." oninput="WhatsAppPresenter.pagina=1;WhatsAppPresenter.renderizar()">
+                    <select id="whatsappFiltro" onchange="WhatsAppPresenter.pagina=1;WhatsAppPresenter.renderizar()">
+                        <option value="">Todos os participantes</option>
+                        <option value="vendedor">Vendedores identificados</option>
+                        <option value="identificado">Gerentes / outros</option>
+                        <option value="revisar">Precisam de revisão</option>
+                        <option value="desconhecido">Não identificados</option>
+                    </select>
+                </div>
+                <div class="vendor-table-wrap"><table class="vendor-table" style="min-width:900px">
+                    <thead><tr><th>NOME NA LISTA</th><th>TELEFONE</th><th>TIPO</th><th>CADASTRO</th><th>MOTIVO</th><th>AÇÃO</th></tr></thead>
+                    <tbody id="whatsappLinhas"><tr><td colspan="6">Nenhum participante carregado.</td></tr></tbody>
+                </table></div>
+                <div class="vendor-pagination"><span id="whatsappPagina"></span><div>
+                    <button type="button" id="whatsappAnterior" onclick="WhatsAppPresenter.mover(-1)" disabled>ANTERIOR</button>
+                    <button type="button" id="whatsappProxima" onclick="WhatsAppPresenter.mover(1)" disabled>PRÓXIMA</button>
+                </div></div>
+                <p class="vendor-last-update">Identificações manuais ficam na aba Identificacoes_Manuais. Caso o número desapareça da próxima importação, a identificação continua guardada para futuras conferências.</p>
+            </div>
+        </section><!-- /abaWhatsapp -->
+
         <section id="abaAcessos" class="aba-conteudo" style="display:none;">
             <div class="admin-card">
                 <h2><i class="fas fa-user-shield" style="color:#d0252a;"></i> GERENCIAR ADMINISTRADORES</h2>
@@ -672,28 +751,54 @@
     </div>
 </div>
 
+<div class="vendor-modal" id="whatsappModal" role="dialog" aria-modal="true" aria-labelledby="whatsappTitulo" onclick="if(event.target===this)WhatsAppPresenter.fechar()">
+    <div class="vendor-modal-card">
+        <h2 id="whatsappTitulo">Identificar participante</h2>
+        <p id="whatsappEditando" class="vendor-subtext"></p>
+        <div class="form-group"><label for="whatsappTipoPessoa">Tipo de participante</label>
+            <select id="whatsappTipoPessoa" onchange="WhatsAppPresenter.mostrarMatricula()" style="padding:12px;width:100%;border-radius:10px">
+                <option value="GERENTE">Gerente</option><option value="FUNCIONARIO">Funcionário (não vendedor)</option>
+                <option value="OUTRO">Outro</option><option value="VENDEDOR">Vendedor (associar Rubi)</option>
+            </select>
+        </div>
+        <div class="form-group" id="whatsappMatriculaBloco" hidden><label for="whatsappMatricula">Matrícula / Rubi</label>
+            <input type="text" id="whatsappMatricula" inputmode="numeric" maxlength="8" placeholder="Matrícula oficial"></div>
+        <div class="form-group"><label for="whatsappObservacao">Observação opcional</label>
+            <input type="text" id="whatsappObservacao" maxlength="220" placeholder="Informação de apoio"></div>
+        <p class="vendor-subtext">A identificação não altera o telefone nem o status de validação do cadastro oficial.</p>
+        <div class="vendor-modal-actions">
+            <button class="btn-primary" id="whatsappSalvar" type="button" onclick="WhatsAppPresenter.salvar()">SALVAR</button>
+            <button class="btn-outline" type="button" onclick="WhatsAppPresenter.salvar(true)">REMOVER IDENTIFICAÇÃO</button>
+            <button class="btn-outline" type="button" onclick="WhatsAppPresenter.fechar()">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
     <!-- Scripts — carregados no final para garantir ordem em todos os browsers -->
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
-    <script src="shared/config.js?v=1.6.3.2"></script>
+    <script src="shared/config.js?v=1.6.4"></script>
     <script src="shared/utils.js"></script>
     <script src="model/firebase-config.js"></script>
-    <script src="model/analytics.js?v=1.6.3.2"></script>
+    <script src="model/analytics.js?v=1.6.4"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js?v=1.6.3.2"></script>
-    <script src="model/validators.js?v=1.6.3.2"></script>
+    <script src="model/storage.js?v=1.6.4"></script>
+    <script src="model/validators.js?v=1.6.4"></script>
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.3.2"></script>
-    <script src="presenter/dashboard-presenter.js?v=1.6.3.2"></script>
-    <script src="model/google-sheets.js?v=1.6.1"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.4"></script>
+    <script src="presenter/dashboard-presenter.js?v=1.6.4"></script>
+    <script src="model/google-sheets.js?v=1.6.4"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="model/vendor-import.js?v=1.6.0"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.1"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.4"></script>
+    <script src="model/whatsapp.js?v=1.6.4"></script>
+    <script src="presenter/pendencias-presenter.js?v=1.6.4"></script>
+    <script src="presenter/whatsapp-presenter.js?v=1.6.4"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
 </body>
 </html>

@@ -178,6 +178,8 @@ const VendedoresPresenter = {
             this.pagina = 1;
             this.filtrar();
             this._renderizarGestaoExtra();
+            if (typeof PendenciasPresenter !== 'undefined') PendenciasPresenter.renderizar();
+            if (typeof WhatsAppPresenter !== 'undefined' && WhatsAppPresenter.participantes.length) WhatsAppPresenter.renderizar();
             this.ultimaAtualizacaoTexto = `Base Vendedores carregada em ${new Date().toLocaleString('pt-BR')}. ${this.registros.length.toLocaleString('pt-BR')} registros lidos diretamente do Google Sheets.`;
             const last = document.getElementById('ultimaAtualizacaoVendedores');
             if (last) last.textContent = this.ultimaAtualizacaoTexto;

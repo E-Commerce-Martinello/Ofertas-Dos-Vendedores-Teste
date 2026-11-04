@@ -70,6 +70,7 @@ const AdminPresenter = {
         if (typeof GoogleSheetsService !== 'undefined') GoogleSheetsService.limparSessao();
         if (typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.limparDados();
         if (typeof DashboardPresenter !== 'undefined') DashboardPresenter.limpar();
+        if (typeof WhatsAppPresenter !== 'undefined') { WhatsAppPresenter.participantes=[]; WhatsAppPresenter.identificacoes=[]; WhatsAppPresenter.previa=null; }
         await Auth.sair();
         document.getElementById('tabAcessos').style.display = 'none';
         this.mostrarAba('ofertas');
@@ -107,25 +108,31 @@ const AdminPresenter = {
         const acessos = aba === 'acessos' && document.getElementById('tabAcessos').style.display !== 'none';
         const vendedores = aba === 'vendedores';
         const dashboard = aba === 'dashboard';
-        this.abaAtual = acessos ? 'acessos' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : 'ofertas';
-        document.getElementById('abaOfertas').style.display = this.abaAtual === 'ofertas' ? 'block' : 'none';
-        document.getElementById('abaVendedores').style.display = vendedores ? 'block' : 'none';
-        document.getElementById('abaDashboard').style.display = dashboard ? 'block' : 'none';
-        document.getElementById('abaAcessos').style.display = acessos ? 'block' : 'none';
-        document.getElementById('tabOfertas').classList.toggle('active', this.abaAtual === 'ofertas');
-        document.getElementById('tabVendedores').classList.toggle('active', vendedores);
-        document.getElementById('tabDashboard').classList.toggle('active', dashboard);
-        document.getElementById('tabAcessos').classList.toggle('active', acessos);
+        const pendencias = aba === 'pendencias';
+        const whatsapp = aba === 'whatsapp';
+        this.abaAtual = acessos ? 'acessos' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : pendencias ? 'pendencias' : whatsapp ? 'whatsapp' : 'ofertas';
+        ['ofertas','vendedores','dashboard','pendencias','whatsapp','acessos'].forEach(nome => {
+            const el = document.getElementById('aba'+nome[0].toUpperCase()+nome.slice(1));
+            if (el) el.style.display = this.abaAtual === nome ? 'block' : 'none';
+            const tab = document.getElementById('tab'+nome[0].toUpperCase()+nome.slice(1));
+            if (tab) tab.classList.toggle('active',this.abaAtual === nome);
+        });
         document.getElementById('btnNovaOfertaTopo').style.display = this.abaAtual === 'ofertas' ? 'inline-block' : 'none';
-        document.getElementById('tituloAdmin').textContent = acessos ? '🔐 ACESSOS' : vendedores ? '👥 VENDEDORES' : dashboard ? '📊 DASHBOARD' : '⚙️ AGENDADOR';
-        document.getElementById('subtituloAdmin').textContent = acessos
-            ? 'Gestão de administradores autorizados'
-            : vendedores ? 'Consulta e atualização dos cadastros'
-            : dashboard ? 'Acompanhamento de compartilhamentos iniciados'
-            : 'Várias ofertas podem ficar disponíveis ao mesmo tempo';
-        if (vendedores && typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.init();
-        if (dashboard && typeof DashboardPresenter !== 'undefined') DashboardPresenter.atualizar();
-        if (acessos && typeof GerenciarAcessosPresenter !== 'undefined') GerenciarAcessosPresenter.carregar();
+        const titulos={ofertas:'⚙️ AGENDADOR',dashboard:'📊 DASHBOARD',vendedores:'👥 VENDEDORES',
+                       pendencias:'📋 PENDÊNCIAS',whatsapp:'💬 WHATSAPP',acessos:'🔐 ACESSOS'};
+        const descricoes={ofertas:'Várias ofertas podem ficar disponíveis ao mesmo tempo',
+                          dashboard:'Acompanhamento de compartilhamentos iniciados',
+                          vendedores:'Consulta e atualização dos cadastros',
+                          pendencias:'Telefones ainda não validados',
+                          whatsapp:'Participantes do grupo e identificações',
+                          acessos:'Gestão de administradores autorizados'};
+        document.getElementById('tituloAdmin').textContent = titulos[this.abaAtual];
+        document.getElementById('subtituloAdmin').textContent = descricoes[this.abaAtual];
+        if (vendedores) VendedoresPresenter.init();
+        if (dashboard) DashboardPresenter.atualizar();
+        if (acessos) GerenciarAcessosPresenter.carregar();
+        if (pendencias) PendenciasPresenter.renderizar();
+        if (whatsapp) WhatsAppPresenter.carregar();
     },
 
     _esc(valor) {
