@@ -38,6 +38,36 @@
         body.dark-mode .dashboard-barra-pista { background:#505050; }
         @media(min-width:700px) { .dashboard-grade { grid-template-columns:repeat(4,minmax(0,1fr)); } .dashboard-ranking-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 
+
+        /* 1.6.6 — lista única e responsiva, sem rolagem horizontal */
+        .vendor-filters { grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr)) !important; }
+        .vendor-filters > input { grid-column:span 2; min-width:0; }
+        .vendor-cards { display:grid; gap:10px; width:100%; min-width:0; }
+        .vendor-entry { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr) auto;
+            gap:12px; padding:15px; border:1px solid #e5e5e5; border-radius:13px; background:#fff; align-items:center; min-width:0; }
+        .vendor-entry-main,.vendor-entry-field { min-width:0; overflow-wrap:anywhere; }
+        .vendor-entry-name { display:block; font-size:13px; font-weight:800; margin-bottom:5px; }
+        .vendor-entry-main small,.vendor-entry-field small,.vendor-entry-meta { display:block; font-size:11px; line-height:1.5; color:#777; }
+        .vendor-entry-field .field-label { display:block; font-size:10px; font-weight:800; text-transform:uppercase; color:#888; margin-bottom:6px; }
+        .vendor-entry-meta { margin-top:5px; }
+        .vendor-entry-actions { display:flex; flex-wrap:wrap; gap:7px; justify-content:flex-end; }
+        .vendor-entry .vendor-badge { white-space:normal; line-height:1.5; }
+        .vendor-tools { margin:18px 0; border-radius:16px; border:1px solid #e3e3e3; padding:12px; }
+        .vendor-tools > summary { list-style:none; cursor:pointer; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:9px 7px; font-weight:800; }
+        .vendor-tools > summary::-webkit-details-marker {display:none;}
+        .vendor-tools > summary::after {content:'⌄'; font-size:20px; }
+        .vendor-tools[open] > summary::after {content:'⌃';}
+        .vendor-tools-help {font-size:11px; color:#888; font-weight:600; margin-left:auto;}
+        .vendor-tools > .admin-card { margin:12px 0; }
+        body.dark-mode .vendor-entry { background:#323232; border-color:#4d4d4d; }
+        body.dark-mode .vendor-entry-main small,body.dark-mode .vendor-entry-field small,body.dark-mode .vendor-entry-meta {color:#c0c0c0;}
+        body.dark-mode .vendor-tools { border-color:#515151; }
+        @media(max-width:1050px) { .vendor-entry { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }
+            .vendor-entry-actions { grid-column:span 2; justify-content:flex-start; } }
+        @media(max-width:600px) { .vendor-entry { grid-template-columns:1fr; gap:9px; }
+            .vendor-entry-actions { grid-column:auto; }
+            .vendor-filters > input { grid-column:auto; }
+            .vendor-tools-help {display:none;} }
     </style>
 
     <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
@@ -378,12 +408,6 @@
             <button type="button" class="admin-tab" id="tabVendedores" onclick="AdminPresenter.mostrarAba('vendedores')">
                 <i class="fas fa-users"></i> VENDEDORES
             </button>
-            <button type="button" class="admin-tab" id="tabPendencias" onclick="AdminPresenter.mostrarAba('pendencias')">
-                <i class="fas fa-clipboard-list"></i> PENDÊNCIAS
-            </button>
-            <button type="button" class="admin-tab" id="tabWhatsapp" onclick="AdminPresenter.mostrarAba('whatsapp')">
-                <i class="fab fa-whatsapp"></i> WHATSAPP
-            </button>
             <button type="button" class="admin-tab" id="tabAcessos" onclick="AdminPresenter.mostrarAba('acessos')" style="display:none;">
                 <i class="fas fa-user-shield"></i> ACESSOS
             </button>
@@ -549,7 +573,7 @@
         <section id="abaVendedores" class="aba-conteudo" style="display:none;">
             <div class="admin-card">
                 <h2><i class="fas fa-users" style="color:#d0252a;"></i> BASE DE VENDEDORES</h2>
-                <p style="color:#777;font-size:13px;line-height:1.6;">A consulta, inclusão e edição dos vendedores agora utiliza diretamente a aba <strong>Vendedores</strong> da planilha de TESTE. A base antiga e os dados de WhatsApp não são alterados nesta etapa.</p>
+                <p style="color:#777;font-size:13px;line-height:1.6;">A consulta, inclusão e edição dos vendedores agora utiliza diretamente a aba <strong>Vendedores</strong> da planilha de TESTE. A situação do grupo é calculada automaticamente pelos telefones validados. As importações não alteram os telefones oficiais sem confirmação.</p>
 
                 <div class="vendor-help">
                     <strong>Conexão protegida pelo Google Apps Script</strong><br>
@@ -585,6 +609,10 @@
                     <div class="vendor-kpi"><strong id="kpiTelefoneValidado">0</strong><span>Telefones validados</span></div>
                     <div class="vendor-kpi"><strong id="kpiTelefonePendente">0</strong><span>Telefones pendentes</span></div>
                     <div class="vendor-kpi"><strong id="kpiTotalInativos">0</strong><span>Cadastros inativos</span></div>
+                    <div class="vendor-kpi"><strong id="kpiNoGrupo">—</strong><span>Vendedores no grupo</span></div>
+                    <div class="vendor-kpi"><strong id="kpiForaGrupo">—</strong><span>Vendedores fora do grupo</span></div>
+                    <div class="vendor-kpi"><strong id="kpiConflitoGrupo">0</strong><span>Cadastros com número repetido</span></div>
+                    <div class="vendor-kpi"><strong id="kpiGrupoPendente">—</strong><span>Não verificáveis</span></div>
                 </div>
 
                 <h2>CONSULTAR E GERENCIAR VENDEDORES</h2>
@@ -605,17 +633,18 @@
                         <option value="sem-telefone">Sem telefone</option>
                         <option value="sem-link">Link não verificado</option>
                     </select>
+                    <select id="filtroGrupoVendedor" aria-label="Filtrar participação no grupo" onchange="VendedoresPresenter.filtrar()">
+                        <option value="">Todos no WhatsApp</option>
+                        <option value="grupo">No grupo</option>
+                        <option value="fora">Fora do grupo</option>
+                        <option value="conflito">Número duplicado</option>
+                        <option value="revisar">Possível DDD diferente</option>
+                        <option value="pendente">Telefone pendente</option>
+                        <option value="sem_dados">Lista do grupo não carregada</option>
+                    </select>
                 </div>
-                <div class="vendor-table-wrap">
-                    <table class="vendor-table">
-                        <thead>
-                            <tr>
-                                <th>MATRÍCULA</th><th>NOME</th><th>FILIAL / LOCALIDADE</th><th>CADASTRO</th><th>TELEFONE</th><th>VALIDAÇÃO</th><th>LINK MARTINELLO</th><th>AÇÕES</th>
-                            </tr>
-                        </thead>
-                        <tbody id="corpoTabelaVendedores"><tr><td colspan="8" class="vendor-empty">Carregando base de vendedores…</td></tr></tbody>
-                    </table>
-                </div>
+                <p class="vendor-subtext">Para conferir pendências, use o filtro Telefone pendente. O status do grupo usa o telefone completo padronizado. Números duplicados, DDDs suspeitos ou não validados exigem revisão; o nome no WhatsApp não altera automaticamente o cadastro.</p>
+                <div class="vendor-cards" id="corpoTabelaVendedores" role="list" aria-live="polite"><p class="vendor-empty">Carregando vendedores…</p></div>
                 <div class="vendor-pagination">
                     <span id="infoPaginacaoVendedores">Nenhum registro</span>
                     <div style="display:flex;gap:8px;">
@@ -634,33 +663,10 @@
                     <p class="vendor-last-update" id="statusVerificacaoLinks">Conecte a API para habilitar a verificação.</p>
                 </div>
             </div>
-        </section><!-- /abaVendedores -->
+        <details class="vendor-tools" id="gestaoParticipantesGrupo">
+            <summary><i class="fab fa-whatsapp"></i> IMPORTAR LISTA DO WHATSAPP E REVISAR EXCEÇÕES <span class="vendor-tools-help">Abrir ferramentas</span></summary>
+            <p class="vendor-subtext">A lista única de vendedores acima é a visão principal. Aqui você atualiza a origem WhatsApp e identifica participantes externos ou situações ambíguas.</p>
 
-        <section id="abaPendencias" class="aba-conteudo" style="display:none;">
-            <div class="admin-card">
-                <h2><i class="fas fa-clipboard-list" style="color:#d0252a"></i> TELEFONES PENDENTES</h2>
-                <p class="vendor-subtext">Somente vendedores ativos com telefone não validado. Use <strong>EDITAR</strong> para completar o cadastro. Nenhuma informação é duplicada no Firebase.</p>
-                <div class="vendor-kpis">
-                    <div class="vendor-kpi"><strong id="pendenciasTotal">0</strong><span>Total pendente</span></div>
-                    <div class="vendor-kpi"><strong id="pendenciasSemNumero">0</strong><span>Sem telefone</span></div>
-                    <div class="vendor-kpi"><strong id="pendenciasAConferir">0</strong><span>Telefone a conferir</span></div>
-                </div>
-                <div class="vendor-filters" style="grid-template-columns:2fr 1fr;">
-                    <input id="pendenciasBusca" type="search" placeholder="Pesquisar nome, matrícula ou telefone..." oninput="PendenciasPresenter.pagina=1;PendenciasPresenter.renderizar()">
-                    <select id="pendenciasFilial" onchange="PendenciasPresenter.pagina=1;PendenciasPresenter.renderizar()"><option value="">Todas as filiais</option></select>
-                </div>
-                <div class="vendor-table-wrap"><table class="vendor-table" style="min-width:680px">
-                    <thead><tr><th>RUBI</th><th>NOME</th><th>FILIAL</th><th>TELEFONE</th><th>STATUS</th><th>AÇÃO</th></tr></thead>
-                    <tbody id="pendenciasLista"><tr><td colspan="6">Carregando...</td></tr></tbody>
-                </table></div>
-                <div class="vendor-pagination"><span id="pendenciasPagina"></span><div>
-                    <button id="pendenciasAnterior" type="button" onclick="PendenciasPresenter.paginaMudar(-1)" disabled>ANTERIOR</button>
-                    <button id="pendenciasProxima" type="button" onclick="PendenciasPresenter.paginaMudar(1)" disabled>PRÓXIMA</button>
-                </div></div>
-            </div>
-        </section><!-- /abaPendencias -->
-
-        <section id="abaWhatsapp" class="aba-conteudo" style="display:none;">
             <div class="admin-card">
                 <h2><i class="fab fa-whatsapp" style="color:#168b57"></i> PARTICIPANTES DO GRUPO</h2>
                 <p class="vendor-subtext">Importe uma lista pelo painel ou aproveite a aba antiga <strong>Parâmetros de Dados</strong>. O sistema reconhece Rubi e telefone validado. Telefones do grupo são padronizados para <strong>DDD + 9 + 8 dígitos</strong>; o cadastro oficial só muda com sua confirmação.</p>
@@ -689,7 +695,7 @@
                 <div id="whatsappStatus" class="vendor-status" role="status">Acesse esta aba para carregar a lista.</div>
             </div>
             <div class="admin-card">
-                <h2>CONFERÊNCIA E IDENTIFICAÇÃO</h2>
+                <h2>PARTICIPANTES EXTERNOS E SITUAÇÕES PARA REVISÃO</h2>
                 <div class="vendor-kpis">
                     <div class="vendor-kpi"><strong id="whatsappTotal">0</strong><span>Participantes</span></div>
                     <div class="vendor-kpi"><strong id="whatsappVendedores">0</strong><span>Vendedores identificados</span></div>
@@ -699,24 +705,27 @@
                 <div class="vendor-filters" style="grid-template-columns:2fr 1fr">
                     <input id="whatsappBusca" type="search" placeholder="Buscar nome, telefone, matrícula..." oninput="WhatsAppPresenter.pagina=1;WhatsAppPresenter.renderizar()">
                     <select id="whatsappFiltro" onchange="WhatsAppPresenter.pagina=1;WhatsAppPresenter.renderizar()">
-                        <option value="">Todos os participantes</option>
-                        <option value="vendedor">Vendedores identificados</option>
+                        <option value="">Todos que precisam ser identificados</option>
+
                         <option value="identificado">Gerentes / outros</option>
                         <option value="revisar">Precisam de revisão</option>
                         <option value="desconhecido">Não identificados</option>
                     </select>
                 </div>
-                <div class="vendor-table-wrap"><table class="vendor-table" style="min-width:900px">
-                    <thead><tr><th>NOME NA LISTA</th><th>TELEFONE</th><th>TIPO</th><th>CADASTRO</th><th>MOTIVO</th><th>AÇÃO</th></tr></thead>
-                    <tbody id="whatsappLinhas"><tr><td colspan="6">Nenhum participante carregado.</td></tr></tbody>
-                </table></div>
+                <div id="whatsappLinhas" class="vendor-cards" role="list"><p class="vendor-empty">Nenhum participante carregado.</p></div>
                 <div class="vendor-pagination"><span id="whatsappPagina"></span><div>
                     <button type="button" id="whatsappAnterior" onclick="WhatsAppPresenter.mover(-1)" disabled>ANTERIOR</button>
                     <button type="button" id="whatsappProxima" onclick="WhatsAppPresenter.mover(1)" disabled>PRÓXIMA</button>
                 </div></div>
                 <p class="vendor-last-update">Identificações manuais ficam na aba Identificacoes_Manuais. Caso o número desapareça da próxima importação, a identificação continua guardada para futuras conferências.</p>
             </div>
-        </section><!-- /abaWhatsapp -->
+
+        </details>
+        </section><!-- /abaVendedores -->
+
+
+
+
 
         <section id="abaAcessos" class="aba-conteudo" style="display:none;">
             <div class="admin-card">
@@ -748,7 +757,7 @@
         <div class="form-group"><label for="editarMatricula">Matrícula / Rubi</label><input type="text" id="editarMatricula" inputmode="numeric"></div>
         <div class="form-group"><label for="editarNomeVendedor">Nome</label><input type="text" id="editarNomeVendedor" maxlength="160"></div>
         <div class="form-group"><label for="editarFilialVendedor">Número da filial</label><input type="text" id="editarFilialVendedor" maxlength="6" inputmode="numeric" pattern="[0-9]*" list="listaNumerosFiliais" oninput="VendedoresPresenter.atualizarLocalidadeFilial()"><datalist id="listaNumerosFiliais"></datalist><small id="localidadeFilialVendedor" style="display:block;color:#777;margin-top:6px;">Informe apenas o número da filial.</small></div>
-        <div class="form-group"><label for="editarTelefoneVendedor">Telefone / WhatsApp</label><input type="tel" id="editarTelefoneVendedor" inputmode="tel" oninput="VendedoresPresenter.aoAlterarTelefone()"></div>
+        <div class="form-group"><label for="editarTelefoneVendedor">Telefone / WhatsApp</label><input type="tel" id="editarTelefoneVendedor" inputmode="tel" placeholder="(DDD) 9 1234-5678" oninput="VendedoresPresenter.aoAlterarTelefone()" onblur="VendedoresPresenter.formatarTelefoneDigitado()"></div>
         <div class="form-group"><label for="editarStatusTelefone">Validação do telefone</label><select id="editarStatusTelefone"><option value="PENDENTE">Pendente de validação</option><option value="VALIDADO">Validado manualmente</option></select></div>
         <div class="form-group"><label>Situação funcional atual</label><div id="editarSituacaoFuncional" class="vendor-help" style="margin:0;">Não informada</div></div>
         <label class="vendor-checkbox"><input type="checkbox" id="editarAtivoVendedor" checked> Cadastro ativo no painel</label>
@@ -798,7 +807,7 @@
     <script src="model/validators.js?v=1.6.4"></script>
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.4"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.6"></script>
     <script src="presenter/dashboard-presenter.js?v=1.6.4"></script>
     <script src="model/google-sheets.js?v=1.6.5"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
@@ -806,10 +815,10 @@
     <script src="model/vendor-import.js?v=1.6.4.1"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.4"></script>
-    <script src="model/whatsapp.js?v=1.6.5"></script>
-    <script src="presenter/pendencias-presenter.js?v=1.6.4"></script>
-    <script src="presenter/whatsapp-presenter.js?v=1.6.5"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.6"></script>
+    <script src="model/whatsapp.js?v=1.6.6"></script>
+    <script src="presenter/pendencias-presenter.js?v=1.6.6"></script>
+    <script src="presenter/whatsapp-presenter.js?v=1.6.6"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
 </body>
 </html>

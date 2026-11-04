@@ -1,7 +1,7 @@
 const WhatsAppPresenter = {
   participantes: [], identificacoes: [], previa: null, tipoPrevia:'colar',
   arquivo:null, importando:false, origemPrevia:'',
-  pagina:1, porPagina:40, editando:'', carregando:false,
+  pagina:1, porPagina:40, editando:'', carregando:false, grupoCarregado:false,
   _esc(v) { return VendedoresPresenter._escapar(v); },
   _status(txt,tipo='') { const e=document.getElementById('whatsappStatus'); if(e){e.className='vendor-status '+tipo; e.textContent=txt;} },
   async carregar() {
@@ -12,9 +12,11 @@ const WhatsAppPresenter = {
       if (!VendedoresPresenter.registros.length) throw new Error('Aguarde o carregamento da base de vendedores e tente novamente.');
       const dados=await GoogleSheetsService.listarWhatsApp();
       this.participantes=dados.participantes||[];
+      this.grupoCarregado = true;
       this.identificacoes=dados.identificacoes||[];
       this.pagina=1;
       this.renderizar();
+      VendedoresPresenter.atualizarGrupo();
       this._status(`${this.participantes.length} participantes na lista atual. Telefones exibidos em DDD + 9 + 8 dígitos.`, 'ok');
     } catch(e) { this._status(e.message,'error'); }
     finally {this.carregando=false;}
@@ -137,32 +139,40 @@ const WhatsAppPresenter = {
     return this.participantes.map(p=>({...p, classificacao:GrupoWhatsAppModel.classificar(p,base,this.identificacoes)}));
   },
   renderizar() {
-    const lista=this._registrosClassificados();
-    const totais={vendedor:0,identificado:0,revisar:0,desconhecido:0};
-    lista.forEach(p=>{totais[p.classificacao.situacao]=(totais[p.classificacao.situacao]||0)+1;});
-    document.getElementById('whatsappTotal').textContent=String(lista.length);
-    document.getElementById('whatsappVendedores').textContent=String(totais.vendedor);
-    document.getElementById('whatsappRevisar').textContent=String(totais.revisar);
-    document.getElementById('whatsappDesconhecidos').textContent=String(totais.desconhecido);
-    const estado=document.getElementById('whatsappFiltro').value;
-    const busca=document.getElementById('whatsappBusca').value.toLocaleLowerCase('pt-BR').trim();
-    const vistos=lista.filter(p=>(!estado || p.classificacao.situacao===estado) &&
-      (!busca || [p.nome,p.telefone,p.classificacao.matricula,p.classificacao.vendedor?.nome].some(v=>String(v||'').toLocaleLowerCase('pt-BR').includes(busca))));
-    const pages=Math.max(1,Math.ceil(vistos.length/this.porPagina));
-    this.pagina=Math.max(1,Math.min(this.pagina,pages));
-    const pageItems=vistos.slice((this.pagina-1)*this.porPagina,this.pagina*this.porPagina);
-    const statusNome={vendedor:'VENDEDOR',identificado:'OUTRO / GERENTE',revisar:'REVISAR',desconhecido:'NÃO IDENTIFICADO'};
-    const classe={vendedor:'in',identificado:'success',revisar:'review',desconhecido:'unknown'};
-    const corpo=document.getElementById('whatsappLinhas');
-    corpo.innerHTML=pageItems.map(p=>`<tr><td>${this._esc(p.nome)}</td><td>${this._esc(p.telefone)}</td>
-      <td><span class="vendor-badge ${classe[p.classificacao.situacao]}">${statusNome[p.classificacao.situacao]}</span></td>
-      <td>${this._esc(p.classificacao.vendedor?.nome||p.classificacao.tipo||'—')}${p.classificacao.matricula?'<br><small>Rubi '+this._esc(p.classificacao.matricula)+'</small>':''}</td>
-      <td>${this._esc(p.classificacao.motivo)}</td>
-      <td><button type="button" class="vendor-small-btn primary" data-tel="${this._esc(p.telefone)}">IDENTIFICAR</button></td></tr>`).join('')||'<tr><td colspan="6" class="vendor-empty">Nenhum participante encontrado.</td></tr>';
-    corpo.querySelectorAll('[data-tel]').forEach(b=>b.addEventListener('click',()=>this.abrirIdentificacao(b.dataset.tel)));
-    document.getElementById('whatsappPagina').textContent=`${vistos.length} encontrados · Página ${this.pagina} de ${pages}`;
-    document.getElementById('whatsappAnterior').disabled=this.pagina<=1;
-    document.getElementById('whatsappProxima').disabled=this.pagina>=pages;
+    const lista = this._registrosClassificados();
+    const totais = {vendedor:0,identificado:0,revisar:0,desconhecido:0};
+    lista.forEach(p => { totais[p.classificacao.situacao] = (totais[p.classificacao.situacao] || 0) + 1; });
+    for (const [id,n] of [['whatsappTotal',lista.length],['whatsappVendedores',totais.vendedor],['whatsappRevisar',totais.revisar],['whatsappDesconhecidos',totais.desconhecido]]) {
+      const el = document.getElementById(id); if (el) el.textContent = String(n);
+    }
+    // Os vendedores identificados estão na lista única acima. Esta seção trata apenas de exceções e pessoas externas.
+    const estado = document.getElementById('whatsappFiltro')?.value || '';
+    const busca = (document.getElementById('whatsappBusca')?.value || '').toLocaleLowerCase('pt-BR').trim();
+    const vistos = lista.filter(p => p.classificacao.situacao !== 'vendedor' &&
+      (!estado || p.classificacao.situacao === estado) &&
+      (!busca || [p.nome,p.telefone,p.classificacao.matricula,p.classificacao.vendedor?.nome]
+         .some(v => String(v || '').toLocaleLowerCase('pt-BR').includes(busca))));
+    const paginas = Math.max(1, Math.ceil(vistos.length / this.porPagina));
+    this.pagina = Math.min(Math.max(this.pagina,1),paginas);
+    const atual = vistos.slice((this.pagina-1)*this.porPagina,this.pagina*this.porPagina);
+    const statusNome = { identificado:'GERENTE / OUTRO', revisar:'REVISAR', desconhecido:'NÃO IDENTIFICADO' };
+    const classe = { identificado:'success', revisar:'review', desconhecido:'unknown' };
+    const corpo = document.getElementById('whatsappLinhas');
+    corpo.innerHTML = atual.map(p => {
+      const c = p.classificacao;
+      return `<article class="vendor-entry" role="listitem">
+        <div class="vendor-entry-main"><span class="vendor-entry-name">${this._esc(p.nome)}</span><small>Participante da lista do grupo</small></div>
+        <div class="vendor-entry-field"><span class="field-label">Telefone do grupo</span><strong>${this._esc(VendedoresPresenter._exibirTelefone(p.telefone))}</strong></div>
+        <div class="vendor-entry-field"><span class="field-label">Identificação</span><span class="vendor-badge ${classe[c.situacao] || 'unknown'}">${statusNome[c.situacao] || 'REVISAR'}</span>
+          <small>${this._esc(c.vendedor?.nome || c.matricula || '—')}</small></div>
+        <div class="vendor-entry-field"><span class="field-label">Motivo</span><small>${this._esc(c.motivo)}</small></div>
+        <div class="vendor-entry-actions"><button type="button" class="vendor-small-btn primary" data-tel="${this._esc(p.telefone)}">IDENTIFICAR</button></div>
+      </article>`;
+    }).join('') || '<p class="vendor-empty">Nenhum participante externo ou pendente encontrado.</p>';
+    corpo.querySelectorAll('[data-tel]').forEach(b => b.addEventListener('click', () => this.abrirIdentificacao(b.dataset.tel)));
+    document.getElementById('whatsappPagina').textContent = `${vistos.length} situações externas ou pendentes · Página ${this.pagina} de ${paginas}`;
+    document.getElementById('whatsappAnterior').disabled = this.pagina <= 1;
+    document.getElementById('whatsappProxima').disabled = this.pagina >= paginas;
   },
   mover(n) {this.pagina+=n;this.renderizar();},
   abrirIdentificacao(telefone) {

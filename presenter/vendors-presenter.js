@@ -20,6 +20,9 @@ const VendedoresPresenter = {
     modoModal: 'editar',
     matriculaOriginal: '',
     ultimaAtualizacaoTexto: '',
+    grupoCarregado: false,
+    grupoTelefones: new Set(),
+    grupoDuplicados: new Set(),
 
     init() {
         if (!this.inicializado) {
@@ -51,6 +54,8 @@ const VendedoresPresenter = {
         return n;
     },
     _exibirTelefone(valor) {
+        const padrao = typeof GrupoWhatsAppModel !== 'undefined' ? GrupoWhatsAppModel.telefone(valor) : '';
+        if (padrao) return `(${padrao.slice(0,2)}) 9 ${padrao.slice(3,7)}-${padrao.slice(7)}`;
         let n = this._digitos(valor);
         let prefixo = '';
         if (n.startsWith('55') && (n.length === 12 || n.length === 13)) { prefixo = '+55 '; n = n.slice(2); }
@@ -65,6 +70,9 @@ const VendedoresPresenter = {
         this.filiais = {};
         this.filtrados = [];
         this.links = {};
+        this.grupoCarregado = false;
+        this.grupoTelefones = new Set();
+        this.grupoDuplicados = new Set();
         this.pagina = 1;
         this.ultimaAtualizacaoTexto = '';
         this.carregando = false;
@@ -170,6 +178,7 @@ const VendedoresPresenter = {
             this.registros = this._mapearVendedores(linhas);
             if (!this.registros.length) throw new Error('A aba Vendedores foi lida, mas não contém linhas válidas.');
             this._atualizarFiltroFilial();
+            if (typeof WhatsAppPresenter !== 'undefined' && WhatsAppPresenter.grupoCarregado) this.atualizarGrupo();
             document.getElementById('painelDadosVendedores').style.display = 'block';
             document.getElementById('painelGestaoVendedores').style.display = 'block';
             const painelImportacao = document.getElementById('painelImportacaoFuncionarios');
@@ -179,7 +188,10 @@ const VendedoresPresenter = {
             this.filtrar();
             this._renderizarGestaoExtra();
             if (typeof PendenciasPresenter !== 'undefined') PendenciasPresenter.renderizar();
-            if (typeof WhatsAppPresenter !== 'undefined' && WhatsAppPresenter.participantes.length) WhatsAppPresenter.renderizar();
+            if (typeof WhatsAppPresenter !== 'undefined') {
+                if (WhatsAppPresenter.grupoCarregado) this.atualizarGrupo();
+                else if (!WhatsAppPresenter.carregando) WhatsAppPresenter.carregar();
+            }
             this.ultimaAtualizacaoTexto = `Base Vendedores carregada em ${new Date().toLocaleString('pt-BR')}. ${this.registros.length.toLocaleString('pt-BR')} registros lidos diretamente do Google Sheets.`;
             const last = document.getElementById('ultimaAtualizacaoVendedores');
             if (last) last.textContent = this.ultimaAtualizacaoTexto;
@@ -221,11 +233,48 @@ const VendedoresPresenter = {
             : 'Informe apenas o número da filial; a localidade é vinculada pelo relatório.';
     },
 
+    atualizarGrupo() {
+        const grupo = typeof WhatsAppPresenter !== 'undefined' ? WhatsAppPresenter : null;
+        this.grupoCarregado = !!grupo?.grupoCarregado && !!(grupo.participantes || []).length;
+        this.grupoTelefones = new Set((grupo?.participantes || [])
+            .map(p => GrupoWhatsAppModel.telefone(p.telefone)).filter(Boolean));
+        const oficiais = new Map();
+        this.registros.forEach(v => {
+            if (v.statusTelefone !== 'VALIDADO') return;
+            const n = GrupoWhatsAppModel.telefone(v.numero);
+            if (!n) return;
+            if (!oficiais.has(n)) oficiais.set(n, new Set());
+            oficiais.get(n).add(v.matricula);
+        });
+        this.grupoDuplicados = new Set([...oficiais.entries()]
+            .filter(([, matriculas]) => matriculas.size > 1).map(([telefone]) => telefone));
+        this.filtrar();
+        if (typeof PendenciasPresenter !== 'undefined') PendenciasPresenter.renderizar();
+    },
+
+    _situacaoGrupo(v) {
+        if (!v.ativo) return { codigo:'inativo', texto:'Cadastro inativo', classe:'unknown' };
+        if (v.statusTelefone !== 'VALIDADO' || !GrupoWhatsAppModel.telefone(v.numero))
+            return { codigo:'pendente', texto:'Telefone pendente', classe:'review' };
+        const n = GrupoWhatsAppModel.telefone(v.numero);
+        if (this.grupoDuplicados.has(n))
+            return { codigo:'conflito', texto:'Número duplicado · revisar', classe:'review' };
+        if (!this.grupoCarregado)
+            return { codigo:'sem_dados', texto:'Aguardando lista do grupo', classe:'unknown' };
+        if (this.grupoTelefones.has(n))
+            return { codigo:'grupo', texto:'No grupo', classe:'in' };
+        // Não associar automaticamente pelo final do número; apenas destacar DDD divergente.
+        if ([...this.grupoTelefones].some(outro => outro.slice(-8) === n.slice(-8)))
+            return { codigo:'revisar', texto:'Possível DDD diferente · revisar', classe:'review' };
+        return { codigo:'fora', texto:'Fora do grupo', classe:'out' };
+    },
+
     filtrar() {
         const termo = this._texto(document.getElementById('buscaVendedor')?.value).toLocaleLowerCase('pt-BR');
         const filtroAtivo = document.getElementById('filtroEmpresaVendedor')?.value || 'ativos';
         const filtroTelefone = document.getElementById('filtroStatusVendedor')?.value || 'todos';
         const filtroFilial = this._texto(document.getElementById('filtroFilialVendedor')?.value).toLocaleLowerCase('pt-BR');
+        const filtroGrupo = document.getElementById('filtroGrupoVendedor')?.value || '';
         this.filtrados = this.registros.filter(v => {
             if (filtroAtivo === 'ativos' && !v.ativo) return false;
             if (filtroAtivo === 'inativos' && v.ativo) return false;
@@ -233,6 +282,7 @@ const VendedoresPresenter = {
             const correspondeBusca = !termo || [v.nome, v.matricula, v.numero, v.filial, v.localidadeFilial, v.codfil]
                 .some(campo => this._texto(campo).toLocaleLowerCase('pt-BR').includes(termo));
             if (!correspondeBusca) return false;
+            if (filtroGrupo && this._situacaoGrupo(v).codigo !== filtroGrupo) return false;
             if (filtroTelefone === 'validado') return v.statusTelefone === 'VALIDADO';
             if (filtroTelefone === 'pendente') return v.statusTelefone === 'PENDENTE';
             if (filtroTelefone === 'sem-telefone') return !this._digitos(v.numero);
@@ -253,6 +303,12 @@ const VendedoresPresenter = {
         document.getElementById('kpiTelefoneValidado').textContent = validados.toLocaleString('pt-BR');
         document.getElementById('kpiTelefonePendente').textContent = pendentes.toLocaleString('pt-BR');
         document.getElementById('kpiTotalInativos').textContent = inativos.toLocaleString('pt-BR');
+        const estados = ativos.map(v => this._situacaoGrupo(v).codigo);
+        for (const [id, codigo] of [['kpiNoGrupo','grupo'],['kpiForaGrupo','fora'],['kpiConflitoGrupo','conflito'],['kpiGrupoPendente','pendente']]) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = !this.grupoCarregado && ['grupo','fora'].includes(codigo)
+                ? '—' : estados.filter(x => x === codigo).length.toLocaleString('pt-BR');
+        }
     },
 
     _statusTelefone(v) {
@@ -276,27 +332,33 @@ const VendedoresPresenter = {
     },
 
     _renderizarTabela() {
-        const tbody = document.getElementById('corpoTabelaVendedores');
+        const destino = document.getElementById('corpoTabelaVendedores');
+        if (!destino) return;
         const total = this.filtrados.length;
         const paginas = Math.max(1, Math.ceil(total / this.porPagina));
-        if (this.pagina > paginas) this.pagina = paginas;
+        this.pagina = Math.min(this.pagina, paginas);
         const inicio = (this.pagina - 1) * this.porPagina;
-        const paginaDados = this.filtrados.slice(inicio, inicio + this.porPagina);
-        if (!total) {
-            tbody.innerHTML = '<tr><td colspan="8" class="vendor-empty">Nenhum vendedor encontrado com esses filtros.</td></tr>';
-        } else {
-            tbody.innerHTML = paginaDados.map(v => `
-                <tr>
-                    <td>${this._escapar(v.matricula)}</td>
-                    <td>${this._escapar(v.nome)}</td>
-                    <td><strong>${this._escapar(v.filial || '—')}</strong>${v.localidadeFilial ? `<div style="font-size:11px;color:#777;">${this._escapar(v.localidadeFilial)}</div>` : ''}</td>
-                    <td><span class="vendor-badge ${v.ativo ? 'success' : 'inactive'}">${v.ativo ? 'ATIVO' : 'INATIVO'}</span></td>
-                    <td>${this._escapar(this._exibirTelefone(v.numero))}</td>
-                    <td>${this._statusTelefone(v)}</td>
-                    <td>${this._statusLink(v.linkStatus)}</td>
-                    <td><button class="vendor-small-btn" type="button" onclick="VendedoresPresenter.abrirEdicao('${this._escapar(v.matricula)}')"><i class="fas fa-pen"></i> Editar</button></td>
-                </tr>`).join('');
-        }
+        const linhas = this.filtrados.slice(inicio, inicio + this.porPagina);
+        destino.innerHTML = linhas.map(v => {
+            const grupo = this._situacaoGrupo(v);
+            const rubi = this._escapar(v.matricula);
+            return `<article class="vendor-entry" role="listitem">
+                <div class="vendor-entry-main">
+                    <span class="vendor-entry-name">${this._escapar(v.nome)}</span>
+                    <small>Rubi ${rubi} · <span class="vendor-badge ${v.ativo ? 'success' : 'inactive'}">${v.ativo ? 'Ativo' : 'Inativo'}</span></small>
+                    <span class="vendor-entry-meta">Link: ${this._statusLink(v.linkStatus)}</span>
+                </div>
+                <div class="vendor-entry-field"><span class="field-label">Filial</span>
+                    <strong>${this._escapar(v.filial || '—')}</strong><small>${this._escapar(v.localidadeFilial || '')}</small></div>
+                <div class="vendor-entry-field"><span class="field-label">WhatsApp / telefone</span>
+                    <strong>${this._escapar(this._exibirTelefone(v.numero))}</strong><small>${v.statusTelefone === 'VALIDADO' ? 'Validado' : 'Pendente de validação'}</small></div>
+                <div class="vendor-entry-field"><span class="field-label">Situação no grupo</span>
+                    <span class="vendor-badge ${grupo.classe}">${this._escapar(grupo.texto)}</span></div>
+                <div class="vendor-entry-actions"><button class="vendor-small-btn" type="button" data-rubi="${rubi}">
+                    <i class="fas fa-pen"></i> Editar</button></div>
+            </article>`;
+        }).join('') || '<p class="vendor-empty">Nenhum vendedor encontrado com esses filtros.</p>';
+        destino.querySelectorAll('[data-rubi]').forEach(b => b.addEventListener('click', () => this.abrirEdicao(b.dataset.rubi)));
         document.getElementById('infoPaginacaoVendedores').textContent = total
             ? `Exibindo ${inicio + 1}–${Math.min(inicio + this.porPagina, total)} de ${total.toLocaleString('pt-BR')} vendedores`
             : 'Nenhum registro';
@@ -342,7 +404,7 @@ const VendedoresPresenter = {
         document.getElementById('editarNomeVendedor').value = vendedor.nome || '';
         document.getElementById('editarFilialVendedor').value = vendedor.filial || '';
         this.atualizarLocalidadeFilial();
-        document.getElementById('editarTelefoneVendedor').value = vendedor.numero || '';
+        document.getElementById('editarTelefoneVendedor').value = this._exibirTelefone(vendedor.numero) === '—' ? '' : this._exibirTelefone(vendedor.numero);
         document.getElementById('editarStatusTelefone').value = vendedor.statusTelefone || 'PENDENTE';
         document.getElementById('editarAtivoVendedor').checked = vendedor.ativo !== false;
         document.getElementById('editarObservacoesVendedor').value = vendedor.observacoes || '';
@@ -351,11 +413,18 @@ const VendedoresPresenter = {
         document.getElementById('modalEditarVendedor').style.display = 'flex';
     },
 
+    formatarTelefoneDigitado() {
+        const campo = document.getElementById('editarTelefoneVendedor');
+        if (!campo) return;
+        const telefone = GrupoWhatsAppModel.telefone(campo.value);
+        if (telefone) campo.value = this._exibirTelefone(telefone);
+    },
+
     aoAlterarTelefone() {
-        const numero = this._normalizarTelefone(document.getElementById('editarTelefoneVendedor').value);
+        const numero = GrupoWhatsAppModel.telefone(document.getElementById('editarTelefoneVendedor').value);
         const atual = this.registros.find(v => this._matricula(v.matricula) === this.matriculaOriginal);
         if (this.modoModal === 'novo' || !atual || numero !== this._normalizarTelefone(atual.numero)) {
-            document.getElementById('editarStatusTelefone').value = numero ? 'PENDENTE' : 'PENDENTE';
+            document.getElementById('editarStatusTelefone').value = 'PENDENTE';
         }
     },
 
@@ -367,13 +436,14 @@ const VendedoresPresenter = {
         const nome = this._texto(document.getElementById('editarNomeVendedor').value);
         const filialDigitada = this._texto(document.getElementById('editarFilialVendedor').value);
         const filial = /^\d{1,6}$/.test(filialDigitada) ? String(Number(filialDigitada)) : filialDigitada;
-        const numero = this._digitos(document.getElementById('editarTelefoneVendedor').value);
+        const telefoneInformado = this._digitos(document.getElementById('editarTelefoneVendedor').value);
+        const numero = telefoneInformado ? GrupoWhatsAppModel.telefone(telefoneInformado) : '';
         const statusTelefone = this._texto(document.getElementById('editarStatusTelefone').value).toUpperCase();
         const ativo = document.getElementById('editarAtivoVendedor').checked;
         const observacoes = this._texto(document.getElementById('editarObservacoesVendedor').value);
         if (!matricula || !nome || !/^\d{1,6}$/.test(filial)) { UI.erro('Informe matrícula, nome e apenas o número da filial.'); return; }
-        if (numero && !([10, 11, 12, 13].includes(numero.length) && (!([12, 13].includes(numero.length)) || numero.startsWith('55')))) {
-            UI.erro('Confira o telefone. Informe DDD e número com 10 ou 11 dígitos.'); return;
+        if (telefoneInformado && !numero) {
+            UI.erro('Telefone inválido. Informe um celular com DDD: (DD) 9 1234-5678.'); return;
         }
         if (numero && !['VALIDADO', 'PENDENTE'].includes(statusTelefone)) { UI.erro('Selecione a situação de validação do telefone.'); return; }
         const cfg = { url: this.apiUrl || localStorage.getItem(this.STORAGE_API_URL), token: null };

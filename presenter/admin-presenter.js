@@ -70,7 +70,7 @@ const AdminPresenter = {
         if (typeof GoogleSheetsService !== 'undefined') GoogleSheetsService.limparSessao();
         if (typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.limparDados();
         if (typeof DashboardPresenter !== 'undefined') DashboardPresenter.limpar();
-        if (typeof WhatsAppPresenter !== 'undefined') { WhatsAppPresenter.participantes=[]; WhatsAppPresenter.identificacoes=[]; WhatsAppPresenter.previa=null; }
+        if (typeof WhatsAppPresenter !== 'undefined') { WhatsAppPresenter.participantes=[]; WhatsAppPresenter.identificacoes=[]; WhatsAppPresenter.previa=null; WhatsAppPresenter.grupoCarregado=false; }
         await Auth.sair();
         document.getElementById('tabAcessos').style.display = 'none';
         this.mostrarAba('ofertas');
@@ -106,10 +106,11 @@ const AdminPresenter = {
 
     mostrarAba(aba) {
         const acessos = aba === 'acessos' && document.getElementById('tabAcessos').style.display !== 'none';
+        if (aba === 'whatsapp' || aba === 'pendencias') aba = 'vendedores';
         const vendedores = aba === 'vendedores';
         const dashboard = aba === 'dashboard';
-        const pendencias = aba === 'pendencias';
-        const whatsapp = aba === 'whatsapp';
+        const pendencias = false; // Pendências agora são um filtro da lista única.
+        const whatsapp = false; // A gestão do grupo está integrada à aba Vendedores.
         this.abaAtual = acessos ? 'acessos' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : pendencias ? 'pendencias' : whatsapp ? 'whatsapp' : 'ofertas';
         ['ofertas','vendedores','dashboard','pendencias','whatsapp','acessos'].forEach(nome => {
             const el = document.getElementById('aba'+nome[0].toUpperCase()+nome.slice(1));
@@ -122,7 +123,7 @@ const AdminPresenter = {
                        pendencias:'📋 PENDÊNCIAS',whatsapp:'💬 WHATSAPP',acessos:'🔐 ACESSOS'};
         const descricoes={ofertas:'Várias ofertas podem ficar disponíveis ao mesmo tempo',
                           dashboard:'Acompanhamento de compartilhamentos iniciados',
-                          vendedores:'Consulta e atualização dos cadastros',
+                          vendedores:'Cadastros, participação no grupo e importações em uma lista única',
                           pendencias:'Telefones ainda não validados',
                           whatsapp:'Participantes do grupo e identificações',
                           acessos:'Gestão de administradores autorizados'};
@@ -132,7 +133,7 @@ const AdminPresenter = {
         if (dashboard) DashboardPresenter.atualizar();
         if (acessos) GerenciarAcessosPresenter.carregar();
         if (pendencias) PendenciasPresenter.renderizar();
-        if (whatsapp) WhatsAppPresenter.carregar();
+        if (vendedores && typeof WhatsAppPresenter !== 'undefined' && !WhatsAppPresenter.grupoCarregado && !WhatsAppPresenter.carregando) WhatsAppPresenter.carregar();
     },
 
     _esc(valor) {
