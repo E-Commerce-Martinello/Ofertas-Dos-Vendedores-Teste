@@ -20,7 +20,10 @@ const AdminPresenter = {
         this._mostrarLogin();
         try {
             const usuario = await Auth.iniciar();
-            if (usuario && url) {
+            if (usuario?.isAnonymous) {
+                // Visitante do portal, não é um administrador: mantém tela de login limpa.
+                await Auth.sair();
+            } else if (usuario && url) {
                 const acesso = await GoogleSheetsService.testarConexao(url);
                 await this._abrirPainel(acesso);
             }
@@ -66,6 +69,7 @@ const AdminPresenter = {
         this.intervaloStatus = null;
         if (typeof GoogleSheetsService !== 'undefined') GoogleSheetsService.limparSessao();
         if (typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.limparDados();
+        if (typeof DashboardPresenter !== 'undefined') DashboardPresenter.limpar();
         await Auth.sair();
         document.getElementById('tabAcessos').style.display = 'none';
         this.mostrarAba('ofertas');
@@ -102,19 +106,25 @@ const AdminPresenter = {
     mostrarAba(aba) {
         const acessos = aba === 'acessos' && document.getElementById('tabAcessos').style.display !== 'none';
         const vendedores = aba === 'vendedores';
-        this.abaAtual = acessos ? 'acessos' : vendedores ? 'vendedores' : 'ofertas';
+        const dashboard = aba === 'dashboard';
+        this.abaAtual = acessos ? 'acessos' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : 'ofertas';
         document.getElementById('abaOfertas').style.display = this.abaAtual === 'ofertas' ? 'block' : 'none';
         document.getElementById('abaVendedores').style.display = vendedores ? 'block' : 'none';
+        document.getElementById('abaDashboard').style.display = dashboard ? 'block' : 'none';
         document.getElementById('abaAcessos').style.display = acessos ? 'block' : 'none';
         document.getElementById('tabOfertas').classList.toggle('active', this.abaAtual === 'ofertas');
         document.getElementById('tabVendedores').classList.toggle('active', vendedores);
+        document.getElementById('tabDashboard').classList.toggle('active', dashboard);
         document.getElementById('tabAcessos').classList.toggle('active', acessos);
         document.getElementById('btnNovaOfertaTopo').style.display = this.abaAtual === 'ofertas' ? 'inline-block' : 'none';
-        document.getElementById('tituloAdmin').textContent = acessos ? '🔐 ACESSOS' : vendedores ? '👥 VENDEDORES' : '⚙️ AGENDADOR';
+        document.getElementById('tituloAdmin').textContent = acessos ? '🔐 ACESSOS' : vendedores ? '👥 VENDEDORES' : dashboard ? '📊 DASHBOARD' : '⚙️ AGENDADOR';
         document.getElementById('subtituloAdmin').textContent = acessos
             ? 'Gestão de administradores autorizados'
-            : vendedores ? 'Consulta e atualização dos cadastros' : 'Várias ofertas podem ficar disponíveis ao mesmo tempo';
+            : vendedores ? 'Consulta e atualização dos cadastros'
+            : dashboard ? 'Acompanhamento de compartilhamentos iniciados'
+            : 'Várias ofertas podem ficar disponíveis ao mesmo tempo';
         if (vendedores && typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.init();
+        if (dashboard && typeof DashboardPresenter !== 'undefined') DashboardPresenter.atualizar();
         if (acessos && typeof GerenciarAcessosPresenter !== 'undefined') GerenciarAcessosPresenter.carregar();
     },
 

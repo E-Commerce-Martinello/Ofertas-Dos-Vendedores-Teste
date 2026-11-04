@@ -17,6 +17,8 @@ const IndexPresenter = {
             input.value = cod;
             this._atualizarBordaMatricula(input);
         }
+        // Inicia uma sessão anônima somente para registrar interações, sem bloquear o portal.
+        AnalyticsService.prepararPortal().catch(e => console.warn('Medição indisponível:', e));
         this._renderCarregando();
         const cache = Storage.ofertasDoCache();
         if (cache.length) this._aplicarOfertas(cache);
@@ -179,8 +181,10 @@ const IndexPresenter = {
             Storage.salvarUltimaMatricula(cod);
             const link = `${CONFIG.urlBase}${cod}?redir=${encodeURIComponent(oferta.linkProduto)}`;
             const msg = formatarTexto(oferta.textoOferta, link, cod);
+            // A telemetria é indicativa e não pode bloquear o compartilhamento.
+            // Uma interação por oferta/minuto/navegador é contabilizada.
+            AnalyticsService.registrarInicio(oferta, cod).catch(e => console.warn('Falha de telemetria:', e));
             await API.rastrear(cod, getBrowserName());
-            // Contabilização por oferta será ativada em uma etapa posterior, com endpoint protegido.
             await API.compartilhar(msg, oferta.urlImagem || 'img/produto.png');
         } catch (e) {
             console.error('Falha na preparação do compartilhamento:', e);

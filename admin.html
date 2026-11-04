@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.6.2</title>
+    <title>Admin Martinello | 1.6.3</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -12,7 +12,33 @@
             if (t === 'dark') document.documentElement.classList.add('dark-mode-pre');
         })();
     </script>
-    <style> html.dark-mode-pre body { background: #1a1a1a !important; color: white; } </style>
+    <style> html.dark-mode-pre body { background: #1a1a1a !important; color: white; } 
+        /* DASHBOARD — registros iniciados, não envios confirmados */
+        .dashboard-filtros { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+        .dashboard-filtros label { font-size:12px; font-weight:800; color:#666; }
+        .dashboard-filtros select { background:#fff; color:#333; border:1px solid #ccc; border-radius:10px; padding:10px; max-width:260px; width:100%; }
+        .dashboard-grade { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:16px 0; }
+        .dashboard-metrica { border:1px solid #e2e2e2; border-radius:14px; padding:15px; background:#fafafa; min-width:0; }
+        .dashboard-metrica strong { display:block; font-size:28px; color:#d0252a; overflow-wrap:anywhere; }
+        .dashboard-metrica span { display:block; font-size:11px; color:#666; font-weight:700; margin-top:4px; }
+        .dashboard-ranking-grid { display:grid; grid-template-columns:1fr; gap:14px; }
+        .dashboard-ranking { border:1px solid #e4e4e4; border-radius:15px; padding:15px; min-width:0; }
+        .dashboard-ranking h3 { font-size:14px; margin-bottom:14px; }
+        .dashboard-barra-item { margin:11px 0; }
+        .dashboard-barra-cabecalho { display:flex; gap:10px; justify-content:space-between; align-items:flex-start; font-size:12px; line-height:1.5; }
+        .dashboard-barra-cabecalho span { min-width:0; overflow-wrap:anywhere; }
+        .dashboard-barra-cabecalho strong { color:#d0252a; white-space:nowrap; }
+        .dashboard-barra-pista { background:#eee; height:7px; border-radius:8px; overflow:hidden; margin-top:6px; }
+        .dashboard-barra-pista>div { background:#d0252a; height:100%; border-radius:8px; }
+        .dashboard-vazio { font-size:12px; color:#777; }
+        .dashboard-explicacao { color:#666; font-size:12px; line-height:1.6; margin-top:12px; }
+        body.dark-mode .dashboard-metrica,body.dark-mode .dashboard-ranking { background:#323232; border-color:#555; }
+        body.dark-mode .dashboard-filtros label,body.dark-mode .dashboard-metrica span,body.dark-mode .dashboard-explicacao,body.dark-mode .dashboard-vazio { color:#ccc; }
+        body.dark-mode .dashboard-filtros select { background:#333; color:#eee; border-color:#777; }
+        body.dark-mode .dashboard-barra-pista { background:#505050; }
+        @media(min-width:700px) { .dashboard-grade { grid-template-columns:repeat(4,minmax(0,1fr)); } .dashboard-ranking-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+    </style>
 
     <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
     <script>
@@ -25,11 +51,11 @@
                 });
             }
             // Limpar cache de versões antigas automaticamente
-            if (localStorage.getItem('cacheVersion') !== '1.6.2') {
+            if (localStorage.getItem('cacheVersion') !== '1.6.3') {
                 ['ofertasMartinello','ofertaAtiva','configTelaEmBreve'].forEach(function(k){
                     try { localStorage.removeItem(k); } catch(e){}
                 });
-                try { localStorage.setItem('cacheVersion','1.6.2'); } catch(e){}
+                try { localStorage.setItem('cacheVersion','1.6.3'); } catch(e){}
             }
         })();
     </script>
@@ -345,6 +371,9 @@
             <button type="button" class="admin-tab active" id="tabOfertas" onclick="AdminPresenter.mostrarAba('ofertas')">
                 <i class="fas fa-tags"></i> OFERTAS
             </button>
+            <button type="button" class="admin-tab" id="tabDashboard" onclick="AdminPresenter.mostrarAba('dashboard')">
+                <i class="fas fa-chart-line"></i> DASHBOARD
+            </button>
             <button type="button" class="admin-tab" id="tabVendedores" onclick="AdminPresenter.mostrarAba('vendedores')">
                 <i class="fas fa-users"></i> VENDEDORES
             </button>
@@ -367,7 +396,7 @@
                 <div><strong id="ofertasAgendadas">0</strong><span>Agendadas</span></div>
                 <div><strong id="ofertasEncerradas">0</strong><span>Encerradas</span></div>
             </div>
-            <p class="vendor-subtext" style="margin-top:12px;">Os indicadores de compartilhamento por oferta serão adicionados quando a coleta de eventos estiver pronta.</p>
+            <p class="vendor-subtext" style="margin-top:12px;">Confira os inícios de compartilhamento e os rankings na aba <strong>Dashboard</strong>.</p>
         </div>
         <!-- LISTA -->
         <div class="admin-card">
@@ -478,6 +507,37 @@
             <button class="btn-primary" onclick="salvarConfigPadrao()">💾 SALVAR CONFIGURAÇÕES</button>
         </div>
         </section><!-- /abaOfertas -->
+
+        <section id="abaDashboard" class="aba-conteudo" style="display:none;">
+            <div class="admin-card">
+                <h2><i class="fas fa-chart-bar" style="color:#d0252a"></i> DESEMPENHO DO PORTAL</h2>
+                <div class="dashboard-filtros">
+                    <label for="dashboardPeriodo">PERÍODO</label>
+                    <select id="dashboardPeriodo" onchange="DashboardPresenter.atualizar()">
+                        <option value="hoje">Hoje</option><option value="7">Últimos 7 dias</option>
+                        <option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option>
+                    </select>
+                    <label for="dashboardFiltroOferta">OFERTA</label>
+                    <select id="dashboardFiltroOferta" onchange="DashboardPresenter.renderizar()"><option value="">Todas as ofertas</option></select>
+                    <button type="button" class="btn-outline" id="dashboardAtualizar" onclick="DashboardPresenter.atualizar()" style="width:auto;margin:0"><i class="fas fa-sync-alt"></i> ATUALIZAR</button>
+                </div>
+                <div id="dashboardStatus" class="vendor-status" role="status">Selecione esta aba para carregar os dados.</div>
+                <div class="dashboard-grade" aria-label="Indicadores de utilização">
+                    <div class="dashboard-metrica"><strong id="dashInicios">0</strong><span>INÍCIOS REGISTRADOS</span></div>
+                    <div class="dashboard-metrica"><strong id="dashVendedores">0</strong><span>VENDEDORES DISTINTOS</span></div>
+                    <div class="dashboard-metrica"><strong id="dashOfertas">0</strong><span>OFERTAS UTILIZADAS</span></div>
+                    <div class="dashboard-metrica"><strong id="dashMaisPopular" style="font-size:16px">—</strong><span>OFERTA MAIS ACIONADA</span></div>
+                </div>
+                <p class="dashboard-explicacao">A medição registra o início da preparação do compartilhamento, não o envio efetivo pelo WhatsApp. Para evitar duplo clique, conta no máximo um início por oferta, por minuto e por navegador autenticado. A coleta começou nesta versão; períodos anteriores não são recuperados automaticamente.</p>
+                <p class="dashboard-explicacao" id="dashboardAvisoBase"></p>
+            </div>
+            <div class="admin-card dashboard-ranking-grid">
+                <div class="dashboard-ranking"><h3>🏆 OFERTAS MAIS ACIONADAS</h3><div id="dashRankingOfertas"></div></div>
+                <div class="dashboard-ranking"><h3>👥 VENDEDORES MAIS ATIVOS</h3><div id="dashRankingVendedores"></div></div>
+                <div class="dashboard-ranking"><h3>🏬 UTILIZAÇÃO POR FILIAL</h3><div id="dashRankingFiliais"></div></div>
+                <div class="dashboard-ranking"><h3>📅 DIAS COM MAIS INÍCIOS</h3><div id="dashEvolucao"></div></div>
+            </div>
+        </section><!-- /abaDashboard -->
 
         <section id="abaVendedores" class="aba-conteudo" style="display:none;">
             <div class="admin-card">
@@ -616,15 +676,17 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
-    <script src="shared/config.js?v=1.6.2"></script>
+    <script src="shared/config.js?v=1.6.3"></script>
     <script src="shared/utils.js"></script>
     <script src="model/firebase-config.js"></script>
+    <script src="model/analytics.js?v=1.6.3"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js?v=1.6.2"></script>
-    <script src="model/validators.js?v=1.6.2"></script>
+    <script src="model/storage.js?v=1.6.3"></script>
+    <script src="model/validators.js?v=1.6.3"></script>
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.2"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.3"></script>
+    <script src="presenter/dashboard-presenter.js?v=1.6.3"></script>
     <script src="model/google-sheets.js?v=1.6.1"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>

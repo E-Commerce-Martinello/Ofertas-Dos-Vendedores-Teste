@@ -57,11 +57,11 @@
                 });
             }
             // Limpar cache de versões antigas automaticamente
-            if (localStorage.getItem('cacheVersion') !== '1.6.2') {
+            if (localStorage.getItem('cacheVersion') !== '1.6.3') {
                 ['ofertasMartinello','ofertaAtiva','configTelaEmBreve'].forEach(function(k){
                     try { localStorage.removeItem(k); } catch(e){}
                 });
-                try { localStorage.setItem('cacheVersion','1.6.2'); } catch(e){}
+                try { localStorage.setItem('cacheVersion','1.6.3'); } catch(e){}
             }
         })();
     </script>
@@ -383,14 +383,16 @@
     <!-- Scripts — carregados no final para garantir ordem em todos os browsers -->
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
-    <script src="shared/config.js?v=1.6.2"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
+    <script src="shared/config.js?v=1.6.3"></script>
     <script src="shared/utils.js"></script>
     <script src="model/firebase-config.js"></script>
+    <script src="model/analytics.js?v=1.6.3"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js?v=1.6.2"></script>
-    <script src="model/validators.js?v=1.6.2"></script>
+    <script src="model/storage.js?v=1.6.3"></script>
+    <script src="model/validators.js?v=1.6.3"></script>
     <script src="view/ui.js"></script>
     <script src="presenter/api.js"></script>
-    <script src="presenter/index-presenter.js?v=1.6.2"></script>
+    <script src="presenter/index-presenter.js?v=1.6.3"></script>
 </body>
 </html>
