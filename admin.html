@@ -665,6 +665,14 @@
                 <h2><i class="fab fa-whatsapp" style="color:#168b57"></i> PARTICIPANTES DO GRUPO</h2>
                 <p class="vendor-subtext">Importe uma lista pelo painel ou aproveite a aba antiga <strong>Parâmetros de Dados</strong>. O sistema associa por Rubi ou telefone validado, mas <strong>nunca altera automaticamente o telefone de um vendedor</strong>.</p>
                 <h3>Importar participantes</h3>
+                <p class="vendor-subtext"><strong>Recomendado:</strong> envie o arquivo exportado do WhatsApp, sem modificar. O painel utiliza somente o nome exibido e o número; não grava as demais colunas.</p>
+                <input type="file" id="whatsappArquivo" accept=".xlsx,.xls,.ods,.csv" hidden onchange="WhatsAppPresenter.selecionarArquivo(this)">
+                <div class="vendor-actions">
+                    <button class="btn-outline" type="button" onclick="document.getElementById('whatsappArquivo').click()"><i class="fas fa-file-excel"></i> ESCOLHER ARQUIVO</button>
+                    <button class="btn-outline" id="whatsappAnalisarArquivo" type="button" onclick="WhatsAppPresenter.preverArquivo()"><i class="fas fa-search"></i> ANALISAR ARQUIVO</button>
+                </div>
+                <p id="whatsappArquivoInfo" class="vendor-subtext" style="margin-top:6px">Nenhum arquivo selecionado.</p>
+                <p class="vendor-subtext" style="margin-top:14px">Ou cole a lista manualmente, uma pessoa por linha:</p>
                 <p class="vendor-subtext">Para colar diretamente, use uma pessoa por linha no formato <strong>Nome;Telefone</strong> (ou separado por TAB). Confira a prévia antes de substituir a lista atual.</p>
                 <textarea id="whatsappColar" rows="4" placeholder="LUCAS - (12345) NOME - VENDEDOR;65999999999&#10;FILIAL - GERENTE;65988888888" style="width:100%;padding:12px;border:2px solid #ddd;border-radius:10px;background:transparent;color:inherit"></textarea>
                 <div class="vendor-actions">
@@ -673,7 +681,9 @@
                 </div>
                 <div id="whatsappPrevia" hidden style="margin:14px 0;padding:14px;border:1px solid #ddd;border-radius:12px">
                     <p id="whatsappPreviaTexto"></p>
-                    <button class="btn-primary" type="button" onclick="WhatsAppPresenter.importar()" style="width:auto"><i class="fas fa-check"></i> CONFIRMAR SUBSTITUIÇÃO DA LISTA</button>
+                    <p id="whatsappPreviaAmostra" class="vendor-subtext"></p>
+                    <p id="whatsappPreviaAvisos" class="vendor-subtext" style="color:#a35505"></p>
+                    <button class="btn-primary" id="whatsappConfirmarImportacao" type="button" onclick="WhatsAppPresenter.importar()" style="width:auto"><i class="fas fa-check"></i> CONFIRMAR SUBSTITUIÇÃO DA LISTA</button>
                 </div>
                 <div class="vendor-actions"><button class="btn-outline" type="button" onclick="WhatsAppPresenter.carregar()"><i class="fas fa-sync-alt"></i> ATUALIZAR LISTA</button></div>
                 <div id="whatsappStatus" class="vendor-status" role="status">Acesse esta aba para carregar a lista.</div>
@@ -792,13 +802,13 @@
     <script src="model/google-sheets.js?v=1.6.4"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-    <script src="model/vendor-import.js?v=1.6.0"></script>
+    <script src="model/vendor-import.js?v=1.6.4.1"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
     <script src="presenter/vendors-presenter.js?v=1.6.4"></script>
-    <script src="model/whatsapp.js?v=1.6.4"></script>
+    <script src="model/whatsapp.js?v=1.6.4.1"></script>
     <script src="presenter/pendencias-presenter.js?v=1.6.4"></script>
-    <script src="presenter/whatsapp-presenter.js?v=1.6.4"></script>
+    <script src="presenter/whatsapp-presenter.js?v=1.6.4.1"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 const WhatsAppPresenter = {
   participantes: [], identificacoes: [], previa: null, tipoPrevia:'colar',
+  arquivo:null, importando:false, origemPrevia:'',
   pagina:1, porPagina:40, editando:'', carregando:false,
   _esc(v) { return VendedoresPresenter._escapar(v); },
   _status(txt,tipo='') { const e=document.getElementById('whatsappStatus'); if(e){e.className='vendor-status '+tipo; e.textContent=txt;} },
@@ -18,6 +19,43 @@ const WhatsAppPresenter = {
     } catch(e) { this._status(e.message,'error'); }
     finally {this.carregando=false;}
   },
+  selecionarArquivo(input) {
+    this.arquivo = input?.files?.[0] || null;
+    this.previa = null;
+    document.getElementById('whatsappPrevia').hidden = true;
+    const info = document.getElementById('whatsappArquivoInfo');
+    if (info) info.textContent = this.arquivo
+      ? `${this.arquivo.name} — ${(this.arquivo.size / 1024).toFixed(1)} KB`
+      : 'Nenhum arquivo selecionado.';
+    this._status(this.arquivo ? 'Arquivo selecionado. Clique em ANÁLISE DO ARQUIVO.' : 'Selecione o relatório exportado do WhatsApp.');
+  },
+  async preverArquivo() {
+    if (!this.arquivo) { this._status('Selecione o arquivo de participantes primeiro.', 'error'); return; }
+    if (typeof XLSX === 'undefined') { this._status('Não foi possível carregar o leitor de planilhas. Atualize a página e tente novamente.', 'error'); return; }
+    if (this.arquivo.size > 8 * 1024 * 1024) { this._status('O arquivo excede 8 MB.', 'error'); return; }
+    const botao = document.getElementById('whatsappAnalisarArquivo');
+    if (botao) botao.disabled=true;
+    this._status('Lendo o arquivo no navegador, sem enviar a planilha inteira...');
+    try {
+      const bytes = await this.arquivo.arrayBuffer();
+      const workbook = XLSX.read(bytes, { type:'array', cellText:true, cellFormula:false, cellHTML:false });
+      const resultado = GrupoWhatsAppModel.analisarWorkbook(workbook);
+      if (!resultado.registros.length) throw new Error('Nenhum participante válido encontrado. Confira se o arquivo possui displayName e mobile.');
+      if (resultado.registros.length > 1500) throw new Error('A importação aceita até 1.500 participantes por vez.');
+      this.previa=resultado.registros;
+      this.tipoPrevia='arquivo';
+      this.origemPrevia=`Arquivo ${this.arquivo.name}`;
+      this._mostrarPrevia(resultado.registros.length, resultado.ignorados + resultado.duplicados, this.origemPrevia);
+      if (resultado.avisos.length) {
+        const nota = document.getElementById('whatsappPreviaAvisos');
+        if (nota) nota.textContent = `${resultado.avisos.length} linha(s) sem nome ou telefone válido foram ignoradas. Ex.: ${resultado.avisos.slice(0,3).join(' | ')}`;
+      }
+    } catch(e) {
+      this.previa=null;
+      document.getElementById('whatsappPrevia').hidden=true;
+      this._status(e.message || 'Não foi possível ler o arquivo.', 'error');
+    } finally { if (botao) botao.disabled=false; }
+  },
   preverTexto() {
     const texto=document.getElementById('whatsappColar').value;
     const r=GrupoWhatsAppModel.analisarTexto(texto);
@@ -27,37 +65,52 @@ const WhatsAppPresenter = {
       document.getElementById('whatsappPrevia').hidden=true;
       return;
     }
-    this.previa=r.registros; this.tipoPrevia='colar'; this._mostrarPrevia(r.registros.length,r.duplicados, 'Texto colado');
+    this.previa=r.registros; this.tipoPrevia='colar'; this.origemPrevia='Texto colado'; this._mostrarPrevia(r.registros.length,r.duplicados, 'Texto colado');
   },
   async preverParametros() {
     this._status('Lendo a aba Parâmetros de Dados...');
     try {
       const r=await GoogleSheetsService.lerParametrosWhatsApp();
       if (!r.registros?.length) throw new Error('Não há participantes com telefone válido na aba Parâmetros de Dados.');
-      this.previa=r.registros; this.tipoPrevia='parametros';
+      this.previa=r.registros; this.tipoPrevia='parametros'; this.origemPrevia='Parâmetros de Dados';
       this._mostrarPrevia(r.registros.length,r.descartadas||0,'Parâmetros de Dados');
     } catch(e) {this.previa=null;document.getElementById('whatsappPrevia').hidden=true;this._status(e.message,'error');}
   },
   _mostrarPrevia(total, ignorados, origem) {
     const p=document.getElementById('whatsappPrevia'); p.hidden=false;
     document.getElementById('whatsappPreviaTexto').textContent=`${origem}: ${total} números únicos; ${ignorados} linhas ignoradas ou repetidas. A lista anterior será substituída; identificações manuais serão preservadas.`;
+    const nota=document.getElementById('whatsappPreviaAvisos'); if (nota) nota.textContent='';
+    const amostra=document.getElementById('whatsappPreviaAmostra');
+    if (amostra) amostra.textContent = (this.previa || []).slice(0,3)
+      .map(r => `${r.nome} · telefone final ${String(r.telefone).slice(-4)}`).join(' | ');
     this._status('Prévia pronta. Confira a quantidade antes de substituir.');
   },
   async importar() {
-    if (!this.previa?.length) return;
+    if (!this.previa?.length || this.importando) return;
     const anteriores=this.participantes.length;
     const reducao=anteriores>=20 && this.previa.length<anteriores*0.7;
     const detalhe=reducao?' ATENÇÃO: a nova lista é mais de 30% menor do que a anterior.':'';
     if (!confirm(`Substituir a lista atual (${anteriores}) por ${this.previa.length} participantes?${detalhe}\nOs cadastros oficiais e as identificações manuais NÃO serão alterados.`)) return;
     if (reducao && !confirm('Confirma novamente a redução significativa da lista de participantes?')) return;
+    this.importando=true;
+    const btn=document.getElementById('whatsappConfirmarImportacao');
+    if (btn) btn.disabled=true;
     this._status('Atualizando a lista do grupo no Sheets...');
     try {
-      const resposta=await GoogleSheetsService.importarWhatsApp({origem:this.tipoPrevia,
-        registros: this.tipoPrevia==='colar'?this.previa:[], confirmar:true, aceitarReducao:reducao });
-      this._status(`${resposta.total} participantes importados. Telefones dos vendedores não foram alterados.`, 'ok');
-      this.previa=null; document.getElementById('whatsappPrevia').hidden=true;
+      const resposta=await GoogleSheetsService.importarWhatsApp({
+        origem:this.tipoPrevia==='parametros' ? 'parametros' : 'colar',
+        registros:this.tipoPrevia==='parametros' ? [] : this.previa,
+        confirmado:true, aceitarReducao:reducao
+      });
+      if (!Number.isInteger(Number(resposta.total)) || Number(resposta.total)!==this.previa.length) {
+        throw new Error('A API não confirmou a quantidade esperada. Confira a lista no Google Sheets antes de repetir.');
+      }
+      this.previa=null;
+      document.getElementById('whatsappPrevia').hidden=true;
       await this.carregar();
+      this._status(`${resposta.total} participantes gravados no Sheets. Telefones dos vendedores preservados.`, 'ok');
     } catch(e) {this._status(e.message,'error');}
+    finally { this.importando=false; if (btn) btn.disabled=false; }
   },
   _registrosClassificados() {
     const base=VendedoresPresenter.registros || [];

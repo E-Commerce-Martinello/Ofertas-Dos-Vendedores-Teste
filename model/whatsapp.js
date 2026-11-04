@@ -32,6 +32,47 @@ const GrupoWhatsAppModel = {
     });
     return { registros: validos, erros, duplicados };
   },
+  analisarWorkbook(workbook) {
+    if (!workbook?.SheetNames?.length) throw new Error('A planilha não possui abas legíveis.');
+    const registros=[], avisos=[];
+    let duplicados=0, ignorados=0, encontrouCabecalho=false;
+    const vistos=new Set();
+    const normalizaCab = v => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/gi,'').toLowerCase();
+    workbook.SheetNames.forEach(aba => {
+      const linhas = XLSX.utils.sheet_to_json(workbook.Sheets[aba], {header:1, defval:'', raw:false, blankrows:false});
+      let cab=null;
+      for (let i=0;i<Math.min(linhas.length,25);i++) {
+        const h=(linhas[i] || []).map(normalizaCab);
+        const fone=h.findIndex(v=>['mobile','phone','phone1value','telefone','numero','celular','whatsapp'].includes(v));
+        const nome=h.findIndex(v=>['displayname','nomeexibido','nomecompleto','nome','participante','name'].includes(v));
+        const first=h.findIndex(v=>['firstname','primeironome'].includes(v));
+        const last=h.findIndex(v=>['lastname','sobrenome'].includes(v));
+        if (fone>=0 && (nome>=0 || first>=0)) { cab={linha:i,fone,nome,first,last}; break; }
+      }
+      if (!cab) return;
+      encontrouCabecalho=true;
+      for (let i=cab.linha+1; i<linhas.length; i++) {
+        const r=linhas[i]||[];
+        if (!r.some(v=>String(v??'').trim())) continue;
+        const rawPhone=String(r[cab.fone]??'').trim();
+        const telefone=this.telefone(rawPhone);
+        const nomeBruto=cab.nome>=0 ? String(r[cab.nome]??'').trim() : '';
+        const fallback=[cab.first>=0?r[cab.first]:'',cab.last>=0?r[cab.last]:'']
+          .map(x=>String(x??'').trim()).filter(Boolean).join(' ');
+        const nome=(nomeBruto || fallback).replace(/[\x00-\x1f\x7f]/g,' ').trim();
+        if (!telefone || !nome || /^[=+@-]/.test(nome)) {
+          ignorados++;
+          if (avisos.length<20) avisos.push(`aba ${aba}, linha ${i+1}`);
+          continue;
+        }
+        if (vistos.has(telefone)) {duplicados++; continue;}
+        vistos.add(telefone);
+        registros.push({telefone,nome:nome.slice(0,180)});
+      }
+    });
+    if (!encontrouCabecalho) throw new Error('Não encontrei as colunas displayName e mobile (ou Nome e Telefone).');
+    return {registros, ignorados, duplicados, avisos};
+  },
   classificar(participante, vendedores, manuais) {
     const telefone = this.telefone(participante.telefone);
     const nomeGrupo = String(participante.nome || '');

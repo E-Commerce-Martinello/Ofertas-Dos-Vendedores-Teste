@@ -74,13 +74,18 @@ const VendorImportPresenter = {
 
     _filialDoCabecalho(valor) {
         const t = this._texto(valor);
-        // No XLS da empresa: "1.0001 , MARTINELLO, F0001 LUCAS DO RIO VERDE".
-        // O identificador do cadastro é 1 (F0001), não a cidade nem o número 1.0001.
-        const m = t.match(/\bF\s*0*(\d{1,6})\s+(.+)$/i);
+        // O relatório original traz os cabeçalhos na coluna A:
+        // "1.0001 , MARTINELLO, F0001 LUCAS DO RIO VERDE".
+        // Na versão formatada: "F0001 LUCAS DO RIO VERDE".
+        // NÃO buscar códigos F em RG/CPF: existem textos como
+        // "F059999 - CGPI/DIREX/PF/XX", que NÃO identificam uma filial.
+        const origem = t.match(/^\d{1,4}\.\d{4}\s*,\s*MARTINELLO\s*,\s*F0*([1-9]\d{0,3})\s+(.+)$/i);
+        const formatado = t.match(/^F0*([1-9]\d{0,3})\s+([^,;]+)$/i);
+        const m = origem || formatado;
         if (!m) return null;
         const numero = String(Number(m[1]));
         const localidade = this._texto(m[2]).replace(/^[,;:\-\s]+/, '').replace(/[;,\s]+$/, '');
-        if (!/^\d+$/.test(numero) || numero === '0' || !localidade) return null;
+        if (!localidade || /^-/.test(localidade)) return null;
         return { numero, localidade };
     },
 
@@ -109,12 +114,12 @@ const VendorImportPresenter = {
         const cab = this._lerCabecalho(rows);
         if (cab) {
             for (let i = 0; i < cab.linha; i++) {
-                const secao = (rows[i] || []).map(c => this._filialDoCabecalho(c)).find(Boolean);
+                const secao = this._filialDoCabecalho((rows[i] || [])[0]);
                 if (secao) filialAtual = secao;
             }
             for (let i = cab.linha + 1; i < rows.length; i++) {
                 const row = rows[i] || [];
-                const secao = row.map(c => this._filialDoCabecalho(c)).find(Boolean);
+                const secao = this._filialDoCabecalho(row[0]);
                 if (secao) { filialAtual = secao; continue; }
                 if (this._ehLinhaPaginacao(row)) continue;
                 const matricula = this._digitos(row[cab.matricula]);
@@ -135,7 +140,7 @@ const VendorImportPresenter = {
         // Formato original/formatado por blocos: uma linha F0001 + linhas de vendedores.
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i] || [];
-            const secao = row.map(c => this._filialDoCabecalho(c)).find(Boolean);
+            const secao = this._filialDoCabecalho(row[0]);
             if (secao) { filialAtual = secao; continue; }
             if (this._ehLinhaPaginacao(row)) continue;
             const matricula = this._digitos(row[0]);
