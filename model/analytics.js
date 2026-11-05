@@ -10,6 +10,28 @@ const AnalyticsService = {
         } catch (_) {}
     },
 
+    // Visita sem matrícula, telefone, IP ou nome. Uma sessão a cada 30 min neste navegador.
+    async registrarVisita() {
+        const url=String(CONFIG.portalEventsApiUrl||'');
+        if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) return false;
+        let anterior=null;
+        try { anterior=JSON.parse(sessionStorage.getItem('martVisitaPortal_TESTE')||'null'); } catch(_) {}
+        if(anterior?.id && Date.now()-anterior.ts < 1800000) return true;
+        const id=`vis_${Date.now()}_${Math.random().toString(36).slice(2,13)}`;
+        const query=new URLSearchParams(location.search);
+        const fonte=query.get('utm_source')==='whatsapp' && query.get('utm_medium')==='grupo'
+          ? 'whatsapp_grupo' : query.has('utm_source') ? 'outro' : 'direto';
+        const dados=new URLSearchParams({action:'registrarVisita',origem:location.origin,
+          sessionId:id,origemCampanha:fonte});
+        try {
+            await fetch(url,{method:'POST',mode:'no-cors',keepalive:true,cache:'no-store',
+              headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:dados.toString()});
+            // Retorno opaco confirma somente despacho; a gravação deve ser conferida no Sheets.
+            try {sessionStorage.setItem('martVisitaPortal_TESTE',JSON.stringify({id,ts:Date.now()}));} catch(_){}
+            return true;
+        } catch(e) {console.warn('Medição de visita indisponível:',e);return false;}
+    },
+
     async registrarInicio(oferta, matricula) {
         const ofertaId = String(oferta?.id ?? '').trim();
         const rubi = String(matricula || '').replace(/\D/g, '');

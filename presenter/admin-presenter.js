@@ -143,7 +143,7 @@ const AdminPresenter = {
             }
         }
         const restaurada = this._abaSalva();
-        this.mostrarAba(['ofertas','dashboard','vendedores','contatos','aparencia','configuracoes','acessos'].includes(restaurada) ? restaurada : 'ofertas');
+        this.mostrarAba(['ofertas','dashboard','vendedores','contatos','aparencia','configuracoes','acessos','links'].includes(restaurada) ? restaurada : 'ofertas');
         if (typeof VendedoresPresenter !== 'undefined') {
             VendedoresPresenter.init();
             // Uma consulta automaticamente, sem expor a URL ou exigir conexão manual.
@@ -214,25 +214,27 @@ const AdminPresenter = {
         const acessos = aba === 'acessos' && document.getElementById('tabAcessos').style.display !== 'none';
         if (aba === 'whatsapp' || aba === 'pendencias') aba = 'vendedores';
         const vendedores = aba === 'vendedores';
+        const links = aba === 'links';
         const dashboard = aba === 'dashboard';
         const contatos = aba === 'contatos';
         const aparencia = aba === 'aparencia';
         const configuracoes = aba === 'configuracoes';
         const pendencias = false; // Pendências agora são um filtro da lista única.
         const whatsapp = false; // A gestão do grupo está integrada à aba Vendedores.
-        this.abaAtual = acessos ? 'acessos' : configuracoes ? 'configuracoes' : aparencia ? 'aparencia' : contatos ? 'contatos' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : 'ofertas';
+        this.abaAtual = acessos ? 'acessos' : configuracoes ? 'configuracoes' : aparencia ? 'aparencia' : contatos ? 'contatos' : links ? 'links' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : 'ofertas';
         if (this._autorizado) this._lembrarAba(this.abaAtual);
-        ['ofertas','vendedores','dashboard','contatos','aparencia','configuracoes','pendencias','whatsapp','acessos'].forEach(nome => {
+        ['ofertas','vendedores','dashboard','links','contatos','aparencia','configuracoes','pendencias','whatsapp','acessos'].forEach(nome => {
             const el = document.getElementById('aba'+nome[0].toUpperCase()+nome.slice(1));
             if (el) el.style.display = this.abaAtual === nome ? 'block' : 'none';
             const tab = document.getElementById('tab'+nome[0].toUpperCase()+nome.slice(1));
             if (tab) tab.classList.toggle('active',this.abaAtual === nome);
         });
         document.getElementById('btnNovaOfertaTopo').style.display = this.abaAtual === 'ofertas' ? 'inline-block' : 'none';
-        const titulos={ofertas:'⚙️ AGENDADOR',dashboard:'📊 DASHBOARD',vendedores:'👥 VENDEDORES',contatos:'💬 CONTATOS',aparencia:'🎨 APARÊNCIA',configuracoes:'⚙️ CONFIGURAÇÕES',
+        const titulos={ofertas:'⚙️ AGENDADOR',dashboard:'📊 DASHBOARD',links:'🔗 LINKS MARTINELLO',vendedores:'👥 VENDEDORES',contatos:'💬 CONTATOS',aparencia:'🎨 APARÊNCIA',configuracoes:'⚙️ CONFIGURAÇÕES',
                        pendencias:'📋 PENDÊNCIAS',whatsapp:'💬 WHATSAPP',acessos:'🔐 ACESSOS'};
         const descricoes={ofertas:'Várias ofertas podem ficar disponíveis ao mesmo tempo',
-                          dashboard:'Acompanhamento de compartilhamentos iniciados',
+                          dashboard:'Acompanhamento de acessos e compartilhamentos iniciados',
+                          links:'Situação dos links de vendedores por filial',
                           vendedores:'Cadastros, participação no grupo e importações em uma lista única',
                           contatos:'Seleção de vendedores e preparação manual de mensagens',
                           aparencia:'Logo, imagem e textos do portal — sincronizados entre dispositivos',
@@ -242,7 +244,8 @@ const AdminPresenter = {
                           acessos:'Gestão de administradores autorizados'};
         document.getElementById('tituloAdmin').textContent = titulos[this.abaAtual];
         document.getElementById('subtituloAdmin').textContent = descricoes[this.abaAtual];
-        if (vendedores) VendedoresPresenter.init();
+        if (vendedores || links) VendedoresPresenter.init();
+        if (links) VendedoresPresenter.renderizarPainelLinks();
         if (dashboard) DashboardPresenter.atualizar();
         if (contatos) ContatosPresenter.init();
         if (acessos) GerenciarAcessosPresenter.carregar();

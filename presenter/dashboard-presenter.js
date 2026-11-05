@@ -51,7 +51,13 @@ const DashboardPresenter = {
         const el = id => document.getElementById(id);
         const selecionada = el('dashboardFiltroOferta')?.value || '';
         const mapa = this._mapaVendedores();
-        const eventos = this.eventos.filter(ev => !selecionada || String(ev.ofertaId) === selecionada);
+        const visitas=this.eventos.filter(ev=>ev.tipo==='acesso_portal');
+        const eventos = this.eventos.filter(ev => ev.tipo==='inicio_compartilhamento' &&
+          (!selecionada || String(ev.ofertaId)===selecionada));
+        const acesso=document.getElementById('dashAcessosPortal');
+        const whats=document.getElementById('dashAcessosWhatsApp');
+        if(acesso)acesso.textContent=visitas.length.toLocaleString('pt-BR');
+        if(whats)whats.textContent=visitas.filter(ev=>ev.origem==='whatsapp_grupo').length.toLocaleString('pt-BR');
         const unicos = new Set(eventos.map(e => e.matricula));
         const ofertas = new Set(eventos.map(e => String(e.ofertaId)));
         el('dashInicios').textContent = eventos.length.toLocaleString('pt-BR');
@@ -86,12 +92,21 @@ const DashboardPresenter = {
         if (!sel) return;
         const anterior = sel.value;
         const map = new Map();
-        for (const e of this.eventos) map.set(String(e.ofertaId), this._nomeOferta(e.ofertaId,e.tituloOferta));
+        for (const e of this.eventos.filter(ev=>ev.tipo==='inicio_compartilhamento')) map.set(String(e.ofertaId), this._nomeOferta(e.ofertaId,e.tituloOferta));
         sel.replaceChildren(new Option('Todas as ofertas',''));
         for (const [id,nome] of [...map].sort((a,b) => a[1].localeCompare(b[1], 'pt-BR'))) {
             sel.add(new Option(nome, id));
         }
         if (map.has(anterior)) sel.value = anterior;
+    },
+
+    async copiarLinkGrupo() {
+        const link=new URL('index.html',location.href);
+        link.searchParams.set('utm_source','whatsapp');
+        link.searchParams.set('utm_medium','grupo');
+        link.searchParams.set('utm_campaign','ofertas');
+        try {await navigator.clipboard.writeText(link.href);UI.ok('Link rastreável copiado.');}
+        catch(_) {window.prompt('Copie o link do grupo:',link.href);}
     },
 
     async atualizar() {

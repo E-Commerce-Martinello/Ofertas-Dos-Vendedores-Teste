@@ -21,6 +21,7 @@ const IndexPresenter = {
         // O registro agora usa um coletor público limitado (Google Sheets).
         // Não requer login Firebase dos vendedores.
         this._renderCarregando();
+        AnalyticsService.registrarVisita().catch(e=>console.warn('Visita não registrada:',e));
         const cache = Storage.ofertasDoCache();
         if (cache.length) this._aplicarOfertas(cache);
         this.intervalo = setInterval(() => this._tick(), 1000);
@@ -199,6 +200,8 @@ const IndexPresenter = {
         btn.disabled = true;
         texto.textContent = 'PREPARANDO...';
         try {
+            const continuar = await TelefonePortal.garantir(cod);
+            if (!continuar) return;
             Storage.salvarUltimaMatricula(cod);
             const link = `${CONFIG.urlBase}${cod}?redir=${encodeURIComponent(oferta.linkProduto)}`;
             const msg = formatarTexto(oferta.textoOferta, link, cod);

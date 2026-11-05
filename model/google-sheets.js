@@ -158,6 +158,11 @@ const GoogleSheetsService = {
         };
     },
 
+    async listarSolicitacoesTelefone() {
+        const r=await this._post('listarSolicitacoesTelefone');
+        return Array.isArray(r.resultado?.pedidos)?r.resultado.pedidos:[];
+    },
+
     async listarLinks() {
         const resposta = await this._post('listarVerificacoesLinks');
         return resposta.resultado || { resultados: [] };

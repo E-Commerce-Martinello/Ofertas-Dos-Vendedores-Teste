@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.6.12 TESTE</title>
+    <title>Admin Martinello | 1.6.13 TESTE</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -202,6 +202,40 @@
         body.dark-mode .aparencia-preview,body.dark-mode .aparencia-ajuda {border-color:#5a5a5a;}
         body.dark-mode .aparencia-ajuda {color:#ccc;}
         @media(max-width:680px) {.aparencia-grid {grid-template-columns:1fr;}.aparencia-acoes button{flex:1 1 100%;}}
+    
+        /* v1.6.13 — painéis e filtros coesos */
+        .central-item{display:flex;flex-direction:column;height:100%;}
+        .central-item p{flex:1;min-height:0;}
+        .central-item button{margin-top:auto!important;}
+        #abaContatos .contatos-grid select,#abaContatos .contatos-grid input,
+        #abaLinks select,#abaLinks input[type="search"] {display:block;appearance:auto;box-sizing:border-box;min-height:43px;padding:10px 12px;border-radius:10px;border:1px solid #c9c9c9;font-family:inherit;font-size:13px;background:#fff;color:#292929;}
+        #abaContatos .contatos-grid select{max-width:none;}
+        body.dark-mode #abaContatos .contatos-grid select,body.dark-mode #abaContatos .contatos-grid input,
+        body.dark-mode #abaLinks select,body.dark-mode #abaLinks input[type="search"] {background:#343434;border-color:#626262;color:#f4f4f4;}
+        #abaLinks .vendor-link-tools{background:transparent;}
+        .links-titulo-linha,.links-secao-topo {display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+        .links-titulo-linha h2 {margin-bottom:6px;}
+        .links-atualizar{width:auto!important;margin:0!important;}
+        .links-secao-topo{margin:20px 0 12px;}
+        .links-secao-topo h3{font-size:15px;}
+        #abaLinks .links-secao-topo select{width:auto;min-width:190px;max-width:100%;}
+        .links-filiais-lista{display:grid;gap:10px;min-width:0;}
+        .links-filial-card{padding:14px;border:1px solid #e0e0e0;border-radius:13px;min-width:0;}
+        .links-filial-card summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+        .links-filial-card summary::-webkit-details-marker{display:none;}
+        .links-filial-name{font-weight:800;font-size:13px;overflow-wrap:anywhere;}
+        .links-filial-total{font-size:12px;color:#777;white-space:nowrap;}
+        .links-filial-stats{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:12px;margin-top:8px;}
+        .links-verde{color:#20854e;font-weight:700;}.links-vermelho{color:#b52b30;font-weight:700;}
+        .links-bar{display:flex;height:7px;border-radius:20px;background:#aaa;overflow:hidden;margin-top:12px;}
+        .links-bar .ok{background:#2e9863;}.links-bar .off{background:#cf454b;}.links-bar .pending{background:#aaa;}
+        .links-filial-detalhes{margin-top:14px;padding-top:12px;border-top:1px solid #ddd;font-size:12px;line-height:1.6;}
+        .links-filial-detalhes p{margin:4px 0;}
+        #abaLinks .vendor-link-filters{grid-template-columns:repeat(3,minmax(0,1fr));}
+        body.dark-mode .links-filial-card{border-color:#515151;}
+        body.dark-mode .links-filial-total{color:#bbb;}
+        @media(max-width:760px){#abaLinks .vendor-link-filters{grid-template-columns:1fr;} .links-titulo-linha{align-items:stretch;} .links-atualizar{width:100%!important;}}
+
     </style>
 
     <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
@@ -584,6 +618,7 @@
             <button type="button" class="admin-tab" id="tabDashboard" onclick="AdminPresenter.mostrarAba('dashboard')">
                 <i class="fas fa-chart-line"></i> DASHBOARD
             </button>
+            <button type="button" class="admin-tab" id="tabLinks" onclick="AdminPresenter.mostrarAba('links')"><i class="fas fa-link"></i> LINKS MARTINELLO</button>
             <button type="button" class="admin-tab" id="tabVendedores" onclick="AdminPresenter.mostrarAba('vendedores')">
                 <i class="fas fa-users"></i> VENDEDORES
             </button>
@@ -760,12 +795,15 @@
                 </div>
                 <div id="dashboardStatus" class="vendor-status" role="status">Selecione esta aba para carregar os dados.</div>
                 <div class="dashboard-grade" aria-label="Indicadores de utilização">
+                    <div class="dashboard-metrica"><strong id="dashAcessosPortal">0</strong><span>ACESSOS AO PORTAL</span></div>
+                    <div class="dashboard-metrica"><strong id="dashAcessosWhatsApp">0</strong><span>VIA LINK DO GRUPO</span></div>
                     <div class="dashboard-metrica"><strong id="dashInicios">0</strong><span>INÍCIOS REGISTRADOS</span></div>
                     <div class="dashboard-metrica"><strong id="dashVendedores">0</strong><span>VENDEDORES DISTINTOS</span></div>
                     <div class="dashboard-metrica"><strong id="dashOfertas">0</strong><span>OFERTAS UTILIZADAS</span></div>
                     <div class="dashboard-metrica"><strong id="dashMaisPopular" style="font-size:16px">—</strong><span>OFERTA MAIS ACIONADA</span></div>
                 </div>
-                <p class="dashboard-explicacao">A medição registra o início da preparação do compartilhamento, não o envio efetivo pelo WhatsApp. Para evitar duplo clique, conta no máximo um início por oferta e matrícula em uma janela de dez minutos. A coleta começou nesta versão; períodos anteriores não são recuperados automaticamente.</p>
+                <div class="vendor-actions" style="margin:9px 0"><button type="button" class="btn-outline" style="width:auto" onclick="DashboardPresenter.copiarLinkGrupo()"><i class="fas fa-link"></i> COPIAR LINK RASTREÁVEL DO GRUPO</button></div>
+                <p class="dashboard-explicacao">Acessos ao portal indicam sessões registradas, sem identificar a pessoa que clicou. A medição registra o início da preparação do compartilhamento, não o envio efetivo pelo WhatsApp. Para evitar duplo clique, conta no máximo um início por oferta e matrícula em uma janela de dez minutos. A coleta começou nesta versão; períodos anteriores não são recuperados automaticamente.</p>
                 <p class="dashboard-explicacao" id="dashboardAvisoBase"></p>
             </div>
             <div class="admin-card dashboard-ranking-grid">
@@ -776,16 +814,55 @@
             </div>
         </section><!-- /abaDashboard -->
 
+        <section id="abaLinks" class="aba-conteudo" style="display:none;">
+          <div class="admin-card">
+            <div class="links-titulo-linha"><div><h2><i class="fas fa-link"></i> LINKS MARTINELLO</h2><p class="vendor-subtext">Resumo dos vendedores ativos, organizado por filial.</p></div><button class="btn-outline links-atualizar" type="button" onclick="VendedoresPresenter.atualizar()"><i class="fas fa-sync-alt"></i> ATUALIZAR</button></div>
+            <div class="dashboard-grade links-kpis">
+              <div class="dashboard-metrica"><strong id="linksTotalAtivos">—</strong><span>VENDEDORES ATIVOS</span></div>
+              <div class="dashboard-metrica"><strong id="linksTotalCadastrados">—</strong><span>CADASTRADOS (REDIRECIONAM)</span></div>
+              <div class="dashboard-metrica"><strong id="linksTotalSemCadastro">—</strong><span>SEM CADASTRO</span></div>
+              <div class="dashboard-metrica"><strong id="linksTotalPendentes">—</strong><span>SEM RESULTADO CONCLUSIVO</span></div>
+            </div>
+            <div class="links-secao-topo"><h3>Resumo por filial</h3><select id="linksDashboardFilial" aria-label="Filtrar dashboard dos links por filial" onchange="VendedoresPresenter.renderizarPainelLinks()"><option value="">Todas as filiais</option></select></div>
+            <div id="linksFiliaisLista" class="links-filiais-lista" aria-live="polite"><p class="vendor-subtext">Carregando filiais…</p></div>
+            <p class="dashboard-explicacao">“Cadastrado” indica redirecionamento observado; “Sem cadastro” indica retorno de ausência/localhost. Erros ou respostas inconclusivas ficam pendentes, sem classificação automática.</p>
+          </div>
+          <div class="admin-card">
+            <div id="painelGestaoVendedores" style="display:none;" class="vendor-link-panel">
+                <details class="vendor-tools vendor-link-tools" id="painelLinks">
+                    <summary><span><i class="fas fa-link"></i> VERIFICAÇÃO DOS LINKS</span><span class="vendor-tools-help">Consulta e resultados</span></summary>
+                    <p class="vendor-subtext">Os resultados são indicativos. Redirecionamentos e códigos HTTP não comprovam, isoladamente, a situação cadastral.</p>
+                    <div class="vendor-link-actions">
+                      <button type="button" class="btn-outline" id="btnVerificarPendentes" onclick="VendedoresPresenter.verificarLinksEmLote('pendentes')"><i class="fas fa-search"></i> VERIFICAR NÃO VERIFICADOS</button>
+                      <button type="button" class="btn-primary" id="btnVerificarTodos" onclick="VendedoresPresenter.verificarLinksEmLote('todos')"><i class="fas fa-sync-alt"></i> VERIFICAÇÃO GERAL</button>
+                      <button type="button" class="vendor-quiet-btn" id="btnCancelarLinks" onclick="VendedoresPresenter.cancelarVerificacaoLinks()" hidden>PARAR</button>
+                    </div>
+                    <p class="vendor-last-update" id="statusVerificacaoLinks" role="status" aria-live="polite">Escolha uma verificação. O sistema consulta em lotes de até 30.</p>
+                    <div class="vendor-link-filters">
+                      <select id="filtroLinkGeral" aria-label="Filtrar status do link" onchange="VendedoresPresenter.filtrarLinks()">
+                        <option value="todos">Todos os links</option>
+                        <option value="sem-link">Não verificados</option>
+                        <option value="inativo">Sem cadastro</option>
+                        <option value="redirecionamento">Cadastrados</option>
+                      </select>
+                      <select id="filtroFilialLinks" aria-label="Filtrar links por filial" onchange="VendedoresPresenter.filtrarLinks()"><option value="">Todas as filiais</option></select>
+                      <input type="search" id="buscaLinkGeral" aria-label="Buscar link por vendedor ou matrícula" placeholder="Buscar vendedor ou Rubi..." oninput="VendedoresPresenter.filtrarLinks()">
+                    </div>
+                    <div id="resumoLinks" class="vendor-last-update"></div>
+                    <div id="listaLinks" class="vendor-links-lista" role="list" aria-live="polite"></div>
+                    <div class="vendor-actions vendor-centered-actions">
+                      <button type="button" id="btnMaisLinks" class="vendor-quiet-btn" onclick="VendedoresPresenter.mostrarMaisLinks()" hidden>Mostrar mais links</button>
+                      <button type="button" id="btnMenosLinks" class="vendor-quiet-btn" onclick="VendedoresPresenter.mostrarMenosLinks()" hidden>Mostrar menos</button>
+                    </div>
+                </details>
+            </div>
+          </div>
+        </section><!-- /abaLinks -->
+
         <section id="abaVendedores" class="aba-conteudo" style="display:none;">
             <div class="admin-card">
                 <h2><i class="fas fa-users" style="color:#d0252a;"></i> BASE DE VENDEDORES</h2>
-                <p style="color:#777;font-size:13px;line-height:1.6;">A consulta, inclusão e edição dos vendedores agora utiliza diretamente a aba <strong>Vendedores</strong> da planilha de TESTE. A situação do grupo é calculada automaticamente pelos telefones validados. As importações não alteram os telefones oficiais sem confirmação.</p>
-
-                <div class="vendor-help">
-                    <strong>Conexão protegida pelo Google Apps Script</strong><br>
-                    A API usa a planilha de TESTE e valida a identidade Google via Firebase Authentication no servidor. Nenhum token permanente é armazenado neste navegador.
-                </div>
-
+                <p class="vendor-subtext">Consulte e edite os vendedores, telefones e situação no grupo em um só lugar.</p>
                 <div class="vendor-actions">
                     <button type="button" class="btn-outline" id="btnAtualizarVendedores" onclick="VendedoresPresenter.atualizar()" disabled><i class="fas fa-sync-alt"></i> ATUALIZAR DADOS</button>
                 </div>
@@ -809,38 +886,14 @@
                     <div class="vendor-kpi"><strong id="kpiGrupoPendente">—</strong><span>Não verificáveis</span></div>
                 </div>
 
-            <div id="painelGestaoVendedores" style="display:none;" class="vendor-link-panel">
-                <details class="vendor-tools vendor-link-tools" id="painelLinks">
-                    <summary><span><i class="fas fa-link"></i> LINKS MARTINELLO</span><span class="vendor-tools-help">Verificações e resultados</span></summary>
-                    <p class="vendor-subtext">Resultados ficam no Google Sheets. Resposta HTTP, redirecionamento e falha de consulta não confirmam, por si só, que a matrícula está inativa.</p>
-                    <div class="vendor-link-actions">
-                      <button type="button" class="btn-outline" id="btnVerificarPendentes" onclick="VendedoresPresenter.verificarLinksEmLote('pendentes')"><i class="fas fa-search"></i> VERIFICAR NÃO VERIFICADOS</button>
-                      <button type="button" class="btn-primary" id="btnVerificarTodos" onclick="VendedoresPresenter.verificarLinksEmLote('todos')"><i class="fas fa-sync-alt"></i> VERIFICAÇÃO GERAL</button>
-                      <button type="button" class="vendor-quiet-btn" id="btnCancelarLinks" onclick="VendedoresPresenter.cancelarVerificacaoLinks()" hidden>PARAR</button>
-                    </div>
-                    <p class="vendor-last-update" id="statusVerificacaoLinks" role="status" aria-live="polite">Escolha uma verificação. O sistema consulta em lotes de até 30.</p>
-                    <div class="vendor-link-filters">
-                      <select id="filtroLinkGeral" aria-label="Filtrar status do link" onchange="VendedoresPresenter.filtrarLinks()">
-                        <option value="alertas">Links que precisam de atenção</option>
-                        <option value="sem-link">Não verificados</option>
-                        <option value="redirecionamento">Redirecionam</option>
-                        <option value="inativo">Possíveis inativos</option>
-                        <option value="erro">Erros de consulta</option>
-                        <option value="inconclusivo">Inconclusivos</option>
-                        <option value="ativo">Responderam (HTTP 2xx)</option>
-                        <option value="todos">Todos os links</option>
-                      </select>
-                      <input type="search" id="buscaLinkGeral" aria-label="Buscar link por vendedor ou matrícula" placeholder="Buscar vendedor ou Rubi..." oninput="VendedoresPresenter.filtrarLinks()">
-                    </div>
-                    <div id="resumoLinks" class="vendor-last-update"></div>
-                    <div id="listaLinks" class="vendor-links-lista" role="list" aria-live="polite"></div>
-                    <div class="vendor-actions vendor-centered-actions">
-                      <button type="button" id="btnMaisLinks" class="vendor-quiet-btn" onclick="VendedoresPresenter.mostrarMaisLinks()" hidden>Mostrar mais links</button>
-                      <button type="button" id="btnMenosLinks" class="vendor-quiet-btn" onclick="VendedoresPresenter.mostrarMenosLinks()" hidden>Mostrar menos</button>
-                    </div>
-                </details>
-            </div>
 
+
+                <details class="vendor-tools" id="painelPedidosTelefone" ontoggle="if(this.open)VendedoresPresenter.carregarSolicitacoesTelefone()">
+                  <summary><span><i class="fas fa-phone-alt"></i> SOLICITAÇÕES DE TELEFONE</span><span class="vendor-tools-help">Recebidas pelo portal para revisão</span></summary>
+                  <p class="vendor-subtext">Os números enviados pelo portal não alteram o cadastro oficial. Confira com o vendedor antes de marcá-los como validados.</p>
+                  <div id="pedidosTelefoneStatus" class="vendor-last-update">Abra para consultar os pedidos.</div>
+                  <div id="pedidosTelefoneLista" class="vendor-links-lista"></div>
+                </details>
                 <div class="vendor-section-head">
                     <h2>CONSULTAR E GERENCIAR VENDEDORES</h2>
                     <button class="vendor-quiet-btn" type="button" onclick="VendedoresPresenter.limparFiltros()"><i class="fas fa-undo-alt"></i> Limpar filtros</button>
@@ -1109,21 +1162,21 @@
     <script src="shared/utils.js"></script>
     <script src="model/firebase-config.js"></script>
     <script src="model/appearance.js?v=1.6.10"></script>
-    <script src="model/analytics.js?v=1.6.4"></script>
+    <script src="model/analytics.js?v=1.6.13"></script>
     <script src="model/horario.js"></script>
     <script src="model/storage.js?v=1.6.11"></script>
     <script src="model/validators.js?v=1.6.4"></script>
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.12"></script>
-    <script src="presenter/dashboard-presenter.js?v=1.6.4"></script>
-    <script src="model/google-sheets.js?v=1.6.9.1"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.13"></script>
+    <script src="presenter/dashboard-presenter.js?v=1.6.13"></script>
+    <script src="model/google-sheets.js?v=1.6.13"></script>
     <!-- SheetJS é carregado sob demanda, apenas quando alguém importa uma planilha. -->
     <script src="model/planilha-loader.js?v=1.6.12"></script>
     <script src="model/vendor-import.js?v=1.6.12"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.12"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.13"></script>
     <script src="model/whatsapp.js?v=1.6.8"></script>
     <script src="presenter/pendencias-presenter.js?v=1.6.6"></script>
     <script src="presenter/whatsapp-presenter.js?v=1.6.12"></script>

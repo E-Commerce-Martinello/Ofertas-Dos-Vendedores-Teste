@@ -15,7 +15,23 @@
     <style>
         /* Aplicado antes do body carregar — evita flash branco */
         html.dark-mode-pre body { background: #1a1a1a !important; }
-    </style>
+    
+        /* v1.6.13 — solicitação opcional após consultar status oficial */
+        #portalTelefoneModal[hidden]{display:none!important;}
+        #portalTelefoneModal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:flex;justify-content:center;align-items:center;padding:16px;}
+        .portal-telefone-card{width:min(100%,410px);max-height:95vh;overflow:auto;background:#fff;color:#252525;border-radius:18px;padding:24px;box-shadow:0 14px 45px rgba(0,0,0,.3);}
+        .portal-telefone-card h3{font-size:18px;margin-bottom:12px;color:#d0252a;}
+        .portal-telefone-card p{font-size:13px;line-height:1.6;margin:9px 0;}
+        .portal-telefone-card label{display:block;font-size:12px;font-weight:700;margin:14px 0 6px;}
+        .portal-telefone-card input{display:block;width:100%;border:1px solid #bbb;border-radius:9px;padding:12px;font:700 16px 'Montserrat',sans-serif;}
+        .portal-telefone-erro{color:#b32028;min-height:20px;font-size:12px;margin:7px 0;}
+        .portal-telefone-acoes{display:grid;gap:8px;margin-top:10px;}
+        .portal-telefone-acoes button{border:0;border-radius:10px;padding:12px 14px;font-weight:800;cursor:pointer;font-family:inherit;}
+        #portalTelefoneSalvar{background:#d0252a;color:#fff;}
+        #portalTelefoneCancelar{background:#eee;color:#333;}
+        .portal-telefone-card small{display:block;color:#666;font-size:11px;line-height:1.55;margin-top:10px;}
+
+</style>
 
     <!-- LIMPEZA DE QUOTA — roda antes de tudo, resolve Safari/iPhone -->
     <script>
@@ -390,6 +406,21 @@
 
 
     <!-- Scripts — carregados no final para garantir ordem em todos os browsers -->
+    <div id="portalTelefoneModal" hidden role="dialog" aria-modal="true" aria-labelledby="portalTelefoneTitulo">
+  <div class="portal-telefone-card">
+    <h3 id="portalTelefoneTitulo"><i class="fab fa-whatsapp"></i> Confirme seu WhatsApp</h3>
+    <p>A matrícula <strong id="portalTelefoneRubi"></strong> ainda não possui telefone validado na base. Informe seu número para análise da equipe.</p>
+    <form id="portalTelefoneForm" onsubmit="event.preventDefault();TelefonePortal.enviar()">
+      <label for="portalTelefoneNumero">Celular brasileiro com DDD (11 dígitos)</label>
+      <input id="portalTelefoneNumero" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(65) 9 1234-5678" maxlength="16" required oninput="TelefonePortal.formatarCampo()">
+      <div id="portalTelefoneErro" class="portal-telefone-erro" role="alert" aria-live="polite"></div>
+      <div class="portal-telefone-acoes"><button id="portalTelefoneSalvar" type="submit">ENVIAR PARA ANÁLISE E CONTINUAR</button>
+        <button id="portalTelefoneCancelar" type="button" onclick="TelefonePortal.fechar(false)">CANCELAR</button></div>
+    </form>
+    <small>O número não será validado automaticamente. Somente administradores autorizados poderão revisar o pedido.</small>
+  </div>
+</div>
+
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
@@ -397,12 +428,13 @@
     <script src="shared/utils.js"></script>
     <script src="model/firebase-config.js"></script>
     <script src="model/appearance.js?v=1.6.10"></script>
-    <script src="model/analytics.js?v=1.6.3.2"></script>
+    <script src="model/analytics.js?v=1.6.13"></script>
+    <script src="model/telefone-portal.js?v=1.6.13"></script>
     <script src="model/horario.js"></script>
     <script src="model/storage.js?v=1.6.11"></script>
     <script src="model/validators.js?v=1.6.3.2"></script>
     <script src="view/ui.js"></script>
     <script src="presenter/api.js"></script>
-    <script src="presenter/index-presenter.js?v=1.6.12"></script>
+    <script src="presenter/index-presenter.js?v=1.6.13"></script>
 </body>
 </html>

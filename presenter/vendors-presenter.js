@@ -194,6 +194,7 @@ const VendedoresPresenter = {
             this.registros = this._mapearVendedores(linhas);
             if (!this.registros.length) throw new Error('A aba Vendedores foi lida, mas não contém linhas válidas.');
             this._atualizarFiltroFilial();
+            this._atualizarFiltroFilialLinks();
             if (typeof WhatsAppPresenter !== 'undefined' && WhatsAppPresenter.grupoCarregado) this.atualizarGrupo();
             document.getElementById('painelDadosVendedores').style.display = 'block';
             document.getElementById('painelGestaoVendedores').style.display = 'block';
@@ -357,8 +358,8 @@ const VendedoresPresenter = {
         if (!link) return '<span class="vendor-badge unknown">Não verificado</span>';
         const status = link.status || 'inconclusivo';
         const mapa = {
-            ativo: ['success', 'Respondeu (2xx)'], inativo: ['inactive', 'Possível inativo'],
-            redirecionamento: ['review', 'Redireciona'], inconclusivo: ['unknown', 'Inconclusivo'],
+            ativo: ['unknown', 'Resposta HTTP 2xx'], inativo: ['inactive', 'Sem cadastro (indício)'],
+            redirecionamento: ['success', 'Cadastrado (redireciona)'], inconclusivo: ['unknown', 'Inconclusivo'],
             erro: ['unknown', 'Erro na consulta']
         };
         const [classe, rotulo] = mapa[status] || mapa.inconclusivo;
@@ -539,20 +540,67 @@ const VendedoresPresenter = {
 
     salvarUrlVerificador() { UI.ok('A verificação utilizará a mesma URL e o token da API de vendedores.'); },
 
-    // A consulta de links é independente dos filtros de telefone e WhatsApp.
+    // Dashboard e filtros exclusivos dos links. O status e sempre indicativo.
+    _categoriaLink(v) {
+        const status = v.linkStatus?.status;
+        if (status === 'redirecionamento') return 'redirecionamento';
+        if (status === 'inativo') return 'inativo';
+        if (!v.linkStatus?.verificadoEm) return 'sem-link';
+        return 'indefinido';
+    },
+
+    _atualizarFiltroFilialLinks() {
+        const filiais = [...new Set(this.registros.filter(v=>v.ativo).map(v=>String(v.filial||'').trim()).filter(Boolean))]
+          .sort((a,b)=>Number(a)-Number(b));
+        for (const id of ['filtroFilialLinks','linksDashboardFilial']) {
+            const el=document.getElementById(id);if (!el) continue;
+            const anterior=el.value;
+            el.replaceChildren(new Option('Todas as filiais',''));
+            for(const filial of filiais) el.add(new Option(`Filial ${filial}${this.filiais[filial]?' · '+this.filiais[filial]:''}`,filial));
+            if (filiais.includes(anterior)) el.value=anterior;
+        }
+    },
+
+    renderizarPainelLinks() {
+        const ativos=this.registros.filter(v=>v.ativo);
+        const cont=(cat,lista)=>lista.filter(v=>this._categoriaLink(v)===cat).length;
+        const escreva=(id,n)=>{const el=document.getElementById(id);if(el)el.textContent=n.toLocaleString('pt-BR');};
+        const cadastrados=cont('redirecionamento',ativos), sem=cont('inativo',ativos);
+        escreva('linksTotalAtivos',ativos.length);
+        escreva('linksTotalCadastrados',cadastrados);
+        escreva('linksTotalSemCadastro',sem);
+        escreva('linksTotalPendentes',ativos.length-cadastrados-sem);
+        const filtrar=document.getElementById('linksDashboardFilial')?.value||'';
+        const grupos=new Map();
+        for(const v of ativos){
+            if(filtrar&&String(v.filial)!==filtrar)continue;
+            const filial=String(v.filial||'—');
+            if(!grupos.has(filial))grupos.set(filial,[]);
+            grupos.get(filial).push(v);
+        }
+        const el=document.getElementById('linksFiliaisLista');if(!el)return;
+        el.innerHTML=[...grupos.entries()].sort((a,b)=>Number(a[0])-Number(b[0])).map(([filial,lista])=>{
+            const total=lista.length,ok=cont('redirecionamento',lista),off=cont('inativo',lista),pend=total-ok-off;
+            const divergentes=lista.filter(v=>this._categoriaLink(v)==='inativo');
+            return `<details class="links-filial-card"><summary><span class="links-filial-name">Filial ${this._escapar(filial)}${this.filiais[filial]?' · '+this._escapar(this.filiais[filial]):''}</span><span class="links-filial-total">${total} vendedores</span></summary>
+                <div class="links-filial-stats"><span class="links-verde">${ok} cadastrados</span><span class="links-vermelho">${off} sem cadastro</span><span>${pend} pendentes</span></div>
+                <div class="links-bar" aria-hidden="true"><span class="ok" style="width:${100*ok/total}%"></span><span class="off" style="width:${100*off/total}%"></span><span class="pending" style="width:${100*pend/total}%"></span></div>
+                <div class="links-filial-detalhes"><strong>Sem cadastro (indício):</strong>${divergentes.length?divergentes.map(v=>`<p>${this._escapar(v.nome)} · Rubi ${this._escapar(v.matricula)}</p>`).join(''):'<p>Nenhum vendedor nesta categoria.</p>'}</div>
+              </details>`;
+        }).join('')||'<p class="vendor-empty">Nenhuma filial disponível para este filtro.</p>';
+    },
+
     filtrarLinks() {
-        const filtro = document.getElementById('filtroLinkGeral')?.value || 'alertas';
-        const busca = this._texto(document.getElementById('buscaLinkGeral')?.value).toLocaleLowerCase('pt-BR');
-        const digitos = this._digitos(busca);
-        const ativos = this.registros.filter(v => v.ativo);
-        this.linksFiltrados = ativos.filter(v => {
-            const status = v.linkStatus?.status || 'sem-link';
-            if (filtro === 'alertas' && !['inativo','redirecionamento','erro','inconclusivo'].includes(status)) return false;
-            if (filtro !== 'todos' && filtro !== 'alertas' && filtro !== status) return false;
-            return !busca || v.nome.toLocaleLowerCase('pt-BR').includes(busca) || (digitos && this._matricula(v.matricula).includes(digitos));
-        });
-        this.linksExibidos = 12;
+        const filtro=document.getElementById('filtroLinkGeral')?.value||'todos';
+        const busca=this._texto(document.getElementById('buscaLinkGeral')?.value).toLocaleLowerCase('pt-BR');
+        const digitos=this._digitos(busca);
+        const filial=document.getElementById('filtroFilialLinks')?.value||'';
+        this.linksFiltrados=this.registros.filter(v=>v.ativo && (!filial || String(v.filial)===filial) &&
+            (filtro==='todos'||this._categoriaLink(v)===filtro) &&
+            (!busca||v.nome.toLocaleLowerCase('pt-BR').includes(busca)||(digitos&&this._matricula(v.matricula).includes(digitos))));
+        this.linksExibidos=12;
         this._renderizarLinks();
+        this.renderizarPainelLinks();
     },
 
     _renderizarLinks() {
@@ -633,6 +681,38 @@ const VendedoresPresenter = {
         }
     },
     verificarProximosLinks() { return this.verificarLinksEmLote('pendentes'); },
+
+    async carregarSolicitacoesTelefone() {
+        const destino=document.getElementById('pedidosTelefoneLista');
+        const status=document.getElementById('pedidosTelefoneStatus');
+        if(!destino||!Auth.usuarioAtual())return;
+        if(status)status.textContent='Consultando solicitações no Google Sheets…';
+        try {
+            const pedidos=await GoogleSheetsService.listarSolicitacoesTelefone();
+            const abertos=pedidos.filter(p=>!p.resolvido);
+            if(status)status.textContent=`${abertos.length} solicitação(ões) ainda não correspondente(s) a um telefone oficial validado; ${pedidos.length} registros consultados.`;
+            destino.innerHTML=abertos.slice(0,40).map(p=>{
+                const rubi=this._escapar(p.matricula),fone=this._escapar(this._exibirTelefone(p.telefone));
+                const vendedor=this.registros.find(v=>String(v.matricula)===String(p.matricula));
+                return `<article class="vendor-link-row"><div><strong>${this._escapar(vendedor?.nome||'Matrícula não localizada')} · Rubi ${rubi}</strong>
+                  <small>WhatsApp informado: ${fone} · ${this._escapar(String(p.criadoEm||'').slice(0,19))}</small></div>
+                  ${vendedor?`<button type="button" class="vendor-small-btn" data-pedido="${rubi}" data-numero="${this._escapar(p.telefone)}">REVISAR CADASTRO</button>`:'<span class="vendor-badge unknown">Revisar matrícula</span>'}</article>`;
+            }).join('')||'<p class="vendor-empty">Nenhuma solicitação pendente de validação.</p>';
+            destino.querySelectorAll('[data-pedido]').forEach(btn=>btn.addEventListener('click',()=>this.abrirSolicitacaoTelefone(btn.dataset.pedido,btn.dataset.numero)));
+        } catch(e) {if(status)status.textContent=`Não foi possível carregar solicitações: ${e.message||'falha na API'}`;}
+    },
+
+    abrirSolicitacaoTelefone(matricula,telefone) {
+        const vendedor=this.registros.find(v=>String(v.matricula)===String(matricula));
+        if(!vendedor){UI.erro('Matrícula ausente. Confira o cadastro antes de atualizar.');return;}
+        this.abrirEdicao(matricula);
+        const campo=document.getElementById('editarTelefoneVendedor');
+        if(campo)campo.value=this._exibirTelefone(telefone);
+        this.aoAlterarTelefone();
+        // A seleção VALIDADO só pode ser feita pelo administrador após a conferência.
+        document.getElementById('editarStatusTelefone').value='PENDENTE';
+        UI.ok('Número sugerido no formulário. Confirme a identidade antes de validar ou salvar.');
+    },
 
     mudarPagina(direcao) {
         const paginas = Math.max(1, Math.ceil(this.filtrados.length / this.porPagina));
