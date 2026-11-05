@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.6.9.1 TESTE</title>
+    <title>Admin Martinello | 1.6.10 TESTE</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -189,6 +189,19 @@
           #abaContatos .contatos-acoes button {flex:1 1 auto;}
           .contatos-lista-rodape {align-items:flex-start;flex-wrap:wrap;}
         }
+
+        /* 1.6.10 — Aparência: mesma hierarquia dos demais painéis */
+        .aparencia-grid {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.7fr);gap:18px;align-items:start;margin:16px 0 5px;}
+        .aparencia-grid input[type=file] {display:block;margin:12px 0 8px;max-width:100%;font-size:12px;}
+        .aparencia-preview {min-height:125px;display:flex;align-items:center;justify-content:center;border:1px dashed #c8c8c8;border-radius:13px;background:rgba(0,0,0,.02);padding:14px;}
+        .aparencia-preview img {max-width:260px;max-height:125px;object-fit:contain;}
+        .aparencia-ajuda {border:1px solid #e4e4e4;border-radius:13px;padding:17px;color:#555;font-size:12px;line-height:1.65;}
+        .aparencia-ajuda strong {display:block;color:inherit;margin-bottom:7px;}
+        .aparencia-acoes {display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;margin-top:14px;}
+        .aparencia-acoes button,.aparencia-secondary {width:auto!important;margin:0!important;padding:10px 14px!important;font-size:12px!important;}
+        body.dark-mode .aparencia-preview,body.dark-mode .aparencia-ajuda {border-color:#5a5a5a;}
+        body.dark-mode .aparencia-ajuda {color:#ccc;}
+        @media(max-width:680px) {.aparencia-grid {grid-template-columns:1fr;}.aparencia-acoes button{flex:1 1 100%;}}
     </style>
 
     <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
@@ -532,6 +545,9 @@
             <button type="button" class="admin-tab" id="tabContatos" onclick="AdminPresenter.mostrarAba('contatos')">
                 <i class="fab fa-whatsapp"></i> CONTATOS
             </button>
+            <button type="button" class="admin-tab" id="tabAparencia" onclick="AdminPresenter.mostrarAba('aparencia')">
+                <i class="fas fa-palette"></i> APARÊNCIA
+            </button>
             <button type="button" class="admin-tab" id="tabAcessos" onclick="AdminPresenter.mostrarAba('acessos')" style="display:none;">
                 <i class="fas fa-user-shield"></i> ACESSOS
             </button>
@@ -633,18 +649,34 @@
             </div>
         </div>
 
-        <!-- CONFIG EM BREVE -->
+        </section><!-- /abaOfertas -->
+
+        <section id="abaAparencia" class="aba-conteudo" style="display:none;">
+          <div class="admin-card">
+            <h2><i class="fas fa-palette"></i> IDENTIDADE VISUAL DO PORTAL</h2>
+            <p class="vendor-subtext">As alterações ficam no Firebase de TESTE e aparecem no portal para todos os vendedores, sem editar o GitHub. Não afeta a imagem dos banners das ofertas.</p>
+            <div class="aparencia-grid">
+              <div class="form-group">
+                <label for="fileLogoPortal">LOGO DO PORTAL</label>
+                <div class="aparencia-preview"><img id="previewLogoPortal" src="img/logo.png" alt="Prévia da logo"></div>
+                <input id="fileLogoPortal" type="file" accept="image/png,image/jpeg,image/webp" onchange="AdminPresenter.previewLogoPortal(event)">
+                <button type="button" class="btn-outline aparencia-secondary" onclick="AdminPresenter.restaurarLogoPortal()">USAR LOGO ORIGINAL</button>
+              </div>
+              <div class="aparencia-ajuda"><strong>Antes de publicar</strong><p>Confira a logo e a tela “Em breve”. Imagens são reduzidas automaticamente para evitar lentidão. O botão Salvar publica as alterações para todos os visitantes.</p></div>
+            </div>
+          </div>
+        <!-- CONFIG EM BREVE — agora sincronizada entre dispositivos -->
         <div class="admin-card">
             <h2>⚙️ TELA "EM BREVE"</h2>
-            <p style="margin-bottom:20px;color:#888;">Personaliza a aparência quando não há oferta ativa.</p>
+            <p style="margin-bottom:20px;color:#888;">Título, mensagem e imagem exibidos quando não há oferta ativa. Salve para publicar em todos os dispositivos.</p>
 
             <div class="form-group">
-                <label>🖼️ IMAGEM DE FUNDO</label>
+                <label>🖼️ IMAGEM PADRÃO (QUANDO NÃO HÁ OFERTAS)</label>
                 <div class="upload-area" id="dropAreaPadrao">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <p><strong>Clique ou arraste a imagem padrão</strong></p>
-                    <p style="font-size:14px;">PNG, JPG ou GIF (até 5MB)</p>
-                    <input type="file" id="filePadrao" accept="image/*" style="display:none;">
+                    <p style="font-size:14px;">PNG, JPG ou WebP (otimizada automaticamente)</p>
+                    <input type="file" id="filePadrao" accept="image/png,image/jpeg,image/webp" style="display:none;">
                 </div>
                 <img id="previewPadrao" class="preview-image" src="img/produto.png">
             </div>
@@ -659,9 +691,9 @@
                 <textarea id="mensagemPadrao" rows="3">Estamos preparando novidades especiais para você! Fique ligado.</textarea>
             </div>
 
-            <button class="btn-primary" onclick="salvarConfigPadrao()">💾 SALVAR CONFIGURAÇÕES</button>
+            <div class="aparencia-acoes"><button type="button" class="btn-outline aparencia-secondary" onclick="AdminPresenter.restaurarImagemPadrao()">USAR IMAGEM ORIGINAL</button><button type="button" class="btn-primary" id="btnSalvarAparencia" onclick="salvarConfigPadrao()"><i class="fas fa-save"></i> SALVAR APARÊNCIA</button></div><p id="aparenciaStatus" role="status" class="vendor-subtext"></p>
         </div>
-        </section><!-- /abaOfertas -->
+        </section><!-- /abaAparencia -->
 
         <section id="abaDashboard" class="aba-conteudo" style="display:none;">
             <div class="admin-card">
@@ -994,13 +1026,14 @@
     <script src="shared/config.js?v=1.6.4"></script>
     <script src="shared/utils.js"></script>
     <script src="model/firebase-config.js"></script>
+    <script src="model/appearance.js?v=1.6.10"></script>
     <script src="model/analytics.js?v=1.6.4"></script>
     <script src="model/horario.js"></script>
     <script src="model/storage.js?v=1.6.4"></script>
     <script src="model/validators.js?v=1.6.4"></script>
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.9.1"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.10"></script>
     <script src="presenter/dashboard-presenter.js?v=1.6.4"></script>
     <script src="model/google-sheets.js?v=1.6.9.1"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->

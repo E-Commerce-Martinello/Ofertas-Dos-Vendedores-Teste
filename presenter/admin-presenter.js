@@ -128,22 +128,24 @@ const AdminPresenter = {
         const vendedores = aba === 'vendedores';
         const dashboard = aba === 'dashboard';
         const contatos = aba === 'contatos';
+        const aparencia = aba === 'aparencia';
         const pendencias = false; // Pendências agora são um filtro da lista única.
         const whatsapp = false; // A gestão do grupo está integrada à aba Vendedores.
-        this.abaAtual = acessos ? 'acessos' : contatos ? 'contatos' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : pendencias ? 'pendencias' : whatsapp ? 'whatsapp' : 'ofertas';
-        ['ofertas','vendedores','dashboard','contatos','pendencias','whatsapp','acessos'].forEach(nome => {
+        this.abaAtual = acessos ? 'acessos' : aparencia ? 'aparencia' : contatos ? 'contatos' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : pendencias ? 'pendencias' : whatsapp ? 'whatsapp' : 'ofertas';
+        ['ofertas','vendedores','dashboard','contatos','aparencia','pendencias','whatsapp','acessos'].forEach(nome => {
             const el = document.getElementById('aba'+nome[0].toUpperCase()+nome.slice(1));
             if (el) el.style.display = this.abaAtual === nome ? 'block' : 'none';
             const tab = document.getElementById('tab'+nome[0].toUpperCase()+nome.slice(1));
             if (tab) tab.classList.toggle('active',this.abaAtual === nome);
         });
         document.getElementById('btnNovaOfertaTopo').style.display = this.abaAtual === 'ofertas' ? 'inline-block' : 'none';
-        const titulos={ofertas:'⚙️ AGENDADOR',dashboard:'📊 DASHBOARD',vendedores:'👥 VENDEDORES',contatos:'💬 CONTATOS',
+        const titulos={ofertas:'⚙️ AGENDADOR',dashboard:'📊 DASHBOARD',vendedores:'👥 VENDEDORES',contatos:'💬 CONTATOS',aparencia:'🎨 APARÊNCIA',
                        pendencias:'📋 PENDÊNCIAS',whatsapp:'💬 WHATSAPP',acessos:'🔐 ACESSOS'};
         const descricoes={ofertas:'Várias ofertas podem ficar disponíveis ao mesmo tempo',
                           dashboard:'Acompanhamento de compartilhamentos iniciados',
                           vendedores:'Cadastros, participação no grupo e importações em uma lista única',
                           contatos:'Seleção de vendedores e preparação manual de mensagens',
+                          aparencia:'Logo, imagem e textos do portal — sincronizados entre dispositivos',
                           pendencias:'Telefones ainda não validados',
                           whatsapp:'Participantes do grupo e identificações',
                           acessos:'Gestão de administradores autorizados'};
@@ -337,35 +339,89 @@ const AdminPresenter = {
 
     // ── CONFIG EM BREVE ──────────────────────
 
-    async salvarConfigEmBreve() {
-        const fp = document.getElementById('filePadrao');
-        let imagem = 'img/produto.png';
-
-        if (fp.files?.[0]) {
-            const v = Validators.imagem(fp.files[0]);
-            if (!v.valido) { UI.erro(v.erro); return; }
-            imagem = await UI.paraBase64(fp.files[0]);
-        } else {
-            const p = document.getElementById('previewPadrao');
-            if (p?.src) imagem = p.src;
+    _statusAparencia(texto, erro=false) {
+        const el = document.getElementById('aparenciaStatus');
+        if (el) { el.textContent = texto; el.style.color = erro ? '#c0222b' : '#368355'; }
+    },
+    _logoOriginalPendente: false,
+    _imagemOriginalPendente: false,
+    previewLogoPortal() {
+        const f = document.getElementById('fileLogoPortal')?.files?.[0];
+        if (!f) return;
+        if (!['image/png','image/jpeg','image/webp'].includes(f.type) || f.size > 6*1024*1024) {
+            this._statusAparencia('Use PNG, JPG ou WebP de até 6 MB.', true); return;
         }
-
-        Storage.salvarConfigEmBreve({
-            imagem,
-            titulo:   document.getElementById('tituloPadrao').value  || 'EM BREVE',
-            mensagem: document.getElementById('mensagemPadrao').value || '',
-        });
-        UI.ok('Configurações salvas!');
+        this._logoOriginalPendente = false;
+        const r = new FileReader();
+        r.onload = () => { const p=document.getElementById('previewLogoPortal'); if (p) p.src=r.result; };
+        r.readAsDataURL(f);
+    },
+    restaurarLogoPortal() {
+        this._logoOriginalPendente = true;
+        const file=document.getElementById('fileLogoPortal'); if(file) file.value='';
+        const p=document.getElementById('previewLogoPortal'); if(p) p.src='img/logo.png';
+        this._statusAparencia('Logo original selecionada. Clique em Salvar aparência para publicar.');
+    },
+    restaurarImagemPadrao() {
+        this._imagemOriginalPendente = true;
+        const file=document.getElementById('filePadrao'); if(file) file.value='';
+        const p=document.getElementById('previewPadrao'); if(p) p.src='img/produto.png';
+        this._statusAparencia('Imagem original selecionada. Clique em Salvar aparência para publicar.');
+    },
+    async salvarConfigEmBreve() {
+        const btn=document.getElementById('btnSalvarAparencia');
+        if(btn) btn.disabled = true;
+        this._statusAparencia('Otimizando as imagens e salvando no Firebase…');
+        try {
+            const anterior = AparenciaPortal.dados || AparenciaPortal.padrao;
+            const legado = AparenciaPortal.dados ? null : Storage.carregarConfigEmBreve();
+            const imagemAnterior = legado
+                ? AparenciaPortal._imagem(legado.imagem, AparenciaPortal.padrao.imagem, 280000)
+                : anterior.imagem;
+            const arquivoLogo = document.getElementById('fileLogoPortal')?.files?.[0];
+            const arquivoPadrao = document.getElementById('filePadrao')?.files?.[0];
+            const logo = this._logoOriginalPendente ? 'img/logo.png' : arquivoLogo
+                ? await AparenciaPortal.compactarImagem(arquivoLogo, 650, 180000) : anterior.logo;
+            const imagem = this._imagemOriginalPendente ? 'img/produto.png' : arquivoPadrao
+                ? await AparenciaPortal.compactarImagem(arquivoPadrao, 1100, 280000) : imagemAnterior;
+            const cfg = {
+                logo, imagem,
+                titulo: document.getElementById('tituloPadrao').value.trim() || 'EM BREVE',
+                mensagem: document.getElementById('mensagemPadrao').value.trim()
+            };
+            if(cfg.titulo.length>100 || cfg.mensagem.length>500) throw new Error('Título: até 100 caracteres; mensagem: até 500.');
+            await AparenciaPortal.salvar(cfg);
+            Storage.salvarConfigEmBreve({imagem:cfg.imagem,titulo:cfg.titulo,mensagem:cfg.mensagem});
+            document.getElementById('previewLogoPortal').src = cfg.logo;
+            document.getElementById('previewPadrao').src = cfg.imagem;
+            const lp=document.getElementById('fileLogoPortal'); if(lp) lp.value='';
+            const fp=document.getElementById('filePadrao'); if(fp) fp.value='';
+            this._logoOriginalPendente=false; this._imagemOriginalPendente=false;
+            this._statusAparencia('Aparência publicada! Atualize o portal para conferir.');
+            UI.ok('Aparência salva no Firebase e disponível para todos os dispositivos.');
+        } catch (erro) {
+            this._statusAparencia('Não foi possível salvar: ' + (erro.message||erro),true);
+        } finally {if(btn) btn.disabled = false;}
     },
 
-    _carregarConfigEmBreve() {
-        const cfg = Storage.carregarConfigEmBreve();
-        if (!cfg) return;
-        console.log('⚙️ Config "Em Breve" carregada');
-        if (cfg.imagem && cfg.imagem !== 'img/produto.png')
-            document.getElementById('previewPadrao').src = cfg.imagem;
-        if (cfg.titulo)   document.getElementById('tituloPadrao').value   = cfg.titulo;
-        if (cfg.mensagem) document.getElementById('mensagemPadrao').value = cfg.mensagem;
+    async _carregarConfigEmBreve() {
+        const local = Storage.carregarConfigEmBreve();
+        try {
+            const cfg = await AparenciaPortal.carregar();
+            if (AparenciaPortal.dados || !local) {
+                document.getElementById('previewPadrao').src=cfg.imagem;
+                document.getElementById('tituloPadrao').value=cfg.titulo;
+                document.getElementById('mensagemPadrao').value=cfg.mensagem;
+            } else {
+                document.getElementById('previewPadrao').src=local.imagem||cfg.imagem;
+                document.getElementById('tituloPadrao').value=local.titulo||cfg.titulo;
+                document.getElementById('mensagemPadrao').value=local.mensagem||cfg.mensagem;
+                this._statusAparencia('Configuração local antiga detectada. Revise e clique em Salvar para publicar.');
+            }
+            document.getElementById('previewLogoPortal').src=cfg.logo;
+        } catch (erro) {
+            this._statusAparencia('Não foi possível carregar o Firebase: '+(erro.message||erro),true);
+        }
     },
 
     // ── DRAG & DROP ──────────────────────────

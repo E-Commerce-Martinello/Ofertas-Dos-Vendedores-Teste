@@ -28,11 +28,24 @@ const IndexPresenter = {
             else { this._syncFirebase(); if (!this.intervalo) this.intervalo = setInterval(() => this._tick(), 1000); }
         });
         await this._syncFirebase();
+        // Identidade visual pública: atualizada em todos os celulares e computadores.
+        this._carregarAparencia();
         setInterval(() => { if (!document.hidden) this._syncFirebase(); }, 30000);
     },
 
+    async _carregarAparencia() {
+        try {
+            const dados = await AparenciaPortal.carregar();
+            const logo = document.getElementById('logoPortal');
+            if (logo) logo.src = dados.logo || 'img/logo.png';
+            this._renderOferta(this.ofertaAtual);
+        } catch (erro) {
+            console.warn('Aparência pública indisponível, mantendo padrão:', erro.message);
+        }
+    },
+
     _configEmBreve() {
-        return Storage.carregarConfigEmBreve() || {
+        return AparenciaPortal.dados || Storage.carregarConfigEmBreve() || {
             imagem: 'img/produto.png', titulo: 'EM BREVE',
             mensagem: 'Estamos preparando novidades especiais! Fique ligado.'
         };
