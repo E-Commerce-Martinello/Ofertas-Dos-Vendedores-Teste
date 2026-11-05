@@ -21,6 +21,10 @@ const WhatsAppPresenter = {
     } catch(e) { this._status(e.message,'error'); }
     finally {this.carregando=false;}
   },
+  agendarBusca() {
+    clearTimeout(this._timerBusca);
+    this._timerBusca=setTimeout(()=>{this.pagina=1;this.renderizar();},160);
+  },
   selecionarArquivo(input) {
     this.arquivo = input?.files?.[0] || null;
     this.previa = null;
@@ -69,15 +73,6 @@ const WhatsAppPresenter = {
     }
     this.previa=r.registros; this.tipoPrevia='colar'; this.origemPrevia='Texto colado'; this._mostrarPrevia(r.registros.length,r.duplicados, 'Texto colado');
   },
-  async preverParametros() {
-    this._status('Lendo a aba Parâmetros de Dados...');
-    try {
-      const r=await GoogleSheetsService.lerParametrosWhatsApp();
-      if (!r.registros?.length) throw new Error('Não há participantes com telefone válido na aba Parâmetros de Dados.');
-      this.previa=r.registros; this.tipoPrevia='parametros'; this.origemPrevia='Parâmetros de Dados';
-      this._mostrarPrevia(r.registros.length,r.descartadas||0,'Parâmetros de Dados');
-    } catch(e) {this.previa=null;document.getElementById('whatsappPrevia').hidden=true;this._status(e.message,'error');}
-  },
   _mostrarPrevia(total, ignorados, origem) {
     const p=document.getElementById('whatsappPrevia'); p.hidden=false;
     document.getElementById('whatsappPreviaTexto').textContent=`${origem}: ${total} números únicos; ${ignorados} linhas ignoradas ou repetidas. A lista anterior será substituída; identificações manuais serão preservadas.`;
@@ -100,8 +95,8 @@ const WhatsAppPresenter = {
     this._status('Atualizando a lista do grupo no Sheets...');
     try {
       const resposta=await GoogleSheetsService.importarWhatsApp({
-        origem:this.tipoPrevia==='parametros' ? 'parametros' : 'colar',
-        registros:this.tipoPrevia==='parametros' ? [] : this.previa,
+        origem:'colar',
+        registros:this.previa,
         confirmado:true, aceitarReducao:reducao
       });
       if (!Number.isInteger(Number(resposta.total)) || Number(resposta.total)!==this.previa.length) {

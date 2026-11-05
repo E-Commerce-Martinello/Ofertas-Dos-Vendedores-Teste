@@ -583,6 +583,28 @@
         body.dark-mode .central-preferencias {border-color:#4f4f4f;}
         body.dark-mode .central-preferencias select {border-color:#666;background:#343434;}
 
+    
+        /* v1.6.16 — acabamento: foco acessível, filtros proporcionais e área de ações estável. */
+        :is(#painelAdmin, #loginBox) :is(button, a, input, select, textarea, summary):focus-visible {
+            outline: 3px solid #dc4046;
+            outline-offset: 3px;
+        }
+        .admin-tab, .vendor-small-btn, .btn-outline { transition: background-color .15s ease, border-color .15s ease; }
+        .vendor-actions > button { min-width:0; }
+        #gestaoParticipantesGrupo .vendor-actions { align-items:stretch; }
+        #gestaoParticipantesGrupo .vendor-actions button { flex:1 1 210px; }
+        #abaVendedores .vendor-cards, #abaLinks .links-ranking-box { min-width:0; }
+        .vendor-status { overflow-wrap:anywhere; }
+        @media(max-width:650px) {
+            .admin-card { min-width:0; }
+            .vendor-pagination { align-items:stretch; }
+            .vendor-pagination > div { flex-wrap:wrap; }
+            #gestaoParticipantesGrupo .vendor-actions button { flex:1 1 100%; }
+        }
+        @media(prefers-reduced-motion:reduce) {
+            .admin-tab,.vendor-small-btn,.btn-outline { transition:none; }
+        }
+
     </style>
 </head>
 <body>
@@ -898,7 +920,7 @@
                         <option value="redirecionamento">Cadastrados</option>
                       </select>
                       <select id="filtroFilialLinks" aria-label="Filtrar links por filial" onchange="VendedoresPresenter.filtrarLinks()"><option value="">Todas as filiais</option></select>
-                      <input type="search" id="buscaLinkGeral" aria-label="Buscar link por vendedor ou matrícula" placeholder="Buscar vendedor ou Rubi..." oninput="VendedoresPresenter.filtrarLinks()">
+                      <input type="search" id="buscaLinkGeral" aria-label="Buscar link por vendedor ou matrícula" placeholder="Buscar vendedor ou Rubi..." oninput="VendedoresPresenter.agendarBuscaLinks()">
                     </div>
                     <div id="resumoLinks" class="vendor-last-update"></div>
                     <div id="listaLinks" class="vendor-links-lista" role="list" aria-live="polite"></div>
@@ -993,7 +1015,7 @@
 
             <div class="admin-card">
                 <h2><i class="fab fa-whatsapp" style="color:#168b57"></i> PARTICIPANTES DO GRUPO</h2>
-                <p class="vendor-subtext">Importe uma lista pelo painel ou aproveite a aba antiga <strong>Parâmetros de Dados</strong>. O sistema reconhece Rubi e telefone validado. Telefones do grupo são padronizados para <strong>DDD + 9 + 8 dígitos</strong>; o cadastro oficial só muda com sua confirmação.</p>
+                <p class="vendor-subtext">Importe os participantes diretamente pelo arquivo exportado ou texto colado. A prévia mostra os números únicos antes da confirmação. Os telefones oficiais dos vendedores só mudam com sua autorização.</p>
                 <h3>Importar participantes</h3>
                 <p class="vendor-subtext"><strong>Recomendado:</strong> envie o arquivo exportado do WhatsApp, sem modificar. O painel utiliza somente o nome exibido e o número; não grava as demais colunas.</p>
                 <input type="file" id="whatsappArquivo" accept=".xlsx,.xls,.ods,.csv" hidden onchange="WhatsAppPresenter.selecionarArquivo(this)">
@@ -1007,7 +1029,6 @@
                 <textarea id="whatsappColar" rows="4" placeholder="LUCAS - (12345) NOME - VENDEDOR;65999999999&#10;FILIAL - GERENTE;65988888888" style="width:100%;padding:12px;border:2px solid #ddd;border-radius:10px;background:transparent;color:inherit"></textarea>
                 <div class="vendor-actions">
                     <button class="btn-outline" type="button" onclick="WhatsAppPresenter.preverTexto()"><i class="fas fa-search"></i> ANALISAR TEXTO</button>
-                    <button class="btn-outline" type="button" onclick="WhatsAppPresenter.preverParametros()"><i class="fas fa-table"></i> LER PARÂMETROS DE DADOS</button>
                 </div>
                 <div id="whatsappPrevia" hidden style="margin:14px 0;padding:14px;border:1px solid #ddd;border-radius:12px">
                     <p id="whatsappPreviaTexto"></p>
@@ -1028,7 +1049,7 @@
                     <div class="vendor-kpi"><strong id="whatsappDesconhecidos">0</strong><span>Não identificados</span></div>
                 </div>
                 <div class="vendor-filters" style="grid-template-columns:2fr 1fr">
-                    <input id="whatsappBusca" type="search" placeholder="Buscar nome, telefone, matrícula..." oninput="WhatsAppPresenter.pagina=1;WhatsAppPresenter.renderizar()">
+                    <input id="whatsappBusca" type="search" placeholder="Buscar nome, telefone, matrícula..." oninput="WhatsAppPresenter.agendarBusca()">
                     <select id="whatsappFiltro" onchange="WhatsAppPresenter.pagina=1;WhatsAppPresenter.renderizar()">
                         <option value="">Todos que precisam ser identificados</option>
 
@@ -1248,19 +1269,19 @@
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
     <script src="presenter/campanhas-presenter.js?v=1.6.14"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.15"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.16"></script>
     <script src="presenter/seguranca-presenter.js?v=1.6.15"></script>
     <script src="presenter/dashboard-presenter.js?v=1.6.14"></script>
-    <script src="model/google-sheets.js?v=1.6.15"></script>
+    <script src="model/google-sheets.js?v=1.6.16"></script>
     <!-- SheetJS é carregado sob demanda, apenas quando alguém importa uma planilha. -->
     <script src="model/planilha-loader.js?v=1.6.12"></script>
     <script src="model/vendor-import.js?v=1.6.12"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.14"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.16"></script>
     <script src="model/whatsapp.js?v=1.6.8"></script>
     <script src="presenter/pendencias-presenter.js?v=1.6.6"></script>
-    <script src="presenter/whatsapp-presenter.js?v=1.6.12"></script>
+    <script src="presenter/whatsapp-presenter.js?v=1.6.16"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
     <script src="presenter/contatos-presenter.js?v=1.6.14"></script>
 </body>

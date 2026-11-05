@@ -160,7 +160,9 @@ const AdminPresenter = {
 
         // Datas agendadas continuam mudando mesmo sem nova gravação no Firebase.
         // Intervalo mais leve para a página administrativa.
-        this.intervaloStatus = setInterval(() => this.renderLista(), 30000);
+        this.intervaloStatus = setInterval(() => {
+            if (this._autorizado && this.abaAtual === 'ofertas') this.renderLista();
+        }, 30000);
         console.log('✅ Painel admin pronto!');
     },
 
@@ -246,6 +248,7 @@ const AdminPresenter = {
                           acessos:'Gestão de administradores autorizados'};
         document.getElementById('tituloAdmin').textContent = titulos[this.abaAtual];
         document.getElementById('subtituloAdmin').textContent = descricoes[this.abaAtual];
+        if (this.abaAtual === 'ofertas' && this._autorizado) this.renderLista();
         if (vendedores || links) VendedoresPresenter.init();
         if (links) VendedoresPresenter.renderizarPainelLinks();
         if (dashboard) DashboardPresenter.atualizar();

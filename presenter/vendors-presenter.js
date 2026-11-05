@@ -195,7 +195,6 @@ const VendedoresPresenter = {
             if (!this.registros.length) throw new Error('A aba Vendedores foi lida, mas não contém linhas válidas.');
             this._atualizarFiltroFilial();
             this._atualizarFiltroFilialLinks();
-            if (typeof WhatsAppPresenter !== 'undefined' && WhatsAppPresenter.grupoCarregado) this.atualizarGrupo();
             document.getElementById('painelDadosVendedores').style.display = 'block';
             document.getElementById('painelGestaoVendedores').style.display = 'block';
             const painelImportacao = document.getElementById('painelImportacaoFuncionarios');
@@ -300,19 +299,21 @@ const VendedoresPresenter = {
         const filtroTelefone = document.getElementById('filtroStatusVendedor')?.value || 'todos';
         const filtroFilial = this._texto(document.getElementById('filtroFilialVendedor')?.value).toLocaleLowerCase('pt-BR');
         const filtroGrupo = document.getElementById('filtroGrupoVendedor')?.value || '';
+        const digitosBusca = termo ? this._digitos(termo) : '';
         this.filtrados = this.registros.filter(v => {
             if (filtroAtivo === 'ativos' && !v.ativo) return false;
             if (filtroAtivo === 'inativos' && v.ativo) return false;
             if (filtroFilial && this._texto(v.filial).toLocaleLowerCase('pt-BR') !== filtroFilial) return false;
-            const digitosBusca = this._digitos(termo);
-            const foneOficial = this._digitos(v.numero);
-            const fonePadronizado = GrupoWhatsAppModel.telefone(v.numero);
-            const nomeOuNumero = [v.nome, v.matricula, v.filial, v.localidadeFilial]
-                .some(campo => this._texto(campo).toLocaleLowerCase('pt-BR').includes(termo));
-            const buscaTelefone = digitosBusca.length >= 3 && [foneOficial, fonePadronizado, `55${fonePadronizado}`]
-                .some(fone => fone && fone.includes(digitosBusca));
-            const correspondeBusca = !termo || nomeOuNumero || buscaTelefone;
-            if (!correspondeBusca) return false;
+            if (termo) {
+                const nomeOuNumero = [v.nome,v.matricula,v.filial,v.localidadeFilial]
+                    .some(campo => this._texto(campo).toLocaleLowerCase('pt-BR').includes(termo));
+                if (!nomeOuNumero) {
+                    if (digitosBusca.length < 3) return false;
+                    const oficial = this._digitos(v.numero);
+                    const padronizado = GrupoWhatsAppModel.telefone(v.numero);
+                    if (![oficial,padronizado,`55${padronizado}`].some(fone => fone && fone.includes(digitosBusca))) return false;
+                }
+            }
             if (filtroGrupo && this._situacaoGrupo(v).codigo !== filtroGrupo) return false;
             if (filtroTelefone === 'validado') return v.statusTelefone === 'VALIDADO';
             if (filtroTelefone === 'pendente') return v.statusTelefone === 'PENDENTE';
@@ -614,6 +615,11 @@ const VendedoresPresenter = {
         }).join('') || '<p class="vendor-empty">Nenhuma filial disponível para o filtro.</p>';
         const legenda=document.getElementById('linksResumoOrdenacao');
         if (legenda) legenda.textContent=`${lista.length} filiais na lista · máximo de 10 visíveis antes da rolagem`;
+    },
+
+    agendarBuscaLinks() {
+        clearTimeout(this._timerBuscaLinks);
+        this._timerBuscaLinks = setTimeout(() => this.filtrarLinks(), 160);
     },
 
     filtrarLinks() {

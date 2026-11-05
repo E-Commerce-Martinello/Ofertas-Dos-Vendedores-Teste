@@ -247,10 +247,6 @@ const GoogleSheetsService = {
         const r = await this._post('listarWhatsApp');
         return r.resultado || { participantes: [], identificacoes: [] };
     },
-    async lerParametrosWhatsApp() {
-        const r = await this._post('lerParametrosWhatsApp');
-        return r.resultado || { registros: [], descartadas: 0 };
-    },
     async importarWhatsApp(dados) {
         const r = await this._post('importarWhatsApp', dados);
         return r.resultado || {};
