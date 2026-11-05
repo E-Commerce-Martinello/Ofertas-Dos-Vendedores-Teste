@@ -168,6 +168,21 @@ const GoogleSheetsService = {
         return resposta.resultado || { resultados: [] };
     },
 
+    async listarAuditoria() {
+        const r=await this._post('listarAuditoria');
+        return r.resultado || {eventos:[],total:0};
+    },
+
+    async criarBackupPlanilha() {
+        const r=await this._post('criarBackupPlanilha');
+        return r.resultado || {};
+    },
+
+    async registrarAuditoriaFirebase(tipo,alvo,campos=[]) {
+        const r=await this._post('registrarAuditoriaFirebase',{tipo,alvo,campos});
+        return r.resultado || {};
+    },
+
     async listarCampanhas() {
         const r=await this._post('listarCampanhas');
         return r.resultado || {campanhaGeral:'',linkGrupo:'https://www.martinello.com.br/ofertasvendedor',revision:''};

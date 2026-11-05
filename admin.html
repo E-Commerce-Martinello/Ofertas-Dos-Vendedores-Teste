@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.6.14 TESTE</title>
+    <title>Admin Martinello | 1.6.15 TESTE</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -1137,6 +1137,31 @@
                     <p class="vendor-subtext">Essa preferência é local. Os dados e os cadastros continuam compartilhados no Google Sheets.</p>
                 </div>
             </div>
+                <div class="central-preferencias" id="segurancaSecao">
+                    <h3 style="font-size:17px;margin:0 0 10px"><i class="fas fa-shield-alt"></i> Segurança, backups e auditoria</h3>
+                    <p class="vendor-subtext">Backups manuais e histórico de operações. Exclusivo da conta principal. Os dados não são enviados ao GitHub nem armazenados no Cloudflare.</p>
+                    <p id="segurancaAviso" class="vendor-subtext">Somente a conta principal pode consultar o histórico e gerar backups.</p>
+                    <div id="segurancaFerramentas" hidden>
+                        <div class="vendor-actions" style="gap:10px;flex-wrap:wrap; margin:12px 0">
+                            <button type="button" id="btnBackupPlanilha" class="btn-outline" onclick="SegurancaPresenter.criarBackupPlanilha()"><i class="fas fa-cloud-upload-alt"></i> BACKUP DA PLANILHA NO DRIVE</button>
+                            <button type="button" id="btnBackupFirebase" class="btn-outline" onclick="SegurancaPresenter.exportarFirebase()"><i class="fas fa-file-download"></i> EXPORTAR OFERTAS E APARÊNCIA (JSON)</button>
+                        </div>
+                        <a id="segurancaBackupLink" href="#" hidden target="_blank" rel="noopener noreferrer" style="font-size:12px;margin-bottom:10px"></a>
+                        <p id="segurancaStatus" class="vendor-status" role="status">Nenhum backup criado nesta sessão.</p>
+                        <div class="vendor-actions" style="margin:18px 0 10px;gap:9px;align-items:center">
+                            <h3 style="margin:0;font-size:15px;flex:1">Histórico de alterações administrativas</h3>
+                            <button type="button" class="btn-outline" id="btnAtualizarAuditoria" onclick="SegurancaPresenter.carregarAuditoria()">ATUALIZAR HISTÓRICO</button>
+                        </div>
+                        <div class="vendor-table-wrap" style="max-height:390px;overflow:auto">
+                            <table class="vendor-table" style="min-width:780px">
+                                <thead><tr><th>DATA (UTC)</th><th>ADMINISTRADOR</th><th>OPERAÇÃO</th><th>REFERÊNCIA</th><th>RESUMO</th><th>ORIGEM</th></tr></thead>
+                                <tbody id="segurancaAuditoriaLinhas"><tr><td colspan="5">Clique em Atualizar histórico.</td></tr></tbody>
+                            </table>
+                        </div>
+                        <p id="segurancaAuditoriaTotal" class="vendor-subtext"></p>
+                        <p class="vendor-last-update">Operações nas planilhas são registradas pela API. Mudanças de ofertas e aparência são relatos do navegador, não uma trilha inviolável do Firebase. Os arquivos JSON baixados exigem armazenamento privado.</p>
+                    </div>
+                </div>
         </section>
 
         <section id="abaAcessos" class="aba-conteudo" style="display:none;">
@@ -1223,9 +1248,10 @@
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
     <script src="presenter/campanhas-presenter.js?v=1.6.14"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.14"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.15"></script>
+    <script src="presenter/seguranca-presenter.js?v=1.6.15"></script>
     <script src="presenter/dashboard-presenter.js?v=1.6.14"></script>
-    <script src="model/google-sheets.js?v=1.6.14"></script>
+    <script src="model/google-sheets.js?v=1.6.15"></script>
     <!-- SheetJS é carregado sob demanda, apenas quando alguém importa uma planilha. -->
     <script src="model/planilha-loader.js?v=1.6.12"></script>
     <script src="model/vendor-import.js?v=1.6.12"></script>

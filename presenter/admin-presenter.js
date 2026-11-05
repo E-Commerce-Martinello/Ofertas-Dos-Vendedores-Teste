@@ -126,6 +126,7 @@ const AdminPresenter = {
         const gestor = acesso.proprietario === true;
         this.ehPrincipal = gestor;
         this._autorizado = true;
+        if(typeof SegurancaPresenter !== 'undefined') SegurancaPresenter.exibir();
         document.getElementById('tabAcessos').style.display = gestor ? '' : 'none';
         const avisoAdmin = document.getElementById('avisoPermissaoOfertas');
         if (avisoAdmin) {
@@ -251,6 +252,7 @@ const AdminPresenter = {
         if (contatos) ContatosPresenter.init();
         if (acessos) GerenciarAcessosPresenter.carregar();
         if (configuracoes) this._renderPreferencias();
+        if(configuracoes && typeof SegurancaPresenter !== 'undefined') SegurancaPresenter.exibir();
         document.querySelector('.admin-container')?.classList.toggle('admin-container-contacts', contatos);
         if (pendencias) PendenciasPresenter.renderizar();
         if (vendedores && typeof WhatsAppPresenter !== 'undefined' && !WhatsAppPresenter.grupoCarregado && !WhatsAppPresenter.carregando) WhatsAppPresenter.carregar();
@@ -451,11 +453,19 @@ const AdminPresenter = {
         this.renderLista();
         this.cancelarEdicao();
         UI.ok('Oferta salva com segurança e sincronizada com os demais administradores.');
+        if(typeof SegurancaPresenter!=='undefined')
+            SegurancaPresenter.registrarFirebase(emEdicao?'oferta_editada':'oferta_criada',oferta.id,
+                ['dataInicio','dataFim','linkProduto','textoOferta','tituloPagina','campanha','urlImagem']
+                    .filter(k=>!emEdicao||String(original?.[k]??'')!==String(oferta[k]??'')));
     },
 
     async excluirOferta(idx) {
         const oferta=this.ofertas[idx];
-        if (!oferta || !confirm('Excluir esta oferta?')) return;
+        if(!oferta) return;
+        const titulo = oferta.tituloPagina || oferta.id || 'oferta';
+        if(!confirm('ATENÇÃO: excluir a oferta "'+titulo+'" é irreversível sem um backup. Deseja continuar?'))return;
+        const digitado=prompt('Para confirmar a exclusão, digite EXCLUIR em letras maiúsculas:');
+        if(digitado !== 'EXCLUIR'){UI.erro('Exclusão cancelada.');return;}
         const resultado=await Storage.modificarOferta({
             tipo:'excluir',id:oferta.id,base:Storage.assinaturaOferta(oferta)
         });
@@ -468,6 +478,8 @@ const AdminPresenter = {
         this.ofertas=resultado.ofertas;
         this.renderLista();
         UI.ok('Oferta excluída e sincronizada.');
+        if(typeof SegurancaPresenter!=='undefined')
+            SegurancaPresenter.registrarFirebase('oferta_excluida',oferta.id);
     },
 
     // ── PREVIEW EM TEMPO REAL ────────────────
@@ -543,6 +555,8 @@ const AdminPresenter = {
             this._logoOriginalPendente=false; this._imagemOriginalPendente=false;
             this._statusAparencia('Aparência publicada! Atualize o portal para conferir.');
             UI.ok('Aparência salva no Firebase e disponível para todos os dispositivos.');
+            if(typeof SegurancaPresenter!=='undefined')
+                SegurancaPresenter.registrarFirebase('aparencia_alterada','portal');
         } catch (erro) {
             this._statusAparencia('Não foi possível salvar: ' + (erro.message||erro),true);
         } finally {if(btn) btn.disabled = false;}
