@@ -6,6 +6,7 @@ const IndexPresenter = {
     enviando: false,
     intervalo: null,
     _assinatura: '',
+    pararSyncOfertas: null,
 
     async init() {
         Storage.verificarQuota();
@@ -28,9 +29,13 @@ const IndexPresenter = {
             else { this._syncFirebase(); if (!this.intervalo) this.intervalo = setInterval(() => this._tick(), 1000); }
         });
         await this._syncFirebase();
+        this.pararSyncOfertas=Storage.escutarOfertas(ofertas => {
+            this._aplicarOfertas(ofertas);
+            this._assinatura=this._ativas().map(o=>String(o.id)).join(',');
+        }, e=>console.warn('Sincronização de ofertas temporariamente indisponível:',e));
         // Identidade visual pública: atualizada em todos os celulares e computadores.
         this._carregarAparencia();
-        setInterval(() => { if (!document.hidden) this._syncFirebase(); }, 30000);
+        // A assinatura do Firebase já notifica a cada alteração; evita consultas repetidas.
     },
 
     async _carregarAparencia() {

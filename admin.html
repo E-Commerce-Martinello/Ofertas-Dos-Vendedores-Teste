@@ -572,6 +572,7 @@
         <!-- LISTA -->
         <div class="admin-card">
             <h2>📋 OFERTAS PROGRAMADAS (SIMULTÂNEAS PERMITIDAS)</h2>
+            <p id="estadoSyncOfertas" class="vendor-subtext" role="status" style="margin-bottom:12px;">Conectando às atualizações das ofertas…</p>
             <div id="listaOfertas"></div>
         </div>
 
@@ -582,6 +583,7 @@
             </button>
             <h2 id="formTitulo">➕ NOVA OFERTA</h2>
             <input type="hidden" id="editandoIdx">
+            <p id="avisoConflitoOferta" role="alert" class="vendor-status" style="display:none;color:#b3232a; border:1px solid #dc6c73; padding:12px; border-radius:10px; margin:12px 0;"></p>
 
             <div class="info-box">
                 <strong>Várias ofertas simultâneas:</strong> você pode cadastrar campanhas com o mesmo período. Todas aparecerão no portal para escolha do vendedor.
@@ -1029,11 +1031,11 @@
     <script src="model/appearance.js?v=1.6.10"></script>
     <script src="model/analytics.js?v=1.6.4"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js?v=1.6.4"></script>
+    <script src="model/storage.js?v=1.6.11"></script>
     <script src="model/validators.js?v=1.6.4"></script>
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.10"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.11"></script>
     <script src="presenter/dashboard-presenter.js?v=1.6.4"></script>
     <script src="model/google-sheets.js?v=1.6.9.1"></script>
     <!-- SheetJS Community Edition: leitura local dos formatos XLS/XLSX/ODS. -->
@@ -1046,6 +1048,6 @@
     <script src="presenter/pendencias-presenter.js?v=1.6.6"></script>
     <script src="presenter/whatsapp-presenter.js?v=1.6.8"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
-    <script src="presenter/contatos-presenter.js?v=1.6.9.1"></script>
+    <script src="presenter/contatos-presenter.js?v=1.6.11"></script>
 </body>
 </html>

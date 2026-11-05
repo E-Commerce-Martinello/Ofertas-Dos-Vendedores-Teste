@@ -9,6 +9,10 @@ const AdminPresenter = {
     intervaloStatus: null,
     timerBloqueio: null,
     abaAtual: 'ofertas',
+    pararSyncOfertas: null,
+    editandoBase: null,
+    editandoId: null,
+    _versaoOfertas: null,
 
     async init() {
         Storage.verificarQuota();
@@ -70,6 +74,7 @@ const AdminPresenter = {
     },
 
     async logout() {
+        this._pararSincronizacao();
         clearInterval(this.intervaloStatus);
         this.intervaloStatus = null;
         if (typeof GoogleSheetsService !== 'undefined') GoogleSheetsService.limparSessao();
@@ -88,6 +93,7 @@ const AdminPresenter = {
     // ── PAINEL ───────────────────────────────
 
     async _abrirPainel(acesso = {}) {
+        this._pararSincronizacao();
         if (this.intervaloStatus) clearInterval(this.intervaloStatus);
         document.getElementById('loginBox').style.display    = 'none';
         document.getElementById('painelAdmin').style.display = 'block';
@@ -115,11 +121,60 @@ const AdminPresenter = {
         this.ofertas = await Storage.carregarOfertas();
         console.log(`📋 ${this.ofertas.length} oferta(s) carregada(s)`);
         this.renderLista();
+        this._sincronizarOfertas();
         this._carregarConfigEmBreve();
         this._setupDragDrop();
 
         this.intervaloStatus = setInterval(() => this.renderLista(), 5000);
         console.log('✅ Painel admin pronto!');
+    },
+
+    _pararSincronizacao() {
+        if (this.pararSyncOfertas) { this.pararSyncOfertas(); this.pararSyncOfertas=null; }
+        this._versaoOfertas=null;
+        this.editandoBase=null;
+        this.editandoId=null;
+    },
+
+    _statusSync(texto, erro=false) {
+        const el=document.getElementById('estadoSyncOfertas');
+        if (!el) return;
+        el.textContent=texto;
+        el.style.color=erro?'#bf2835':'';
+    },
+
+    _sincronizarOfertas() {
+        const assinatura = lista => JSON.stringify(lista.map(o => [o.id, Storage.assinaturaOferta(o)]));
+        this._versaoOfertas=assinatura(this.ofertas);
+        this._statusSync('● Sincronização em tempo real ativada');
+        this.pararSyncOfertas=Storage.escutarOfertas(ofertas => {
+            const agora=assinatura(ofertas);
+            const mudou=agora!==this._versaoOfertas;
+            this._versaoOfertas=agora;
+            this.ofertas=ofertas;
+            if (mudou) {
+                this.renderLista();
+                if (typeof ContatosPresenter!=='undefined' && this.abaAtual==='contatos') {
+                    ContatosPresenter._atualizarOfertas();
+                    ContatosPresenter.renderizarFila();
+                }
+                if (this.editandoId != null && this.editandoBase != null) {
+                    const alvo=ofertas.find(o=>String(o.id)===String(this.editandoId));
+                    if (!alvo || Storage.assinaturaOferta(alvo)!==this.editandoBase) {
+                        this._avisoConflito('⚠️ Esta oferta foi alterada ou excluída por outra conta. Suas alterações no formulário foram mantidas, mas não serão gravadas sobre a versão nova. Copie o texto e reabra a oferta para editar.');
+                    }
+                }
+            }
+            this._statusSync('● Ofertas sincronizadas em tempo real');
+        }, erro => {
+            console.warn('Falha ao receber atualizações das ofertas:',erro);
+            this._statusSync('⚠️ Sem sincronização ao vivo. Não edite até reconectar.',true);
+        });
+    },
+
+    _avisoConflito(texto='') {
+        const el=document.getElementById('avisoConflitoOferta');
+        if (el) { el.textContent=texto; el.style.display=texto?'block':'none'; }
     },
 
     mostrarAba(aba) {
@@ -224,6 +279,9 @@ const AdminPresenter = {
     // ── FORMULÁRIO ───────────────────────────
 
     mostrarNovaOferta() {
+        this.editandoId=null;
+        this.editandoBase=null;
+        this._avisoConflito();
         document.getElementById('formTitulo').innerHTML     = '➕ NOVA OFERTA';
         document.getElementById('editandoIdx').value        = '';
         document.getElementById('dataInicio').value         = '';
@@ -240,6 +298,9 @@ const AdminPresenter = {
     editarOferta(idx) {
         const o = this.ofertas[idx];
         if (!o) { UI.erro('Oferta não encontrada'); return; }
+        this.editandoId=o.id;
+        this.editandoBase=Storage.assinaturaOferta(o);
+        this._avisoConflito();
         console.log(`✏️ Editando oferta [${idx}]:`, o.tituloPagina);
 
         document.getElementById('formTitulo').innerHTML     = '✏️ EDITAR OFERTA';
@@ -263,6 +324,9 @@ const AdminPresenter = {
     },
 
     cancelarEdicao() {
+        this.editandoId=null;
+        this.editandoBase=null;
+        this._avisoConflito();
         document.getElementById('formNovaOferta').style.display = 'none';
         document.getElementById('editandoIdx').value = '';
         this._removerImagem();
@@ -270,60 +334,68 @@ const AdminPresenter = {
     },
 
     async salvarOferta() {
-        const idx   = document.getElementById('editandoIdx').value;
-        const dados = {
-            dataInicio:   document.getElementById('dataInicio').value,
-            dataFim:      document.getElementById('dataFim').value,
-            linkProduto:  document.getElementById('linkProduto').value,
-            textoOferta:  document.getElementById('textoOferta').value,
-            tituloPagina: document.getElementById('tituloPagina').value || 'DISPARO EM ANDAMENTO!',
-        };
-
-        console.log(`💾 Salvando oferta${idx !== '' ? ` [edição idx ${idx}]` : ' [nova]'}...`);
-
-        const val = Validators.oferta(dados, this.ofertas, idx !== '' ? parseInt(idx) : null);
-        if (!val.valido) {
-            console.warn('❌ Validação falhou:', val.erros);
-            UI.erro(val.erros[0]);
+        const emEdicao = this.editandoId != null;
+        const idAlvo = this.editandoId;
+        const original = emEdicao ? this.ofertas.find(o => String(o.id)===String(idAlvo)) : null;
+        if (emEdicao && !original) {
+            this._avisoConflito('⚠️ Esta oferta foi excluída em outra sessão. Copie os dados e cancele a edição.');
+            UI.erro('Oferta excluída por outro administrador. Nada foi alterado.');
             return;
         }
-
-        const fi = document.getElementById('fileInput');
-        let urlImagem = idx !== '' ? this.ofertas[parseInt(idx)].urlImagem : '';
-        if (fi.files?.[0]) {
-            const vImg = Validators.imagem(fi.files[0]);
-            if (!vImg.valido) { UI.erro(vImg.erro); return; }
-            console.log('🖼️ Convertendo imagem para base64...');
-            urlImagem = await UI.paraBase64(fi.files[0]);
-        }
-
-        const oferta = {
-            id:          idx !== '' ? this.ofertas[parseInt(idx)].id : Date.now(),
-            ...dados,
-            urlImagem,
-            dataCriacao: new Date().toISOString(),
+        const dados = {
+            dataInicio:document.getElementById('dataInicio').value,
+            dataFim:document.getElementById('dataFim').value,
+            linkProduto:document.getElementById('linkProduto').value,
+            textoOferta:document.getElementById('textoOferta').value,
+            tituloPagina:document.getElementById('tituloPagina').value || 'DISPARO EM ANDAMENTO!',
         };
-
-        const novaLista = [...this.ofertas];
-        if (idx !== '') novaLista[parseInt(idx)] = { ...oferta, dataCriacao: this.ofertas[parseInt(idx)].dataCriacao || oferta.dataCriacao };
-        else novaLista.push(oferta);
-        const ok = await Storage.salvarOfertas(novaLista);
-        if (!ok) { UI.erro('Não foi possível gravar no Firebase. Nada foi alterado.'); return; }
-        this.ofertas = novaLista;
+        const idxAtual = emEdicao ? this.ofertas.findIndex(o=>String(o.id)===String(idAlvo)) : null;
+        const val=Validators.oferta(dados,this.ofertas,idxAtual);
+        if (!val.valido) { UI.erro(val.erros[0]); return; }
+        const fi=document.getElementById('fileInput');
+        let urlImagem=emEdicao ? original.urlImagem : '';
+        if (fi.files?.[0]) {
+            const vImg=Validators.imagem(fi.files[0]);
+            if (!vImg.valido) { UI.erro(vImg.erro); return; }
+            urlImagem=await UI.paraBase64(fi.files[0]);
+        }
+        const oferta={
+            id:emEdicao?idAlvo:`of_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
+            ...dados, urlImagem,
+            dataCriacao:emEdicao?(original.dataCriacao || new Date().toISOString()):new Date().toISOString(),
+        };
+        const resultado=await Storage.modificarOferta({
+            tipo:emEdicao?'editar':'criar',id:oferta.id,oferta,
+            base:emEdicao?this.editandoBase:null
+        });
+        if (!resultado.ok) {
+            if (['conflito','excluida'].includes(resultado.motivo)) {
+                this._avisoConflito('⚠️ Alteração simultânea detectada. A oferta foi modificada por outra conta. Seu formulário foi preservado; copie os dados e reabra a oferta antes de salvar novamente.');
+                UI.erro('Conflito: a outra alteração foi preservada. Não sobrescrevemos a oferta.');
+            } else UI.erro('Não foi possível salvar a oferta no Firebase. Nada foi sobrescrito.');
+            return;
+        }
+        this.ofertas=resultado.ofertas;
         this.renderLista();
         this.cancelarEdicao();
-        UI.ok('Oferta salva! Ela ficará visível junto às outras durante seu período.');
+        UI.ok('Oferta salva com segurança e sincronizada com os demais administradores.');
     },
 
     async excluirOferta(idx) {
-        const oferta = this.ofertas[idx];
+        const oferta=this.ofertas[idx];
         if (!oferta || !confirm('Excluir esta oferta?')) return;
-        const novaLista = this.ofertas.filter((_,i) => i !== idx);
-        const ok = await Storage.salvarOfertas(novaLista);
-        if (!ok) { UI.erro('Não foi possível excluir no Firebase.'); return; }
-        this.ofertas = novaLista;
+        const resultado=await Storage.modificarOferta({
+            tipo:'excluir',id:oferta.id,base:Storage.assinaturaOferta(oferta)
+        });
+        if (!resultado.ok) {
+            UI.erro(['conflito','excluida'].includes(resultado.motivo)
+                ? 'Esta oferta foi alterada ou excluída por outra conta. A exclusão foi cancelada.'
+                : 'Não foi possível excluir no Firebase.');
+            return;
+        }
+        this.ofertas=resultado.ofertas;
         this.renderLista();
-        UI.ok('Oferta excluída.');
+        UI.ok('Oferta excluída e sincronizada.');
     },
 
     // ── PREVIEW EM TEMPO REAL ────────────────

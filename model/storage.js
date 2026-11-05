@@ -124,6 +124,81 @@ const Storage = {
         }
     },
 
+    // Converte o formato legado do Realtime Database sem modificar o objeto original.
+    _listaRemota(dados) {
+        if (dados == null) return [];
+        if (Array.isArray(dados)) return dados.filter(o => o && typeof o === 'object');
+        if (typeof dados === 'object') return Object.values(dados).filter(o => o && typeof o === 'object');
+        throw new Error('FORMATO_OFERTAS_INVALIDO');
+    },
+
+    // Assinatura consistente mesmo quando o SDK reorganizar a ordem das propriedades.
+    assinaturaOferta(oferta) {
+        const ordenar = valor => {
+            if (Array.isArray(valor)) return valor.map(ordenar);
+            if (valor && typeof valor === 'object') {
+                return Object.fromEntries(Object.keys(valor).sort().map(k => [k, ordenar(valor[k])]));
+            }
+            return valor;
+        };
+        return JSON.stringify(ordenar(oferta));
+    },
+
+    _cacheOfertas(ofertas) {
+        this._salvarLocalSafe('ofertasMartinello', ofertas.map(o => this._ofertaSemImagem(o)));
+        this._atualizarAtiva(ofertas);
+    },
+
+    // Mantém qualquer navegador aberto sincronizado com o Firebase.
+    escutarOfertas(callback, onErro) {
+        const receber = snap => {
+            try {
+                const ofertas = this._listaRemota(snap.val());
+                this._cacheOfertas(ofertas);
+                callback(ofertas);
+            } catch (e) { if (onErro) onErro(e); }
+        };
+        ofertasRef.on('value', receber, onErro);
+        return () => ofertasRef.off('value', receber);
+    },
+
+    // Operação atômica: edições em ofertas diferentes são mescladas;
+    // a mesma oferta, se alterada por outra conta, NÃO é sobrescrita.
+    async modificarOferta({ tipo, id, oferta, base }) {
+        if (this._salvando) return {ok:false, motivo:'ocupado'};
+        this._salvando = true;
+        let motivo = 'conflito';
+        try {
+            const resultado = await ofertasRef.transaction(dados => {
+                // Nunca substituir dados com estrutura inesperada.
+                let atual;
+                try { atual = this._listaRemota(dados); }
+                catch (_) { motivo='formato'; return; }
+                const lista = atual.slice();
+                const idx = lista.findIndex(o => String(o.id) === String(id));
+                if (tipo === 'criar') {
+                    if (idx !== -1) { motivo='duplicado'; return; }
+                    lista.push(oferta);
+                    motivo='';
+                    return lista;
+                }
+                if (idx === -1) { motivo='excluida'; return; }
+                if (this.assinaturaOferta(lista[idx]) !== base) { motivo='conflito'; return; }
+                if (tipo === 'editar') lista[idx] = { ...lista[idx], ...oferta };
+                else if (tipo === 'excluir') lista.splice(idx,1);
+                else { motivo='tipo'; return; }
+                motivo='';
+                return lista;
+            }, undefined, false);
+            const lista = this._listaRemota(resultado.snapshot.val());
+            this._cacheOfertas(lista);
+            return {ok:resultado.committed, motivo:resultado.committed?'':motivo, ofertas:lista};
+        } catch (e) {
+            console.error('Não foi possível gravar a transação de oferta:',e);
+            return {ok:false, motivo:'erro', erro:e};
+        } finally { this._salvando = false; }
+    },
+
     async salvarOfertas(ofertas) {
         // Somente exibir confirmação após gravação aceita pelo servidor.
         // Nunca sobrescrever cache de ofertas se a operação falhar.

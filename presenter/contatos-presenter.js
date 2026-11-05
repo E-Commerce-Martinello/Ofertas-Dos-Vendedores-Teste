@@ -191,7 +191,7 @@ const ContatosPresenter = {
   _prepararBanner(origem) {
     if (!origem) return;
     if (this.bannerCache?.origem === origem) return;
-    const cache = { origem, arquivo:null, erro:null };
+    const cache = { origem, arquivo:null, copiaPng:null, erro:null };
     this.bannerCache = cache;
     // Carregar antes do clique: navigator.share precisa ser chamado durante o gesto do usuário.
     (async () => {
@@ -203,6 +203,17 @@ const ContatosPresenter = {
       if (tipo !== blob.type) throw new Error('Formato não disponível para compartilhamento. Utilize abrir banner.');
       const extensao = tipo==='image/jpeg'?'jpg':tipo==='image/webp'?'webp':'png';
       cache.arquivo = new File([blob], `oferta-martinello.${extensao}`, { type:tipo });
+      if (tipo === 'image/png') cache.copiaPng=blob;
+      else if (typeof createImageBitmap==='function') {
+        try {
+          const bitmap=await createImageBitmap(blob);
+          const canvas=document.createElement('canvas');
+          canvas.width=bitmap.width;canvas.height=bitmap.height;
+          canvas.getContext('2d').drawImage(bitmap,0,0);
+          cache.copiaPng=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+          bitmap.close?.();
+        } catch (e) { console.warn('Banner não preparado para cópia PNG:',e); }
+      }
     })().catch(e => {cache.erro = e.message || 'Falha ao preparar banner';})
       .finally(() => {if (this.bannerCache===cache) this.renderizarFila();});
   },
@@ -217,7 +228,7 @@ const ContatosPresenter = {
     try { podeCompartilhar = !!(navigator.share && navigator.canShare && this.bannerCache?.arquivo
       && navigator.canShare({files:[this.bannerCache.arquivo]})); }
     catch (_) { podeCompartilhar = false; }
-    const avisoShare = this.bannerCache?.erro ? 'Banner indisponível: utilize Abrir banner.' :
+    const avisoShare = this.bannerCache?.erro ? 'Banner indisponível: utilize Copiar banner.' :
       this.bannerCache?.arquivo ? (podeCompartilhar ? 'Compartilhe pelo menu nativo e selecione WhatsApp e a conversa.' : 'Seu navegador não oferece compartilhamento de arquivos. Use o envio manual.') : 'Preparando banner para compartilhar…';
     destino.innerHTML = participantes.map(v => {
       const rubi=this._rubi(v.matricula);
@@ -228,13 +239,13 @@ const ContatosPresenter = {
         && new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Cuiaba',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(c.confirmadoEm)) === hoje);
       return `<article class="contatos-linha" role="listitem"><div class="contatos-conteudo"><strong>${this._esc(v.nome)}</strong>
         <small>Rubi ${rubi} · ${this._esc(VendedoresPresenter._exibirTelefone(v.numero))} · ${linkGrupoOk?'Convite configurado':'Informe o link do grupo para habilitar o convite'}</small>
-        <small>${this._esc(avisoShare)} Não é possível selecionar o destinatário automaticamente pelo compartilhamento nativo.</small></div>
+        <small>${this._esc(avisoShare)} OFERTA DIRETA abre o contato com texto pronto e tenta copiar o banner para você colar. O WhatsApp não permite anexar imagem e legenda automaticamente em uma conversa escolhida por um site.</small></div>
         <div class="contatos-acoes">
           <button type="button" class="btn-outline" data-acao="copiar" data-rubi="${rubi}">COPIAR OFERTA</button>
           <button type="button" class="btn-outline" data-acao="imagem" data-rubi="${rubi}">COPIAR BANNER</button>
-          <button type="button" class="btn-outline" data-acao="abrirImagem" data-rubi="${rubi}">ABRIR BANNER</button>
-          <button type="button" class="btn-primary" data-acao="nativo" data-rubi="${rubi}" ${podeCompartilhar?'':'disabled'} title="Abre o compartilhamento do aparelho; escolha WhatsApp e o destinatário">IMAGEM + TEXTO (CELULAR)</button>
-          <button type="button" class="btn-outline" data-acao="oferta" data-rubi="${rubi}">ABRIR WHATSAPP</button>
+          <button type="button" class="btn-outline" data-acao="direta" data-rubi="${rubi}" title="Abre a conversa com a mensagem pronta; tenta copiar a imagem para colar manualmente">OFERTA DIRETA</button>
+          <button type="button" class="btn-primary" data-acao="nativo" data-rubi="${rubi}" ${podeCompartilhar?'':'disabled'} title="Abre o compartilhamento do aparelho; escolha WhatsApp e o destinatário">OFERTA</button>
+          <button type="button" class="btn-outline" data-acao="contato" data-rubi="${rubi}">ABRIR CONTATO</button>
           <button type="button" class="btn-outline" data-acao="convite" data-rubi="${rubi}" ${linkGrupoOk?'':'disabled'}>ABRIR CONVITE</button>
           <button type="button" class="btn-outline" data-acao="registrar" data-rubi="${rubi}" ${abordadoHoje?'disabled':''}>${abordadoHoje?'ABORDADO HOJE':'MARCAR ABORDADO'}</button>
         </div></article>`;
@@ -265,11 +276,34 @@ const ContatosPresenter = {
       }
       return;
     }
-    if (acao==='oferta' || acao==='convite') {
+    if (acao==='direta') {
+      // O navegador pode abrir um contato com texto, mas NÃO anexar mídia a essa conversa.
+      // Inicia a cópia da imagem no mesmo gesto do usuário e abre o contato com o texto.
+      const arquivo=this.bannerCache?.arquivo;
+      const link=`https://wa.me/55${msgs.n}?text=${encodeURIComponent(msgs.ofertaTexto)}`;
+      let copiando=null;
+      if (arquivo && navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+        // No Clipboard somente PNG é interoperável entre Chrome/WhatsApp Web.
+        const blob = this.bannerCache?.copiaPng;
+        if (blob) {
+          try { copiando=navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); }
+          catch (_) { copiando=null; }
+        }
+      }
+      window.open(link,'_blank','noopener,noreferrer');
+      if (copiando) {
+        try {
+          await copiando;
+          UI.ok('Conversa e texto preparados. Banner copiado: cole a imagem na conversa antes de enviar.');
+        } catch (_) { UI.erro('Conversa aberta com texto. O navegador não liberou o banner; use COPIAR BANNER.'); }
+      } else UI.ok('Conversa aberta com texto. Para enviar a imagem, use COPIAR BANNER e cole na conversa.');
+      return;
+    }
+    if (acao==='contato' || acao==='convite') {
       if (acao==='convite' && !msgs.grupo) { UI.erro('Informe um link válido de convite do WhatsApp.');return; }
-      // O clique gera uma única conversa; o envio nunca é automatizado.
-      const texto = acao==='oferta' ? msgs.ofertaTexto : msgs.conviteTexto;
-      window.open(`https://wa.me/55${msgs.n}?text=${encodeURIComponent(texto)}`,'_blank','noopener,noreferrer');
+      const link=acao==='contato' ? `https://wa.me/55${msgs.n}` :
+        `https://wa.me/55${msgs.n}?text=${encodeURIComponent(msgs.conviteTexto)}`;
+      window.open(link,'_blank','noopener,noreferrer');
       return;
     }
     if (acao==='copiar') {
@@ -310,7 +344,7 @@ const ContatosPresenter = {
         UI.ok('Banner copiado. Cole a imagem na conversa do WhatsApp.');
       } catch (err) {
         // Fallback transparente: abrir a imagem não envia nada automaticamente.
-        UI.erro('Não foi possível copiar a imagem. Utilize o botão ABRIR BANNER para compartilhá-la manualmente.');
+        UI.erro('Não foi possível copiar a imagem neste navegador. Use OFERTA no celular e escolha a conversa manualmente.');
       }
       return;
     }
