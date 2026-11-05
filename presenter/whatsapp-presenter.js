@@ -33,12 +33,12 @@ const WhatsAppPresenter = {
   },
   async preverArquivo() {
     if (!this.arquivo) { this._status('Selecione o arquivo de participantes primeiro.', 'error'); return; }
-    if (typeof XLSX === 'undefined') { this._status('Não foi possível carregar o leitor de planilhas. Atualize a página e tente novamente.', 'error'); return; }
     if (this.arquivo.size > 8 * 1024 * 1024) { this._status('O arquivo excede 8 MB.', 'error'); return; }
     const botao = document.getElementById('whatsappAnalisarArquivo');
     if (botao) botao.disabled=true;
     this._status('Lendo o arquivo no navegador, sem enviar a planilha inteira...');
     try {
+      await PlanilhaLoader.garantir();
       const bytes = await this.arquivo.arrayBuffer();
       const workbook = XLSX.read(bytes, { type:'array', cellText:true, cellFormula:false, cellHTML:false });
       const resultado = GrupoWhatsAppModel.analisarWorkbook(workbook);

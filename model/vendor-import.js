@@ -190,12 +190,12 @@ const VendorImportPresenter = {
     async analisar() {
         if (this.processando) return;
         if (!this.arquivo) { UI.erro('Escolha o relatório antes de analisar.'); return; }
-        if (!window.XLSX || typeof XLSX.read !== 'function') { UI.erro('O leitor de planilhas não carregou. Atualize a página e tente novamente.'); return; }
         if (!VendedoresPresenter.registros.length) { UI.erro('Conecte e carregue a base de vendedores antes de importar.'); return; }
         this.processando = true;
         const botao = document.getElementById('btnAnalisarRelatorio');
         if (botao) { botao.disabled = true; botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ANALISANDO...'; }
         try {
+            await PlanilhaLoader.garantir();
             const bytes = await this.arquivo.arrayBuffer();
             const workbook = XLSX.read(bytes, { type:'array', codepage:1252, cellDates:true, cellText:true, cellFormula:false, cellHTML:false });
             const resultado = this._extrairRegistros(workbook);

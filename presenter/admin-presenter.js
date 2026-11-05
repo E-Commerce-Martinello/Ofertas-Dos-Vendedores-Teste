@@ -13,6 +13,8 @@ const AdminPresenter = {
     editandoBase: null,
     editandoId: null,
     _versaoOfertas: null,
+    _chaveAba: 'martAdminUltimaAba_TESTE',
+    _autorizado: false,
 
     async init() {
         Storage.verificarQuota();
@@ -21,7 +23,7 @@ const AdminPresenter = {
         // Eliminar credenciais e sessões antigas da versão com senha fixa.
         localStorage.removeItem('martVendedoresApiToken_TESTE');
         sessionStorage.removeItem(CONFIG.SESSION_KEY);
-        this._mostrarLogin();
+        this._restaurandoSessao(true);
         try {
             const usuario = await Auth.iniciar();
             if (usuario?.isAnonymous) {
@@ -32,11 +34,31 @@ const AdminPresenter = {
                 await this._abrirPainel(acesso);
             }
         } catch (erro) {
-            // A sessão Firebase pode existir, mas a conta precisa ter permissão no Apps Script.
+            // Sem autorização do Apps Script, não mostrar dados internos nem usar cache.
+            this._mostrarLogin();
             this._mensagemLogin(erro.message || 'Não foi possível validar a conta.');
-            // Mantém a sessão Google se apenas a API falhar. Não libera o painel.
             if (!Auth.usuarioAtual()) await Auth.sair().catch(() => {});
+        } finally {
+            this._restaurandoSessao(false);
         }
+    },
+
+    _restaurandoSessao(ativo) {
+        const box=document.getElementById('loginBox');
+        const aviso=document.getElementById('loginRestaurando');
+        if (box) {if (ativo) box.style.display='block'; box.dataset.restaurando=ativo?'true':'false';}
+        if (aviso) aviso.hidden=!ativo;
+        const titulo=document.getElementById('tituloLogin');
+        if (titulo) titulo.textContent=ativo?'Preparando painel...':'Acesso Restrito';
+        const instrucao=document.getElementById('instrucaoLogin');
+        if (instrucao) instrucao.hidden=ativo;
+    },
+
+    _lembrarAba(aba) {
+        try { sessionStorage.setItem(this._chaveAba, aba); } catch (_) {}
+    },
+    _abaSalva() {
+        try {return sessionStorage.getItem(this._chaveAba)||'ofertas';} catch (_) {return 'ofertas';}
     },
 
     _mensagemLogin(mensagem) {
@@ -45,6 +67,7 @@ const AdminPresenter = {
     },
 
     _mostrarLogin() {
+        this._autorizado = false;
         document.getElementById('loginBox').style.display = 'block';
         document.getElementById('painelAdmin').style.display = 'none';
     },
@@ -77,6 +100,8 @@ const AdminPresenter = {
         this._pararSincronizacao();
         clearInterval(this.intervaloStatus);
         this.intervaloStatus = null;
+        this._autorizado = false;
+        try { sessionStorage.removeItem(this._chaveAba); } catch (_) {}
         if (typeof GoogleSheetsService !== 'undefined') GoogleSheetsService.limparSessao();
         if (typeof VendedoresPresenter !== 'undefined') VendedoresPresenter.limparDados();
         if (typeof DashboardPresenter !== 'undefined') DashboardPresenter.limpar();
@@ -100,32 +125,40 @@ const AdminPresenter = {
 
         const gestor = acesso.proprietario === true;
         this.ehPrincipal = gestor;
+        this._autorizado = true;
         document.getElementById('tabAcessos').style.display = gestor ? '' : 'none';
         const avisoAdmin = document.getElementById('avisoPermissaoOfertas');
         if (avisoAdmin) {
             avisoAdmin.hidden = true;
             if (!gestor) {
-                try {
-                    const uid = Auth.usuarioAtual()?.uid;
-                    const snap = uid ? await database.ref('adminUids_TESTE/' + uid).once('value') : null;
-                    if (!snap?.val()) avisoAdmin.hidden = false;
-                } catch (e) { avisoAdmin.hidden = false; }
+                const uid = Auth.usuarioAtual()?.uid;
+                if (!uid) avisoAdmin.hidden = false;
+                else database.ref('adminUids_TESTE/' + uid).once('value').then(snap => {
+                    // A verificação visual não deve atrasar a abertura do painel;
+                    // as regras Firebase seguem impondo as permissões reais.
+                    if (this._autorizado && Auth.usuarioAtual()?.uid === uid) avisoAdmin.hidden = !!snap.val();
+                }).catch(() => {
+                    if (this._autorizado && Auth.usuarioAtual()?.uid === uid) avisoAdmin.hidden = false;
+                });
             }
         }
-        this.mostrarAba('ofertas');
+        const restaurada = this._abaSalva();
+        this.mostrarAba(['ofertas','dashboard','vendedores','contatos','aparencia','configuracoes','acessos'].includes(restaurada) ? restaurada : 'ofertas');
         if (typeof VendedoresPresenter !== 'undefined') {
             VendedoresPresenter.init();
             // Uma consulta automaticamente, sem expor a URL ou exigir conexão manual.
             VendedoresPresenter.atualizar().catch(erro => console.warn('Falha na atualização automática:', erro));
         }
-        this.ofertas = await Storage.carregarOfertas();
-        console.log(`📋 ${this.ofertas.length} oferta(s) carregada(s)`);
-        this.renderLista();
+        // A assinatura em tempo real inclui o primeiro snapshot. Evita duas leituras
+        // pesadas dos mesmos banners e mantém a proteção de conflitos da v1.6.11.
+        this.ofertas = [];
         this._sincronizarOfertas();
         this._carregarConfigEmBreve();
         this._setupDragDrop();
 
-        this.intervaloStatus = setInterval(() => this.renderLista(), 5000);
+        // Datas agendadas continuam mudando mesmo sem nova gravação no Firebase.
+        // Intervalo mais leve para a página administrativa.
+        this.intervaloStatus = setInterval(() => this.renderLista(), 30000);
         console.log('✅ Painel admin pronto!');
     },
 
@@ -184,23 +217,26 @@ const AdminPresenter = {
         const dashboard = aba === 'dashboard';
         const contatos = aba === 'contatos';
         const aparencia = aba === 'aparencia';
+        const configuracoes = aba === 'configuracoes';
         const pendencias = false; // Pendências agora são um filtro da lista única.
         const whatsapp = false; // A gestão do grupo está integrada à aba Vendedores.
-        this.abaAtual = acessos ? 'acessos' : aparencia ? 'aparencia' : contatos ? 'contatos' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : pendencias ? 'pendencias' : whatsapp ? 'whatsapp' : 'ofertas';
-        ['ofertas','vendedores','dashboard','contatos','aparencia','pendencias','whatsapp','acessos'].forEach(nome => {
+        this.abaAtual = acessos ? 'acessos' : configuracoes ? 'configuracoes' : aparencia ? 'aparencia' : contatos ? 'contatos' : vendedores ? 'vendedores' : dashboard ? 'dashboard' : 'ofertas';
+        if (this._autorizado) this._lembrarAba(this.abaAtual);
+        ['ofertas','vendedores','dashboard','contatos','aparencia','configuracoes','pendencias','whatsapp','acessos'].forEach(nome => {
             const el = document.getElementById('aba'+nome[0].toUpperCase()+nome.slice(1));
             if (el) el.style.display = this.abaAtual === nome ? 'block' : 'none';
             const tab = document.getElementById('tab'+nome[0].toUpperCase()+nome.slice(1));
             if (tab) tab.classList.toggle('active',this.abaAtual === nome);
         });
         document.getElementById('btnNovaOfertaTopo').style.display = this.abaAtual === 'ofertas' ? 'inline-block' : 'none';
-        const titulos={ofertas:'⚙️ AGENDADOR',dashboard:'📊 DASHBOARD',vendedores:'👥 VENDEDORES',contatos:'💬 CONTATOS',aparencia:'🎨 APARÊNCIA',
+        const titulos={ofertas:'⚙️ AGENDADOR',dashboard:'📊 DASHBOARD',vendedores:'👥 VENDEDORES',contatos:'💬 CONTATOS',aparencia:'🎨 APARÊNCIA',configuracoes:'⚙️ CONFIGURAÇÕES',
                        pendencias:'📋 PENDÊNCIAS',whatsapp:'💬 WHATSAPP',acessos:'🔐 ACESSOS'};
         const descricoes={ofertas:'Várias ofertas podem ficar disponíveis ao mesmo tempo',
                           dashboard:'Acompanhamento de compartilhamentos iniciados',
                           vendedores:'Cadastros, participação no grupo e importações em uma lista única',
                           contatos:'Seleção de vendedores e preparação manual de mensagens',
                           aparencia:'Logo, imagem e textos do portal — sincronizados entre dispositivos',
+                          configuracoes:'Central de preferências e atalhos para configurações compartilhadas',
                           pendencias:'Telefones ainda não validados',
                           whatsapp:'Participantes do grupo e identificações',
                           acessos:'Gestão de administradores autorizados'};
@@ -210,9 +246,34 @@ const AdminPresenter = {
         if (dashboard) DashboardPresenter.atualizar();
         if (contatos) ContatosPresenter.init();
         if (acessos) GerenciarAcessosPresenter.carregar();
+        if (configuracoes) this._renderPreferencias();
         document.querySelector('.admin-container')?.classList.toggle('admin-container-contacts', contatos);
         if (pendencias) PendenciasPresenter.renderizar();
         if (vendedores && typeof WhatsAppPresenter !== 'undefined' && !WhatsAppPresenter.grupoCarregado && !WhatsAppPresenter.carregando) WhatsAppPresenter.carregar();
+    },
+
+    abrirConfiguracao(area) {
+        if (area === 'acessos' && !this.ehPrincipal) { UI.erro('Somente a conta principal gerencia acessos.'); return; }
+        this.mostrarAba(area);
+        if (area === 'contatos') {
+            const painel = document.getElementById('contatosConfigPainel');
+            if (painel) {painel.open = true; painel.scrollIntoView({block:'start',behavior:'smooth'});}
+        }
+    },
+
+    _renderPreferencias() {
+        const campo = document.getElementById('centralQtdVendedores');
+        if (campo) campo.value = String(VendedoresPresenter.porPagina);
+        const btn = document.getElementById('centralAcessos');
+        if (btn) btn.disabled = !this.ehPrincipal;
+    },
+    salvarPreferenciaLista(valor) {
+        const itens = Number(valor);
+        if (![15,25,50].includes(itens)) return;
+        VendedoresPresenter.porPagina = itens;
+        VendedoresPresenter.pagina = 1;
+        try { localStorage.setItem('martItensVendedores_TESTE', String(itens)); } catch (_) {}
+        if (VendedoresPresenter.registros.length) VendedoresPresenter.filtrar();
     },
 
     _esc(valor) {

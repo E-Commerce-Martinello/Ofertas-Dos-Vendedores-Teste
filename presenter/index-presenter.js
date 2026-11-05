@@ -99,6 +99,9 @@ const IndexPresenter = {
             img.src = oferta.urlImagem || 'img/produto.png';
             img.alt = '';
             img.loading = 'lazy';
+            img.decoding = 'async';
+            img.width = 160;
+            img.height = 120;
             img.onerror = () => { img.onerror = null; img.src = 'img/produto.png'; };
             const texto = document.createElement('span');
             texto.textContent = oferta.tituloPagina || 'Oferta';

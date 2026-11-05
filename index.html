@@ -244,7 +244,16 @@
         .catalogo-item:hover { border-color:#d0252a; transform:translateY(-1px); }
         .catalogo-item:focus-visible { outline:3px solid #d0252a; outline-offset:2px; }
         .catalogo-item.selecionada { border-color:#d0252a; background:#fff3f4; box-shadow:0 0 0 1px #d0252a; }
-        .catalogo-item img { width:100%; aspect-ratio:4/3; object-fit:contain; border-radius:9px; background:#f3f3f3; }
+        /* v1.6.12: miniaturas sempre no mesmo tamanho; Stories 9:16 não expandem a vitrine. */
+        .catalogo-item { min-width:0; overflow:hidden; }
+        .catalogo-item img {
+            display:block; width:100%; height:auto; aspect-ratio:4/3;
+            object-fit:cover; object-position:center center;
+            border-radius:9px; background:#f3f3f3;
+        }
+        .catalogo-item span { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; min-height:3.8em; }
+        @media(max-width:470px){ .catalogo-grid {grid-template-columns:repeat(2,minmax(0,1fr));} }
+        @media(max-width:340px){ .catalogo-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;} .catalogo-item{padding:6px;} }
         .catalogo-item span { overflow-wrap:anywhere; line-height:1.4; }
         body.dark-mode .catalogo-item { background:#383838; color:#eee; border-color:#555; }
         body.dark-mode .catalogo-item.selecionada { border-color:#f46a70; background:#50282b; }
@@ -394,6 +403,6 @@
     <script src="model/validators.js?v=1.6.3.2"></script>
     <script src="view/ui.js"></script>
     <script src="presenter/api.js"></script>
-    <script src="presenter/index-presenter.js?v=1.6.11"></script>
+    <script src="presenter/index-presenter.js?v=1.6.12"></script>
 </body>
 </html>

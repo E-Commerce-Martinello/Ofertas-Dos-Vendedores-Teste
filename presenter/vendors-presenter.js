@@ -25,10 +25,15 @@ const VendedoresPresenter = {
     ultimaAtualizacaoTexto: '',
     grupoCarregado: false,
     grupoTelefones: new Set(),
+    grupoSufixos: new Set(),
     grupoDuplicados: new Set(),
 
     init() {
         if (!this.inicializado) {
+            try {
+                const preferencia=Number(localStorage.getItem('martItensVendedores_TESTE'));
+                if ([15,25,50].includes(preferencia)) this.porPagina=preferencia;
+            } catch (_) {}
             this.apiUrl = GoogleSheetsService.obterUrl();
             this.inicializado = true;
         }
@@ -75,6 +80,7 @@ const VendedoresPresenter = {
         this.links = {};
         this.grupoCarregado = false;
         this.grupoTelefones = new Set();
+        this.grupoSufixos = new Set();
         this.grupoDuplicados = new Set();
         this.pagina = 1;
         this.linksExibidos = 12;
@@ -171,14 +177,17 @@ const VendedoresPresenter = {
         if (botaoAtualizar) botaoAtualizar.disabled = true;
         this._status('Consultando a aba Vendedores da planilha de TESTE...');
         try {
-            const base = await GoogleSheetsService.carregarVendedores(apiUrl);
+            // Consultas independentes em paralelo: reduzem tempo de espera sem cachear dados pessoais.
+            const [base, consultaLinks] = await Promise.all([
+                GoogleSheetsService.carregarVendedores(apiUrl),
+                GoogleSheetsService.listarLinks().catch(erro => {
+                    console.warn('Não foi possível ler os status de links do Sheets:', erro);
+                    return { resultados: [] };
+                })
+            ]);
             const linhas = base.linhas;
             this.filiais = Object.fromEntries((base.filiais || [])
                 .filter(v => Array.isArray(v) && v.length >= 2 && /^\d+$/.test(String(v[0]))));
-            // Resultados de verificação ficam somente na aba Verificacao_Links do Sheets.
-            let consultaLinks = { resultados: [] };
-            try { consultaLinks = await GoogleSheetsService.listarLinks(); }
-            catch (erro) { console.warn('Não foi possível ler os status de links do Sheets:', erro); }
             this.links = Object.fromEntries((consultaLinks.resultados || [])
                 .filter(x => /^\d+$/.test(String(x.matricula || '')))
                 .map(x => [`m${this._matricula(x.matricula)}`, x]));
@@ -246,6 +255,7 @@ const VendedoresPresenter = {
         this.grupoCarregado = !!grupo?.grupoCarregado && !!(grupo.participantes || []).length;
         this.grupoTelefones = new Set((grupo?.participantes || [])
             .map(p => GrupoWhatsAppModel.telefone(p.telefone)).filter(Boolean));
+        this.grupoSufixos = new Set([...this.grupoTelefones].map(n => n.slice(-8)));
         const oficiais = new Map();
         this.registros.forEach(v => {
             if (v.statusTelefone !== 'VALIDADO') return;
@@ -273,9 +283,14 @@ const VendedoresPresenter = {
         if (this.grupoTelefones.has(n))
             return { codigo:'grupo', texto:'No grupo', classe:'in' };
         // Não associar automaticamente pelo final do número; apenas destacar DDD divergente.
-        if ([...this.grupoTelefones].some(outro => outro.slice(-8) === n.slice(-8)))
+        if (this.grupoSufixos.has(n.slice(-8)))
             return { codigo:'revisar', texto:'Possível DDD diferente · revisar', classe:'review' };
         return { codigo:'fora', texto:'Fora do grupo', classe:'out' };
+    },
+
+    agendarBusca() {
+        clearTimeout(this._timerBusca);
+        this._timerBusca = setTimeout(() => this.filtrar(), 140);
     },
 
     filtrar() {
@@ -351,6 +366,25 @@ const VendedoresPresenter = {
         return `<span class="vendor-badge ${classe}" title="${this._escapar(detalhe)}">${rotulo}</span>`;
     },
 
+    // Vendedores elegíveis continuam usando a fila; os demais abrem a conversa avulsa.
+    // O segundo caminho não adiciona inativos à fila de campanhas.
+    abrirContato(matricula) {
+        const alvo = this.registros.find(v => String(v.matricula) === String(matricula));
+        if (!alvo || alvo.statusTelefone !== 'VALIDADO') {
+            UI.erro('Contato indisponível: o telefone precisa estar validado.'); return;
+        }
+        const telefone = GrupoWhatsAppModel.telefone(alvo.numero);
+        if (!telefone) { UI.erro('Contato indisponível: número brasileiro inválido.'); return; }
+        const elegivel = typeof ContatosPresenter !== 'undefined' &&
+            VendedoresPresenter._situacaoGrupo(alvo).codigo === 'fora' && alvo.ativo &&
+            !this.grupoDuplicados.has(telefone);
+        if (elegivel) {
+            ContatosPresenter.abrirVendedor(matricula);
+        } else {
+            window.open('https://wa.me/55' + telefone, '_blank', 'noopener,noreferrer');
+        }
+    },
+
     _renderizarTabela() {
         const destino = document.getElementById('corpoTabelaVendedores');
         if (!destino) return;
@@ -371,17 +405,17 @@ const VendedoresPresenter = {
                 </div>
                 <div class="vendor-entry-field"><span class="field-label">Filial</span>
                     <strong>${this._escapar(v.filial || '—')}</strong><small>${this._escapar(v.localidadeFilial || '')}</small></div>
-                <div class="vendor-entry-field"><span class="field-label">WhatsApp / telefone</span>
-                    <strong>${this._escapar(this._exibirTelefone(v.numero))}</strong><small>${v.statusTelefone === 'VALIDADO' ? 'Validado' : 'Pendente de validação'}</small></div>
+                <div class="vendor-entry-field vendor-entry-phone"><span class="field-label">WhatsApp / telefone</span>
+                    <strong title="${this._escapar(this._exibirTelefone(v.numero))}">${this._escapar(this._exibirTelefone(v.numero))}</strong><small>${v.statusTelefone === 'VALIDADO' ? 'Validado' : 'Pendente de validação'}</small></div>
                 <div class="vendor-entry-field"><span class="field-label">Situação no grupo</span>
                     <span class="vendor-badge ${grupo.classe}">${this._escapar(grupo.texto)}</span></div>
                 <div class="vendor-entry-actions"><button class="vendor-small-btn" type="button" data-rubi="${rubi}">
                     <i class="fas fa-pen"></i> Editar</button>
-                    ${grupo.codigo === 'fora' && v.statusTelefone === 'VALIDADO' && v.ativo ? `<button class="vendor-small-btn" type="button" data-contato="${rubi}"><i class="fab fa-whatsapp"></i> Contatar</button>` : ''}</div>
+                    ${v.statusTelefone === 'VALIDADO' && !!GrupoWhatsAppModel.telefone(v.numero) ? `<button class="vendor-small-btn vendor-contact-btn" type="button" data-contato="${rubi}" title="${grupo.codigo === 'fora' && v.ativo ? 'Preparar oferta para o vendedor' : 'Abrir contato no WhatsApp (conversa individual)'}"><i class="fab fa-whatsapp"></i> Contatar</button>` : ''}</div>
             </article>`;
         }).join('') || '<p class="vendor-empty">Nenhum vendedor encontrado com esses filtros.</p>';
         destino.querySelectorAll('[data-rubi]').forEach(b => b.addEventListener('click', () => this.abrirEdicao(b.dataset.rubi)));
-        destino.querySelectorAll('[data-contato]').forEach(b => b.addEventListener('click', () => ContatosPresenter.abrirVendedor(b.dataset.contato)));
+        destino.querySelectorAll('[data-contato]').forEach(b => b.addEventListener('click', () => this.abrirContato(b.dataset.contato)));
         document.getElementById('infoPaginacaoVendedores').textContent = total
             ? `Exibindo ${linhas.length} de ${total.toLocaleString('pt-BR')} vendedores`
             : 'Nenhum registro';
