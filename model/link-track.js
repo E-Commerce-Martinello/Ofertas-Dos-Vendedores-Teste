@@ -3,14 +3,13 @@
 const LinkTrack = {
     codigoOferta(o) { return /^[A-Za-z0-9_-]{1,40}$/.test(String(o?.id||'')) ? String(o.id) : ''; },
     rubi(v) { const n=String(v||'').replace(/\D/g,''); return /^\d{3,5}$/.test(n)?n:''; },
+    // Hotfix 1.6.14.1: retorna o link ORIGINAL da Martinello visível ao cliente.
+    // Isso preserva o domínio de confiança, mas não contabiliza novos cliques
+    // do cliente no Dashboard: o registro de compartilhamento continua ativo.
     urlCompartilhavel(oferta,matricula) {
-        const id=this.codigoOferta(oferta),rubi=this.rubi(matricula);
+        const id=this.codigoOferta(oferta), rubi=this.rubi(matricula);
         if(!id || !rubi)throw new Error('Identificador de oferta ou matrícula inválido.');
-        const link=new URL('clique.html',window.location.href);
-        link.searchParams.set('o',id);link.searchParams.set('m',rubi);
-        const camp=typeof CampanhasPortal!=='undefined' ? CampanhasPortal.efetiva(oferta) : '';
-        if(camp)link.searchParams.set('c',camp);
-        return link.href;
+        return this.destino(oferta,rubi);
     },
     destino(oferta,matricula) {
         const rubi=this.rubi(matricula);

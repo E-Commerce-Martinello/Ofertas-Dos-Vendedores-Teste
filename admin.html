@@ -840,11 +840,11 @@
                     <div class="dashboard-metrica"><strong id="dashInicios">0</strong><span>INÍCIOS REGISTRADOS</span></div>
                     <div class="dashboard-metrica"><strong id="dashVendedores">0</strong><span>VENDEDORES DISTINTOS</span></div>
                     <div class="dashboard-metrica"><strong id="dashOfertas">0</strong><span>OFERTAS UTILIZADAS</span></div>
-                    <div class="dashboard-metrica"><strong id="dashCliques">0</strong><span>CLIQUES NOS LINKS DOS VENDEDORES</span></div>
+                    <div class="dashboard-metrica"><strong id="dashCliques">0</strong><span>CLIQUES RASTREADOS (HISTÓRICO)</span></div>
                     <div class="dashboard-metrica"><strong id="dashMaisPopular" style="font-size:16px">—</strong><span>OFERTA MAIS ACIONADA</span></div>
                 </div>
                 <div class="vendor-actions" style="margin:9px 0"><button type="button" class="btn-outline" style="width:auto" onclick="DashboardPresenter.copiarLinkGrupo()"><i class="fas fa-link"></i> COPIAR LINK COMPACTO DO GRUPO</button></div>
-                <p class="dashboard-explicacao">O link compacto do grupo permanece sem parâmetros: a campanha é atribuída no portal conforme a configuração vigente no momento da visita. Sem tag de origem, não é possível garantir que uma visita veio do grupo. Os cliques em links de oferta passam por redirecionamento interno e não confirmam vendas. Acessos ao portal indicam sessões registradas, sem identificar a pessoa que clicou. A medição registra o início da preparação do compartilhamento, não o envio efetivo pelo WhatsApp. Para evitar duplo clique, conta no máximo um início por oferta e matrícula em uma janela de dez minutos. A coleta começou nesta versão; períodos anteriores não são recuperados automaticamente.</p>
+                <p class="dashboard-explicacao">O link compacto do grupo permanece sem parâmetros: a campanha é atribuída no portal conforme a configuração vigente no momento da visita. Sem tag de origem, não é possível garantir que uma visita veio do grupo. Os links enviados ao cliente agora seguem diretamente o domínio oficial da Martinello. O histórico de cliques rastreados anteriormente permanece disponível, mas novas visitas ao link oficial não são mensuradas diretamente neste painel. A medição de cliques reais poderá voltar com apoio do domínio oficial ou futura integração ao Analytics. Acessos ao portal indicam sessões registradas, sem identificar a pessoa que clicou. A medição registra o início da preparação do compartilhamento, não o envio efetivo pelo WhatsApp. Para evitar duplo clique, conta no máximo um início por oferta e matrícula em uma janela de dez minutos. A coleta começou nesta versão; períodos anteriores não são recuperados automaticamente.</p>
                 <p class="dashboard-explicacao" id="dashboardAvisoBase"></p>
             </div>
             <div class="admin-card dashboard-ranking-grid">
@@ -1215,7 +1215,7 @@
     <script src="model/firebase-config.js"></script>
     <script src="model/appearance.js?v=1.6.10"></script>
     <script src="model/campanhas.js?v=1.6.14"></script>
-    <script src="model/link-track.js?v=1.6.14"></script>
+    <script src="model/link-track.js?v=1.6.14.1"></script>
     <script src="model/analytics.js?v=1.6.14"></script>
     <script src="model/horario.js"></script>
     <script src="model/storage.js?v=1.6.11"></script>
