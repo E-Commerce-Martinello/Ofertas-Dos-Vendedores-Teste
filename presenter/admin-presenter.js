@@ -155,6 +155,7 @@ const AdminPresenter = {
         this._sincronizarOfertas();
         this._carregarConfigEmBreve();
         this._setupDragDrop();
+        if (typeof CampanhasPresenter !== 'undefined') CampanhasPresenter.carregar();
 
         // Datas agendadas continuam mudando mesmo sem nova gravação no Firebase.
         // Intervalo mais leve para a página administrativa.
@@ -329,7 +330,8 @@ const AdminPresenter = {
                     <div class="oferta-info">
                         <strong>${this._esc(o.tituloPagina || 'Sem título')}</strong><br>
                         📅 ${formatarBrasilia(ini)} → ${formatarBrasilia(fim)}<br>
-                        🔗 ${this._esc((o.linkProduto||'').slice(0,45))}…
+                        🔗 ${this._esc((o.linkProduto||'').slice(0,45))}…<br>
+                        🏷️ Campanha: ${this._esc(o.campanha || 'Geral')}
                     </div>
                     <div class="oferta-actions">
                         <button class="btn-warning" onclick="AdminPresenter.editarOferta(${i})" style="padding:10px 15px;width:auto;">✏️</button>
@@ -353,6 +355,7 @@ const AdminPresenter = {
         document.getElementById('linkProduto').value        = '';
         document.getElementById('textoOferta').value        = '';
         document.getElementById('tituloPagina').value       = 'DISPARO EM ANDAMENTO!';
+        document.getElementById('campanhaOferta').value     = '';
         this._removerImagem();
         this._atualizarPreview();
         document.getElementById('formNovaOferta').style.display = 'block';
@@ -374,6 +377,7 @@ const AdminPresenter = {
         document.getElementById('linkProduto').value        = o.linkProduto || '';
         document.getElementById('textoOferta').value        = o.textoOferta || '';
         document.getElementById('tituloPagina').value       = o.tituloPagina || 'DISPARO EM ANDAMENTO!';
+        document.getElementById('campanhaOferta').value     = o.campanha || '';
 
         const prev = document.getElementById('preview');
         const btnR = document.getElementById('btnRemoverImagem');
@@ -412,7 +416,11 @@ const AdminPresenter = {
             linkProduto:document.getElementById('linkProduto').value,
             textoOferta:document.getElementById('textoOferta').value,
             tituloPagina:document.getElementById('tituloPagina').value || 'DISPARO EM ANDAMENTO!',
+            campanha:String(document.getElementById('campanhaOferta').value||'').trim().toLowerCase(),
         };
+        if(dados.campanha && !/^[a-z0-9][a-z0-9_-]{0,59}$/.test(dados.campanha)){
+            UI.erro('Campanha individual inválida: até 60 letras minúsculas, números, _ ou -.');return;
+        }
         const idxAtual = emEdicao ? this.ofertas.findIndex(o=>String(o.id)===String(idAlvo)) : null;
         const val=Validators.oferta(dados,this.ofertas,idxAtual);
         if (!val.valido) { UI.erro(val.erros[0]); return; }

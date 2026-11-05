@@ -168,6 +168,16 @@ const GoogleSheetsService = {
         return resposta.resultado || { resultados: [] };
     },
 
+    async listarCampanhas() {
+        const r=await this._post('listarCampanhas');
+        return r.resultado || {campanhaGeral:'',linkGrupo:'https://www.martinello.com.br/ofertasvendedor',revision:''};
+    },
+
+    async salvarCampanhas(campanhaGeral,linkGrupo,revision) {
+        const r=await this._post('salvarCampanhas',{campanhaGeral,linkGrupo,revision});
+        return r.resultado || {};
+    },
+
     async listarConfigContatos() {
         const r = await this._post('listarConfigContatos');
         return r.resultado || {};

@@ -22,7 +22,7 @@ const AnalyticsService = {
         const fonte=query.get('utm_source')==='whatsapp' && query.get('utm_medium')==='grupo'
           ? 'whatsapp_grupo' : query.has('utm_source') ? 'outro' : 'direto';
         const dados=new URLSearchParams({action:'registrarVisita',origem:location.origin,
-          sessionId:id,origemCampanha:fonte});
+          sessionId:id,origemCampanha:fonte,campanha:CampanhasPortal.geral||''});
         try {
             await fetch(url,{method:'POST',mode:'no-cors',keepalive:true,cache:'no-store',
               headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:dados.toString()});
@@ -58,6 +58,7 @@ const AnalyticsService = {
             action: 'registrar',
             ofertaId,
             tituloOferta: String(oferta?.tituloPagina || 'Oferta').slice(0, 100),
+            campanha:CampanhasPortal.efetiva(oferta),
             matricula: rubi,
             origem: window.location.origin,
             requestId: `ev_${Date.now()}_${Math.random().toString(36).slice(2,12)}`

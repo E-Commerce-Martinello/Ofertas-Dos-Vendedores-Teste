@@ -561,6 +561,27 @@ const VendedoresPresenter = {
         }
     },
 
+    // Um único painel: códigos de filial (não posição de ranking), com ordenação opcional.
+    _resumoFiliaisLinks(filtroFilial = '', ordem = 'numero') {
+        const grupos = new Map();
+        this.registros.filter(v => v.ativo).forEach(v => {
+            const filial = String(v.filial || '').trim();
+            if (!/^\d+$/.test(filial) || (filtroFilial && filial !== filtroFilial)) return;
+            if (!grupos.has(filial)) grupos.set(filial, {filial, total:0, cadastrados:0, sem:0, pendentes:0});
+            const registro = grupos.get(filial);
+            registro.total++;
+            const estado = this._categoriaLink(v);
+            if (estado === 'redirecionamento') registro.cadastrados++;
+            else if (estado === 'inativo') registro.sem++;
+            else registro.pendentes++;
+        });
+        return [...grupos.values()].sort((a,b) => {
+            if (ordem === 'mais-sem') return b.sem - a.sem || Number(a.filial) - Number(b.filial);
+            if (ordem === 'menos-sem') return a.sem - b.sem || Number(a.filial) - Number(b.filial);
+            return Number(a.filial) - Number(b.filial);
+        });
+    },
+
     renderizarPainelLinks() {
         const ativos=this.registros.filter(v=>v.ativo);
         const cont=(cat,lista)=>lista.filter(v=>this._categoriaLink(v)===cat).length;
@@ -570,24 +591,29 @@ const VendedoresPresenter = {
         escreva('linksTotalCadastrados',cadastrados);
         escreva('linksTotalSemCadastro',sem);
         escreva('linksTotalPendentes',ativos.length-cadastrados-sem);
-        const filtrar=document.getElementById('linksDashboardFilial')?.value||'';
-        const grupos=new Map();
-        for(const v of ativos){
-            if(filtrar&&String(v.filial)!==filtrar)continue;
-            const filial=String(v.filial||'—');
-            if(!grupos.has(filial))grupos.set(filial,[]);
-            grupos.get(filial).push(v);
-        }
-        const el=document.getElementById('linksFiliaisLista');if(!el)return;
-        el.innerHTML=[...grupos.entries()].sort((a,b)=>Number(a[0])-Number(b[0])).map(([filial,lista])=>{
-            const total=lista.length,ok=cont('redirecionamento',lista),off=cont('inativo',lista),pend=total-ok-off;
-            const divergentes=lista.filter(v=>this._categoriaLink(v)==='inativo');
-            return `<details class="links-filial-card"><summary><span class="links-filial-name">Filial ${this._escapar(filial)}${this.filiais[filial]?' · '+this._escapar(this.filiais[filial]):''}</span><span class="links-filial-total">${total} vendedores</span></summary>
-                <div class="links-filial-stats"><span class="links-verde">${ok} cadastrados</span><span class="links-vermelho">${off} sem cadastro</span><span>${pend} pendentes</span></div>
-                <div class="links-bar" aria-hidden="true"><span class="ok" style="width:${100*ok/total}%"></span><span class="off" style="width:${100*off/total}%"></span><span class="pending" style="width:${100*pend/total}%"></span></div>
-                <div class="links-filial-detalhes"><strong>Sem cadastro (indício):</strong>${divergentes.length?divergentes.map(v=>`<p>${this._escapar(v.nome)} · Rubi ${this._escapar(v.matricula)}</p>`).join(''):'<p>Nenhum vendedor nesta categoria.</p>'}</div>
-              </details>`;
-        }).join('')||'<p class="vendor-empty">Nenhuma filial disponível para este filtro.</p>';
+        const filial=document.getElementById('linksDashboardFilial')?.value || '';
+        const ordem=document.getElementById('linksOrdemFiliais')?.value || 'numero';
+        const lista=this._resumoFiliaisLinks(filial,ordem);
+        const destino=document.getElementById('linksFiliaisLista');
+        if (!destino) return;
+        destino.innerHTML=lista.map(item => {
+            const nome=this.filiais[item.filial] || '';
+            const p=item.total || 1;
+            return `<div class="links-ranking-item" role="listitem">
+                <div class="links-ranking-cabecalho"><span><strong>${this._escapar(item.filial)}.</strong> ${this._escapar(nome || 'Filial '+item.filial)}</span>
+                    <small>${item.total} vendedores</small></div>
+                <div class="links-ranking-dados"><span class="links-vermelho">${item.sem} sem cadastro</span>
+                    <span class="links-verde">${item.cadastrados} cadastrados</span>
+                    <span>${item.pendentes} pendentes</span></div>
+                <div class="links-bar" aria-label="${item.cadastrados} cadastrados, ${item.sem} sem cadastro e ${item.pendentes} pendentes">
+                    <span class="ok" style="width:${(100*item.cadastrados/p).toFixed(2)}%"></span>
+                    <span class="off" style="width:${(100*item.sem/p).toFixed(2)}%"></span>
+                    <span class="pending" style="width:${(100*item.pendentes/p).toFixed(2)}%"></span>
+                </div>
+            </div>`;
+        }).join('') || '<p class="vendor-empty">Nenhuma filial disponível para o filtro.</p>';
+        const legenda=document.getElementById('linksResumoOrdenacao');
+        if (legenda) legenda.textContent=`${lista.length} filiais na lista · máximo de 10 visíveis antes da rolagem`;
     },
 
     filtrarLinks() {

@@ -179,7 +179,7 @@ const ContatosPresenter = {
   _mensagens(v, oferta) {
     const n = GrupoWhatsAppModel.telefone(v.numero);
     if (!n) return null;
-    const link = `${CONFIG.urlBase}${this._rubi(v.matricula)}?redir=${encodeURIComponent(oferta.linkProduto || '')}`;
+    const link = LinkTrack.urlCompartilhavel(oferta,this._rubi(v.matricula));
     const ofertaTexto = formatarTexto(String(oferta.textoOferta || ''), link, this._rubi(v.matricula));
     const conviteModelo = document.getElementById('contatosConviteModelo').value;
     const grupo = this._linkGrupo();

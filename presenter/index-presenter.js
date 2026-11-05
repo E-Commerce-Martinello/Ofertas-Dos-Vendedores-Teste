@@ -21,7 +21,9 @@ const IndexPresenter = {
         // O registro agora usa um coletor público limitado (Google Sheets).
         // Não requer login Firebase dos vendedores.
         this._renderCarregando();
-        AnalyticsService.registrarVisita().catch(e=>console.warn('Visita não registrada:',e));
+        // Identificação de campanha não bloqueia a vitrine; registrar assim que for resolvida.
+        CampanhasPortal.carregar().catch(()=> '').then(()=>AnalyticsService.registrarVisita())
+            .catch(e=>console.warn('Visita não registrada:',e));
         const cache = Storage.ofertasDoCache();
         if (cache.length) this._aplicarOfertas(cache);
         this.intervalo = setInterval(() => this._tick(), 1000);
@@ -203,7 +205,7 @@ const IndexPresenter = {
             const continuar = await TelefonePortal.garantir(cod);
             if (!continuar) return;
             Storage.salvarUltimaMatricula(cod);
-            const link = `${CONFIG.urlBase}${cod}?redir=${encodeURIComponent(oferta.linkProduto)}`;
+            const link = LinkTrack.urlCompartilhavel(oferta,cod);
             const msg = formatarTexto(oferta.textoOferta, link, cod);
             // A telemetria é indicativa e não pode bloquear o compartilhamento.
             // Uma tentativa por oferta, matrícula e janela de dez minutos/navegador.

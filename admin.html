@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Admin Martinello | 1.6.13 TESTE</title>
+    <title>Admin Martinello | 1.6.14 TESTE</title>
 
     <!-- TEMA SEM FLASH -->
     <script>
@@ -213,13 +213,31 @@
         body.dark-mode #abaContatos .contatos-grid select,body.dark-mode #abaContatos .contatos-grid input,
         body.dark-mode #abaLinks select,body.dark-mode #abaLinks input[type="search"] {background:#343434;border-color:#626262;color:#f4f4f4;}
         #abaLinks .vendor-link-tools{background:transparent;}
+        .campanha-geral-grid{display:grid;grid-template-columns:1fr 1.25fr;gap:14px;align-items:end;}
+        @media(max-width:680px){.campanha-geral-grid{grid-template-columns:1fr;}}
         .links-titulo-linha,.links-secao-topo {display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
         .links-titulo-linha h2 {margin-bottom:6px;}
         .links-atualizar{width:auto!important;margin:0!important;}
         .links-secao-topo{margin:20px 0 12px;}
         .links-secao-topo h3{font-size:15px;}
         #abaLinks .links-secao-topo select{width:auto;min-width:190px;max-width:100%;}
-        .links-filiais-lista{display:grid;gap:10px;min-width:0;}
+        .links-filiais-lista{display:flex;flex-direction:column;gap:12px;min-width:0;}
+        .links-ranking-box{border:1px solid #e0e0e0;border-radius:14px;padding:15px;max-height:735px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;}
+        .links-ordenacao{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+        #abaLinks .links-ordenacao select{max-width:100%;min-width:180px;}
+        .links-ranking-item{border-bottom:1px solid #e7e7e7;padding-bottom:12px;min-width:0;}
+        .links-ranking-item:last-child{border-bottom:0;padding-bottom:0;}
+        .links-ranking-cabecalho{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;line-height:1.5;}
+        .links-ranking-cabecalho span{min-width:0;overflow-wrap:anywhere;}
+        .links-ranking-cabecalho strong{color:#d0252a;margin-right:3px;}
+        .links-ranking-cabecalho small{white-space:nowrap;color:#777;}
+        .links-ranking-dados{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 13px;font-size:11px;margin-top:4px;}
+        .links-ranking-item .links-bar{margin-top:7px;}
+        body.dark-mode .links-ranking-box{border-color:#535353;}
+        body.dark-mode .links-ranking-item{border-color:#4c4c4c;}
+        body.dark-mode .links-ranking-cabecalho small{color:#bbb;}
+        @media(max-width:680px){.links-ordenacao{width:100%;}.links-ordenacao select{flex:1 1 100%;}.links-ranking-box{padding:11px;max-height:700px;}}
+
         .links-filial-card{padding:14px;border:1px solid #e0e0e0;border-radius:13px;min-width:0;}
         .links-filial-card summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;}
         .links-filial-card summary::-webkit-details-marker{display:none;}
@@ -652,6 +670,21 @@
             </div>
             <p class="vendor-subtext" style="margin-top:12px;">Confira os inícios de compartilhamento e os rankings na aba <strong>Dashboard</strong>.</p>
         </div>
+        <div class="admin-card" id="painelCampanhaGeral">
+            <h2><i class="fas fa-bullhorn"></i> CAMPANHA GERAL</h2>
+            <p class="vendor-subtext">Usada nas ofertas sem campanha individual. A atribuição interna funciona sem alterar o link compacto da Martinello.</p>
+            <div class="campanha-geral-grid">
+                <div class="form-group"><label for="campanhaGeral">Identificador da campanha</label>
+                    <input id="campanhaGeral" maxlength="60" placeholder="ex: novembro_2026" autocomplete="off"></div>
+                <div class="form-group"><label for="linkGrupoCompacto">Link compacto enviado no grupo</label>
+                    <input id="linkGrupoCompacto" type="url" placeholder="https://www.martinello.com.br/ofertasvendedor"></div>
+            </div>
+            <div class="vendor-actions" style="margin-top:10px">
+                <button type="button" id="btnSalvarCampanhas" class="btn-primary" onclick="CampanhasPresenter.salvar()" style="width:auto"><i class="fas fa-save"></i> SALVAR CAMPANHA</button>
+                <button type="button" class="btn-outline" onclick="CampanhasPresenter.carregar()" style="width:auto">ATUALIZAR</button>
+            </div>
+            <p id="statusCampanhaGeral" class="vendor-last-update" role="status">Carregando configuração...</p>
+        </div>
         <!-- LISTA -->
         <div class="admin-card">
             <h2>📋 OFERTAS PROGRAMADAS (SIMULTÂNEAS PERMITIDAS)</h2>
@@ -691,6 +724,11 @@
                 <input type="url" id="linkProduto" placeholder="https://www.martinello.com.br/...">
             </div>
 
+            <div class="form-group">
+                <label for="campanhaOferta">Campanha individual (opcional)</label>
+                <input id="campanhaOferta" maxlength="60" placeholder="Vazio = usar campanha geral" autocomplete="off">
+                <small class="vendor-subtext">Quando preenchida, esta campanha substitui a geral apenas nesta oferta.</small>
+            </div>
             <div class="form-group">
                 <label>🖼️ IMAGEM DA OFERTA</label>
                 <div class="upload-area" id="dropArea">
@@ -789,6 +827,8 @@
                         <option value="hoje">Hoje</option><option value="7">Últimos 7 dias</option>
                         <option value="30" selected>Últimos 30 dias</option><option value="90">Últimos 90 dias</option>
                     </select>
+                    <label for="dashboardFiltroCampanha">Campanha</label>
+                    <select id="dashboardFiltroCampanha" onchange="DashboardPresenter.renderizar()"><option value="">Todas as campanhas</option></select>
                     <label for="dashboardFiltroOferta">OFERTA</label>
                     <select id="dashboardFiltroOferta" onchange="DashboardPresenter.renderizar()"><option value="">Todas as ofertas</option></select>
                     <button type="button" class="btn-outline" id="dashboardAtualizar" onclick="DashboardPresenter.atualizar()" style="width:auto;margin:0"><i class="fas fa-sync-alt"></i> ATUALIZAR</button>
@@ -796,17 +836,21 @@
                 <div id="dashboardStatus" class="vendor-status" role="status">Selecione esta aba para carregar os dados.</div>
                 <div class="dashboard-grade" aria-label="Indicadores de utilização">
                     <div class="dashboard-metrica"><strong id="dashAcessosPortal">0</strong><span>ACESSOS AO PORTAL</span></div>
-                    <div class="dashboard-metrica"><strong id="dashAcessosWhatsApp">0</strong><span>VIA LINK DO GRUPO</span></div>
+                    <div class="dashboard-metrica"><strong id="dashAcessosWhatsApp">0</strong><span>VIA LINK IDENTIFICADO DO GRUPO</span></div>
                     <div class="dashboard-metrica"><strong id="dashInicios">0</strong><span>INÍCIOS REGISTRADOS</span></div>
                     <div class="dashboard-metrica"><strong id="dashVendedores">0</strong><span>VENDEDORES DISTINTOS</span></div>
                     <div class="dashboard-metrica"><strong id="dashOfertas">0</strong><span>OFERTAS UTILIZADAS</span></div>
+                    <div class="dashboard-metrica"><strong id="dashCliques">0</strong><span>CLIQUES NOS LINKS DOS VENDEDORES</span></div>
                     <div class="dashboard-metrica"><strong id="dashMaisPopular" style="font-size:16px">—</strong><span>OFERTA MAIS ACIONADA</span></div>
                 </div>
-                <div class="vendor-actions" style="margin:9px 0"><button type="button" class="btn-outline" style="width:auto" onclick="DashboardPresenter.copiarLinkGrupo()"><i class="fas fa-link"></i> COPIAR LINK RASTREÁVEL DO GRUPO</button></div>
-                <p class="dashboard-explicacao">Acessos ao portal indicam sessões registradas, sem identificar a pessoa que clicou. A medição registra o início da preparação do compartilhamento, não o envio efetivo pelo WhatsApp. Para evitar duplo clique, conta no máximo um início por oferta e matrícula em uma janela de dez minutos. A coleta começou nesta versão; períodos anteriores não são recuperados automaticamente.</p>
+                <div class="vendor-actions" style="margin:9px 0"><button type="button" class="btn-outline" style="width:auto" onclick="DashboardPresenter.copiarLinkGrupo()"><i class="fas fa-link"></i> COPIAR LINK COMPACTO DO GRUPO</button></div>
+                <p class="dashboard-explicacao">O link compacto do grupo permanece sem parâmetros: a campanha é atribuída no portal conforme a configuração vigente no momento da visita. Sem tag de origem, não é possível garantir que uma visita veio do grupo. Os cliques em links de oferta passam por redirecionamento interno e não confirmam vendas. Acessos ao portal indicam sessões registradas, sem identificar a pessoa que clicou. A medição registra o início da preparação do compartilhamento, não o envio efetivo pelo WhatsApp. Para evitar duplo clique, conta no máximo um início por oferta e matrícula em uma janela de dez minutos. A coleta começou nesta versão; períodos anteriores não são recuperados automaticamente.</p>
                 <p class="dashboard-explicacao" id="dashboardAvisoBase"></p>
             </div>
             <div class="admin-card dashboard-ranking-grid">
+                <div class="dashboard-ranking"><h3>🔗 OFERTAS / PRODUTOS MAIS CLICADOS</h3><div id="dashRankingCliquesOfertas"></div></div>
+                <div class="dashboard-ranking"><h3>👥 CLIQUES POR VENDEDOR</h3><div id="dashRankingCliquesVendedores"></div></div>
+                <div class="dashboard-ranking"><h3>🏬 CLIQUES POR FILIAL</h3><div id="dashRankingCliquesFiliais"></div></div>
                 <div class="dashboard-ranking"><h3>🏆 OFERTAS MAIS ACIONADAS</h3><div id="dashRankingOfertas"></div></div>
                 <div class="dashboard-ranking"><h3>👥 VENDEDORES MAIS ATIVOS</h3><div id="dashRankingVendedores"></div></div>
                 <div class="dashboard-ranking"><h3>🏬 UTILIZAÇÃO POR FILIAL</h3><div id="dashRankingFiliais"></div></div>
@@ -823,8 +867,16 @@
               <div class="dashboard-metrica"><strong id="linksTotalSemCadastro">—</strong><span>SEM CADASTRO</span></div>
               <div class="dashboard-metrica"><strong id="linksTotalPendentes">—</strong><span>SEM RESULTADO CONCLUSIVO</span></div>
             </div>
-            <div class="links-secao-topo"><h3>Resumo por filial</h3><select id="linksDashboardFilial" aria-label="Filtrar dashboard dos links por filial" onchange="VendedoresPresenter.renderizarPainelLinks()"><option value="">Todas as filiais</option></select></div>
-            <div id="linksFiliaisLista" class="links-filiais-lista" aria-live="polite"><p class="vendor-subtext">Carregando filiais…</p></div>
+            <div class="links-secao-topo"><h3>Links por filial</h3><div class="links-ordenacao">
+              <select id="linksDashboardFilial" aria-label="Filtrar dashboard dos links por filial" onchange="VendedoresPresenter.renderizarPainelLinks()"><option value="">Todas as filiais</option></select>
+              <select id="linksOrdemFiliais" aria-label="Ordenar filiais por quantidade sem cadastro" onchange="VendedoresPresenter.renderizarPainelLinks()">
+                <option value="numero">Número da filial (crescente)</option>
+                <option value="mais-sem">Mais vendedores sem cadastro</option>
+                <option value="menos-sem">Menos vendedores sem cadastro</option>
+              </select>
+            </div></div>
+            <div class="links-ranking-box"><div id="linksFiliaisLista" class="links-filiais-lista" role="list" aria-live="polite"><p class="vendor-subtext">Carregando filiais…</p></div></div>
+            <p id="linksResumoOrdenacao" class="vendor-last-update"></p>
             <p class="dashboard-explicacao">“Cadastrado” indica redirecionamento observado; “Sem cadastro” indica retorno de ausência/localhost. Erros ou respostas inconclusivas ficam pendentes, sem classificação automática.</p>
           </div>
           <div class="admin-card">
@@ -1162,25 +1214,28 @@
     <script src="shared/utils.js"></script>
     <script src="model/firebase-config.js"></script>
     <script src="model/appearance.js?v=1.6.10"></script>
-    <script src="model/analytics.js?v=1.6.13"></script>
+    <script src="model/campanhas.js?v=1.6.14"></script>
+    <script src="model/link-track.js?v=1.6.14"></script>
+    <script src="model/analytics.js?v=1.6.14"></script>
     <script src="model/horario.js"></script>
     <script src="model/storage.js?v=1.6.11"></script>
     <script src="model/validators.js?v=1.6.4"></script>
     <script src="model/auth.js?v=1.6.1"></script>
     <script src="view/ui.js"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.13"></script>
-    <script src="presenter/dashboard-presenter.js?v=1.6.13"></script>
-    <script src="model/google-sheets.js?v=1.6.13"></script>
+    <script src="presenter/campanhas-presenter.js?v=1.6.14"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.14"></script>
+    <script src="presenter/dashboard-presenter.js?v=1.6.14"></script>
+    <script src="model/google-sheets.js?v=1.6.14"></script>
     <!-- SheetJS é carregado sob demanda, apenas quando alguém importa uma planilha. -->
     <script src="model/planilha-loader.js?v=1.6.12"></script>
     <script src="model/vendor-import.js?v=1.6.12"></script>
     <script src="model/vendor-management.js?v=1.5.4"></script>
     <script src="model/link-checker.js?v=1.5.4"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.13"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.14"></script>
     <script src="model/whatsapp.js?v=1.6.8"></script>
     <script src="presenter/pendencias-presenter.js?v=1.6.6"></script>
     <script src="presenter/whatsapp-presenter.js?v=1.6.12"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.1"></script>
-    <script src="presenter/contatos-presenter.js?v=1.6.11"></script>
+    <script src="presenter/contatos-presenter.js?v=1.6.14"></script>
 </body>
 </html>
