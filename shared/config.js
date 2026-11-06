@@ -21,7 +21,7 @@ const MART_SERVICOS = Object.freeze({
       messagingSenderId: '139304759090',
       appId: '1:139304759090:web:8dbc12dce295ff3c55312b'
     },
-    adminApiUrl: 'https://script.google.com/macros/s/AKfycbwhjDIBES-sLK0ZVBkdqZkuMXuVw8YLjWKU08ahoN_Oy1_hrMEnyQeHnrLsuvasmNzr/exec',
+    adminApiUrl: 'https://script.google.com/macros/s/AKfycbwhjDlBES-sLK0ZVBkdqZkuMXuVw8YLjWKU08ahoN_Oy1_hrMEnyQeHnrLsuvasmNzr/exec',
     adminProxyUrl: 'https://martinello-admin-teste.loan-martinello.workers.dev/',
     portalEventsApiUrl: 'https://script.google.com/macros/s/AKfycbzXPgbhDvQBhvj-VkiwOpvLyn6kPONPfBgeD0y16idC0nQW7rfYP4kHG5msxhv05uD-/exec'
   },
