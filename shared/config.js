@@ -21,7 +21,7 @@ const CONFIG = Object.freeze({
     // URL da API de teste: endereço de serviço público (NÃO é uma senha).
     // Se a implantação /exec mudar, altere somente esta linha.
     adminApiUrl: 'https://script.google.com/macros/s/AKfycbwhjDIBES-sLK0ZVBkdqZkuMXuVw8YLjWKU08ahoN_Oy1_hrMEnyQeHnrLsuvasmNzr/exec',
-    adminProxyUrl: 'https://martinello-admin.loan-martinello.workers.dev',
+adminProxyUrl: 'https://martinello-admin-teste.loan-martinello.workers.dev/',
 
     // Registro público: cole aqui a URL /exec do Apps Script SEPARADO de eventos.
     // Não reutilize a API administrativa. A URL é pública, não é segredo.
