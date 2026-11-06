@@ -33,14 +33,14 @@ const TelefonePortal = {
   },
   _cache(rubi) {
     try {
-      const dados=JSON.parse(localStorage.getItem('martTelefoneStatus_TESTE_'+rubi)||'null');
+      const dados=JSON.parse(localStorage.getItem(`martTelefoneStatus_${CONFIG.environment}_${rubi}`)||'null');
       if (dados && ['validado','solicitado'].includes(dados.tipo) &&
           Date.now()-dados.quando < (dados.tipo==='validado' ? 7*86400000 : 86400000)) return dados.tipo;
     } catch(_) {}
     return '';
   },
   _marcar(rubi,tipo) {
-    try { localStorage.setItem('martTelefoneStatus_TESTE_'+rubi,JSON.stringify({tipo,quando:Date.now()})); }catch(_){}
+    try { localStorage.setItem(`martTelefoneStatus_${CONFIG.environment}_${rubi}`,JSON.stringify({tipo,quando:Date.now()})); }catch(_){}
   },
   _endpoint() {
     const url=String(CONFIG.portalEventsApiUrl||'').trim();

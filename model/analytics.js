@@ -4,7 +4,7 @@ const AnalyticsService = {
     _diagnostico(status, detalhe = '') {
         if (CONFIG.environment !== 'TESTE') return;
         try {
-            localStorage.setItem('martTelemetriaDiagnostico_TESTE', JSON.stringify({
+            localStorage.setItem(`martTelemetriaDiagnostico_${CONFIG.environment}`, JSON.stringify({
                 status, detalhe: String(detalhe).slice(0, 200), quando: new Date().toISOString()
             }));
         } catch (_) {}
@@ -15,7 +15,7 @@ const AnalyticsService = {
         const url=String(CONFIG.portalEventsApiUrl||'');
         if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) return false;
         let anterior=null;
-        try { anterior=JSON.parse(sessionStorage.getItem('martVisitaPortal_TESTE')||'null'); } catch(_) {}
+        try { anterior=JSON.parse(sessionStorage.getItem(`martVisitaPortal_${CONFIG.environment}`)||'null'); } catch(_) {}
         if(anterior?.id && Date.now()-anterior.ts < 1800000) return true;
         const id=`vis_${Date.now()}_${Math.random().toString(36).slice(2,13)}`;
         const query=new URLSearchParams(location.search);
@@ -27,7 +27,7 @@ const AnalyticsService = {
             await fetch(url,{method:'POST',mode:'no-cors',keepalive:true,cache:'no-store',
               headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:dados.toString()});
             // Retorno opaco confirma somente despacho; a gravação deve ser conferida no Sheets.
-            try {sessionStorage.setItem('martVisitaPortal_TESTE',JSON.stringify({id,ts:Date.now()}));} catch(_){}
+            try {sessionStorage.setItem(`martVisitaPortal_${CONFIG.environment}`,JSON.stringify({id,ts:Date.now()}));} catch(_){}
             return true;
         } catch(e) {console.warn('Medição de visita indisponível:',e);return false;}
     },
@@ -49,7 +49,7 @@ const AnalyticsService = {
         // Duplo clique: máximo uma tentativa por matrícula e oferta a cada 10 minutos
         // neste navegador. O servidor também aplica limites e checa repetição.
         const janela = Math.floor(Date.now() / 600000);
-        const chave = `martEvento_${ofertaId}_${rubi}_${janela}`;
+        const chave = `martEvento_${CONFIG.environment}_${ofertaId}_${rubi}_${janela}`;
         try {
             if (sessionStorage.getItem(chave) === 'ok') return true;
         } catch (_) {}

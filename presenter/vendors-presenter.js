@@ -4,7 +4,7 @@
 // Dados oficiais não são gravados no Firebase.
 // ============================================
 const VendedoresPresenter = {
-    STORAGE_API_URL: 'martVendedoresApiUrl_TESTE',
+    STORAGE_API_URL: `martVendedoresApiUrl_${CONFIG.environment}`,
     STORAGE_LINK_CHECKER: 'adminLinkCheckerUrl',
     apiUrl: '',
     registros: [],
@@ -31,7 +31,7 @@ const VendedoresPresenter = {
     init() {
         if (!this.inicializado) {
             try {
-                const preferencia=Number(localStorage.getItem('martItensVendedores_TESTE'));
+                const preferencia=Number(localStorage.getItem(`martItensVendedores_${CONFIG.environment}`));
                 if ([15,25,50].includes(preferencia)) this.porPagina=preferencia;
             } catch (_) {}
             this.apiUrl = GoogleSheetsService.obterUrl();
@@ -175,7 +175,7 @@ const VendedoresPresenter = {
         this.carregando = true;
         const botaoAtualizar = document.getElementById('btnAtualizarVendedores');
         if (botaoAtualizar) botaoAtualizar.disabled = true;
-        this._status('Consultando a aba Vendedores da planilha de TESTE...');
+        this._status('Consultando a aba Vendedores...');
         try {
             // Consultas independentes em paralelo: reduzem tempo de espera sem cachear dados pessoais.
             const [base, consultaLinks] = await Promise.all([

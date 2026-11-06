@@ -5,6 +5,7 @@
 const Storage = {
 
     _salvando: false,
+    _cacheKey(nome) { return `mart_${CONFIG.environment === 'OFICIAL' ? 'OFICIAL' : 'TESTE'}_${nome}`; },
 
     // ---------- UTILITÁRIOS DE QUOTA ----------
 
@@ -42,28 +43,28 @@ const Storage = {
     _limparDadosPesados() {
         try {
             // Limpar imagens base64 das ofertas em cache
-            const raw = localStorage.getItem('ofertasMartinello');
+            const raw = localStorage.getItem(this._cacheKey('ofertasMartinello'));
             if (raw) {
                 const ofertas = JSON.parse(raw);
                 const semImagens = ofertas.map(o => this._ofertaSemImagem(o));
-                localStorage.setItem('ofertasMartinello', JSON.stringify(semImagens));
+                localStorage.setItem(this._cacheKey('ofertasMartinello'), JSON.stringify(semImagens));
                 console.log('🧹 Imagens base64 removidas do cache de ofertas');
             }
 
             // Limpar imagem da oferta ativa
-            const rawAtiva = localStorage.getItem('ofertaAtiva');
+            const rawAtiva = localStorage.getItem(this._cacheKey('ofertaAtiva'));
             if (rawAtiva) {
                 const ativa = JSON.parse(rawAtiva);
-                localStorage.setItem('ofertaAtiva', JSON.stringify(this._ofertaSemImagem(ativa)));
+                localStorage.setItem(this._cacheKey('ofertaAtiva'), JSON.stringify(this._ofertaSemImagem(ativa)));
             }
 
             // Limpar imagem da config em breve
-            const rawCfg = localStorage.getItem('configTelaEmBreve');
+            const rawCfg = localStorage.getItem(this._cacheKey('configTelaEmBreve'));
             if (rawCfg) {
                 const cfg = JSON.parse(rawCfg);
                 if (cfg.imagem?.startsWith('data:')) {
                     cfg.imagem = 'img/produto.png';
-                    localStorage.setItem('configTelaEmBreve', JSON.stringify(cfg));
+                    localStorage.setItem(this._cacheKey('configTelaEmBreve'), JSON.stringify(cfg));
                     console.log('🧹 Imagem base64 removida da config Em Breve');
                 }
             }
@@ -93,7 +94,7 @@ const Storage = {
     async carregarOfertas() {
         if (this._salvando) {
             console.log('⏳ Save em andamento — usando localStorage');
-            const local = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
+            const local = JSON.parse(localStorage.getItem(this._cacheKey('ofertasMartinello')) || '[]');
             this._atualizarAtiva(local);
             return local;
         }
@@ -111,14 +112,14 @@ const Storage = {
             if (Array.isArray(dados) || (dados && typeof dados === 'object') || dados === null) {
                 // Salvar SEM imagens base64 no localStorage (economiza quota)
                 const semImagens = arr.map(o => this._ofertaSemImagem(o));
-                this._salvarLocalSafe('ofertasMartinello', semImagens);
+                this._salvarLocalSafe(this._cacheKey('ofertasMartinello'), semImagens);
             }
 
             this._atualizarAtiva(arr); // usa array completo (com imagem) para a oferta ativa
             return arr;
         } catch (e) {
             console.warn('⚠️ Firebase indisponível — usando localStorage:', e.message);
-            const local = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
+            const local = JSON.parse(localStorage.getItem(this._cacheKey('ofertasMartinello')) || '[]');
             this._atualizarAtiva(local);
             return local;
         }
@@ -145,7 +146,7 @@ const Storage = {
     },
 
     _cacheOfertas(ofertas) {
-        this._salvarLocalSafe('ofertasMartinello', ofertas.map(o => this._ofertaSemImagem(o)));
+        this._salvarLocalSafe(this._cacheKey('ofertasMartinello'), ofertas.map(o => this._ofertaSemImagem(o)));
         this._atualizarAtiva(ofertas);
     },
 
@@ -206,7 +207,7 @@ const Storage = {
         this._salvando = true;
         try {
             await ofertasRef.set(ofertas);
-            this._salvarLocalSafe('ofertasMartinello', ofertas.map(o => this._ofertaSemImagem(o)));
+            this._salvarLocalSafe(this._cacheKey('ofertasMartinello'), ofertas.map(o => this._ofertaSemImagem(o)));
             this._atualizarAtiva(ofertas);
             return true;
         } catch (e) {
@@ -219,7 +220,7 @@ const Storage = {
 
     ofertasDoCache() {
         try {
-            const lista = JSON.parse(localStorage.getItem('ofertasMartinello') || '[]');
+            const lista = JSON.parse(localStorage.getItem(this._cacheKey('ofertasMartinello')) || '[]');
             return Array.isArray(lista) ? lista : [];
         } catch { return []; }
     },
@@ -229,10 +230,10 @@ const Storage = {
         const ativa = ofertas.find(o => isOfertaAtiva(o, agora)) || null;
         if (ativa) {
             // Salvar oferta ativa SEM imagem base64 (a imagem vem do Firebase diretamente)
-            this._salvarLocalSafe('ofertaAtiva', this._ofertaSemImagem(ativa));
+            this._salvarLocalSafe(this._cacheKey('ofertaAtiva'), this._ofertaSemImagem(ativa));
             console.log('🟢 Oferta ativa:', ativa.tituloPagina);
         } else {
-            localStorage.removeItem('ofertaAtiva');
+            localStorage.removeItem(this._cacheKey('ofertaAtiva'));
             console.log('⏸️ Nenhuma oferta ativa no momento');
         }
         return ativa;
@@ -240,7 +241,7 @@ const Storage = {
 
     ofertaAtivaDoCache() {
         try {
-            const raw = localStorage.getItem('ofertaAtiva');
+            const raw = localStorage.getItem(this._cacheKey('ofertaAtiva'));
             if (!raw) return null;
             const oferta = JSON.parse(raw);
             if (isOfertaAtiva(oferta, getHorarioBrasilia())) {
@@ -248,7 +249,7 @@ const Storage = {
                 return oferta;
             }
             console.log('⌛ Oferta do cache expirou — removendo');
-            localStorage.removeItem('ofertaAtiva');
+            localStorage.removeItem(this._cacheKey('ofertaAtiva'));
             return null;
         } catch { return null; }
     },
@@ -256,7 +257,7 @@ const Storage = {
     // ---------- CONFIG EM BREVE ----------
 
     carregarConfigEmBreve() {
-        try { return JSON.parse(localStorage.getItem('configTelaEmBreve') || 'null'); }
+        try { return JSON.parse(localStorage.getItem(this._cacheKey('configTelaEmBreve')) || 'null'); }
         catch { return null; }
     },
 
@@ -267,7 +268,7 @@ const Storage = {
             console.warn('⚠️ Imagem da config Em Breve muito grande — não salva no cache local');
             cfgParaSalvar.imagem = 'img/produto.png';
         }
-        this._salvarLocalSafe('configTelaEmBreve', cfgParaSalvar);
+        this._salvarLocalSafe(this._cacheKey('configTelaEmBreve'), cfgParaSalvar);
         console.log('💾 Config "Em Breve" salva');
     },
 
@@ -275,6 +276,6 @@ const Storage = {
 
     salvarTema(tema)            { localStorage.setItem('tema', tema); },
     carregarTema()              { return localStorage.getItem('tema') || 'light'; },
-    salvarUltimaMatricula(cod)  { this._salvarLocalSafe('ultimaMatricula', cod); },
-    carregarUltimaMatricula() { return (localStorage.getItem('ultimaMatricula') || '').replace(/\D/g, ''); },
+    salvarUltimaMatricula(cod)  { this._salvarLocalSafe(this._cacheKey('ultimaMatricula'), cod); },
+    carregarUltimaMatricula() { return (localStorage.getItem(this._cacheKey('ultimaMatricula')) || '').replace(/\D/g, ''); },
 };

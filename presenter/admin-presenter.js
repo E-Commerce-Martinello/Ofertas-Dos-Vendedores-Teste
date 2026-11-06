@@ -13,15 +13,19 @@ const AdminPresenter = {
     editandoBase: null,
     editandoId: null,
     _versaoOfertas: null,
-    _chaveAba: 'martAdminUltimaAba_TESTE',
+    _chaveAba: `martAdminUltimaAba_${CONFIG.environment}`,
     _autorizado: false,
 
     async init() {
+        document.querySelectorAll('[data-mart-env-badge]').forEach(el => {
+            el.textContent = MART_PORTAL_PRINCIPAL ? '✓ PORTAL PRINCIPAL' : '⚙ AMBIENTE DE HOMOLOGAÇÃO';
+        });
+        document.title = `Admin Martinello | 1.6.17 ${MART_PORTAL_PRINCIPAL ? 'OFICIAL' : 'HOMOLOGAÇÃO'}`;
         Storage.verificarQuota();
         UI.tema.aplicar(Storage.carregarTema());
         const url = GoogleSheetsService.obterUrl();
         // Eliminar credenciais e sessões antigas da versão com senha fixa.
-        localStorage.removeItem('martVendedoresApiToken_TESTE');
+        localStorage.removeItem('martVendedoresApiToken_LEGADO');
         sessionStorage.removeItem(CONFIG.SESSION_KEY);
         this._restaurandoSessao(true);
         try {
@@ -84,7 +88,7 @@ const AdminPresenter = {
             this._mensagemLogin('Conta Google autenticada. Verificando autorização da API…');
             // Exige permissão no servidor antes de mostrar dados internos no painel.
             const acesso = await GoogleSheetsService.testarConexao(url);
-            localStorage.setItem('martVendedoresApiUrl_TESTE', url);
+            localStorage.setItem(`martVendedoresApiUrl_${CONFIG.environment}`, url);
             await this._abrirPainel(acesso);
         } catch (erro) {
             // Não desfazer um login Google válido por timeout do Apps Script.
@@ -134,7 +138,7 @@ const AdminPresenter = {
             if (!gestor) {
                 const uid = Auth.usuarioAtual()?.uid;
                 if (!uid) avisoAdmin.hidden = false;
-                else database.ref('adminUids_TESTE/' + uid).once('value').then(snap => {
+                else database.ref('adminUids' + sufixoAmbiente + '/' + uid).once('value').then(snap => {
                     // A verificação visual não deve atrasar a abertura do painel;
                     // as regras Firebase seguem impondo as permissões reais.
                     if (this._autorizado && Auth.usuarioAtual()?.uid === uid) avisoAdmin.hidden = !!snap.val();
@@ -281,7 +285,7 @@ const AdminPresenter = {
         if (![15,25,50].includes(itens)) return;
         VendedoresPresenter.porPagina = itens;
         VendedoresPresenter.pagina = 1;
-        try { localStorage.setItem('martItensVendedores_TESTE', String(itens)); } catch (_) {}
+        try { localStorage.setItem(`martItensVendedores_${CONFIG.environment}`, String(itens)); } catch (_) {}
         if (VendedoresPresenter.registros.length) VendedoresPresenter.filtrar();
     },
 
@@ -580,7 +584,7 @@ const AdminPresenter = {
                 this._statusAparencia('Configuração local antiga detectada. Revise e clique em Salvar para publicar.');
             }
             document.getElementById('previewLogoPortal').src=cfg.logo;
-        } catch (erro) {
+            } catch (erro) {
             this._statusAparencia('Não foi possível carregar o Firebase: '+(erro.message||erro),true);
         }
     },

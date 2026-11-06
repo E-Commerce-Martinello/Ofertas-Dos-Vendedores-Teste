@@ -39,7 +39,7 @@ const SegurancaPresenter = {
     },
     async exportarFirebase() {
         if(!this._permitido())return;
-        if(!confirm('Baixar um arquivo JSON das OFERTAS e da APARÊNCIA do Firebase de TESTE para este dispositivo? Armazene o arquivo em local privado.'))return;
+        if(!confirm('Baixar um arquivo JSON das OFERTAS e da APARÊNCIA do Firebase oficial para este dispositivo? Armazene o arquivo em local privado.'))return;
         const btn=document.getElementById('btnBackupFirebase');
         if(btn)btn.disabled=true;
         this._status('Lendo ofertas e aparência diretamente do Firebase…');
@@ -49,16 +49,16 @@ const SegurancaPresenter = {
                 AparenciaPortal.referencia.once('value')
             ]);
             const documento={
-                formato:'martinello-backup-firebase',versao:1,ambiente:'TESTE',
+                formato:'martinello-backup-firebase',versao:1,ambiente:CONFIG.environment,
                 criadoEm:new Date().toISOString(),
                 nota:'Backup manual. Não contém dados do Sheets nem permissões administrativas. Não restaurar automaticamente.',
-                dados:{ofertasMartinello_TESTE:ofertas.val(),aparenciaPortal_TESTE:aparencia.val()}
+                dados:{['ofertasMartinello'+sufixoAmbiente]:ofertas.val(),['aparenciaPortal'+sufixoAmbiente]:aparencia.val()}
             };
             const blob=new Blob([JSON.stringify(documento)],{type:'application/json;charset=utf-8'});
             const url=URL.createObjectURL(blob);
             const a=document.createElement('a');
             a.href=url;
-            a.download='Martinello_Firebase_TESTE_'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
+            a.download=`Martinello_Firebase_${CONFIG.environment}_`+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
             a.style.display='none';document.body.appendChild(a);a.click();a.remove();
             setTimeout(()=>URL.revokeObjectURL(url),30000);
             this._status('Arquivo preparado para download. Confira se ele realmente foi salvo no dispositivo.');

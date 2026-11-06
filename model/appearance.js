@@ -2,6 +2,7 @@
 // Conteúdo público de leitura, edição restrita pelas regras do Firebase.
 const AparenciaPortal = {
     dados: null,
+    carregada: false,
     referencia: database.ref('aparenciaPortal' + sufixoAmbiente),
     padrao: Object.freeze({
         logo: 'img/logo.png',
@@ -29,14 +30,16 @@ const AparenciaPortal = {
         const snap = await this.referencia.once('value');
         // Dado ausente é normal na primeira implantação: manter a aparência atual.
         this.dados = snap.exists() ? this._normalizar(snap.val()) : null;
+        this.carregada = true;
         return this.dados || { ...this.padrao };
     },
     async salvar(dados) {
         const cfg = this._normalizar(dados);
         if (!cfg.titulo.trim()) throw new Error('Informe o título da tela Em breve.');
-        await this.referencia.set(cfg); // só confirma após gravação real
-        this.dados = cfg;
-        return cfg;
+        const {logo, imagem, titulo, mensagem} = cfg;
+        await this.referencia.update({logo,imagem,titulo,mensagem});
+        this.dados = { ...cfg };
+        return this.dados;
     },
     async compactarImagem(arquivo, ladoMaximo = 900, limite = 180000) {
         if (!arquivo || !['image/png', 'image/jpeg', 'image/webp'].includes(arquivo.type)) {

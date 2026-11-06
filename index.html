@@ -55,8 +55,7 @@
                     // Se ainda cheio, limpar tudo como último recurso
                     try { localStorage.setItem('_t', '1'); localStorage.removeItem('_t'); }
                     catch(e3) {
-                        console.warn('🧹 localStorage ainda cheio — limpando tudo');
-                        localStorage.clear();
+                        console.warn('🧹 localStorage ainda cheio; cache preservado para não afetar o outro repositório.');
                     }
                 }
             }
@@ -261,7 +260,26 @@
         .catalogo-item:focus-visible { outline:3px solid #d0252a; outline-offset:2px; }
         .catalogo-item.selecionada { border-color:#d0252a; background:#fff3f4; box-shadow:0 0 0 1px #d0252a; }
         /* v1.6.12: miniaturas sempre no mesmo tamanho; Stories 9:16 não expandem a vitrine. */
-        .catalogo-item { min-width:0; overflow:hidden; }
+        .catalogo-item { min-width:0; overflow:hidden; position:relative; }
+        .catalogo-item.mais-compartilhada {
+            border:3px solid #c51f27;
+            background:linear-gradient(150deg,#fff0f1 0%,#fffafa 76%);
+            box-shadow:0 0 0 2px rgba(197,31,39,.15),0 5px 17px rgba(197,31,39,.20);
+            padding:7px; /* espessura maior sem aumentar dimensoes dos cards */
+        }
+        .catalogo-item.mais-compartilhada.selecionada { background:linear-gradient(155deg,#ffe0e2,#fff3f4);border-color:#c51f27; }
+        .catalogo-item.mais-compartilhada .catalogo-tag-mais {box-shadow:0 2px 8px rgba(0,0,0,.22);}
+
+        .catalogo-tag-mais {position:absolute;z-index:2;top:13px;left:13px;max-width:calc(100% - 26px);
+            padding:5px 7px;border-radius:7px;background:#d0252a;color:white;font-size:9px;
+            line-height:1.25;font-weight:800;letter-spacing:.1px;text-align:center;pointer-events:none;}
+        body.dark-mode .catalogo-item.mais-compartilhada,
+        body.dark-mode .catalogo-item.mais-compartilhada.selecionada {
+            background:linear-gradient(155deg,#54282d,#39252a);color:#fff;
+            border-color:#ff8189;box-shadow:0 0 0 2px rgba(255,129,137,.25),0 5px 14px rgba(0,0,0,.30);
+        }
+        @media (prefers-reduced-motion:reduce){.catalogo-item.mais-compartilhada{transition:none;}}
+
         .catalogo-item img {
             display:block; width:100%; height:auto; aspect-ratio:4/3;
             object-fit:cover; object-position:center center;
@@ -424,19 +442,20 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
-    <script src="shared/config.js?v=1.6.3.2"></script>
+    <script src="shared/config.js?v=1.6.17"></script>
     <script src="shared/utils.js"></script>
-    <script src="model/firebase-config.js"></script>
-    <script src="model/appearance.js?v=1.6.10"></script>
-    <script src="model/campanhas.js?v=1.6.14"></script>
-    <script src="model/link-track.js?v=1.6.14.1"></script>
-    <script src="model/analytics.js?v=1.6.14"></script>
-    <script src="model/telefone-portal.js?v=1.6.13"></script>
+    <script src="model/firebase-config.js?v=1.6.17"></script>
+    <script src="model/appearance.js?v=1.6.17"></script>
+    <script src="model/campanhas.js?v=1.6.17"></script>
+    <script src="model/link-track.js?v=1.6.17"></script>
+    <script src="model/analytics.js?v=1.6.17"></script>
+    <script src="model/ranking-ofertas.js?v=1.6.17"></script>
+    <script src="model/telefone-portal.js?v=1.6.17"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js?v=1.6.11"></script>
-    <script src="model/validators.js?v=1.6.3.2"></script>
-    <script src="view/ui.js"></script>
+    <script src="model/storage.js?v=1.6.17"></script>
+    <script src="model/validators.js?v=1.6.17"></script>
+    <script src="view/ui.js?v=1.6.17"></script>
     <script src="presenter/api.js"></script>
-    <script src="presenter/index-presenter.js?v=1.6.14"></script>
+    <script src="presenter/index-presenter.js?v=1.6.17"></script>
 </body>
 </html>

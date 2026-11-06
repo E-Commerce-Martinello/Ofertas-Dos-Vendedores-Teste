@@ -7,6 +7,8 @@ const IndexPresenter = {
     intervalo: null,
     _assinatura: '',
     pararSyncOfertas: null,
+    _rankingSolicitado: '',
+    _aparenciaOuvindo: false,
 
     async init() {
         Storage.verificarQuota();
@@ -44,12 +46,25 @@ const IndexPresenter = {
     async _carregarAparencia() {
         try {
             const dados = await AparenciaPortal.carregar();
-            const logo = document.getElementById('logoPortal');
-            if (logo) logo.src = dados.logo || 'img/logo.png';
-            this._renderOferta(this.ofertaAtual);
+            this._aplicarAparencia(dados);
+            // Atualizar identidade visual em tempo real nos dois portais.
+            if (!this._aparenciaOuvindo) {
+                this._aparenciaOuvindo=true;
+                AparenciaPortal.referencia.on('value', snap => {
+                    const dados = snap.exists() ? AparenciaPortal._normalizar(snap.val()) : {...AparenciaPortal.padrao};
+                    AparenciaPortal.dados=dados;
+                    this._aplicarAparencia(dados);
+                },erro=>console.warn('Aparência: sincronização indisponível:',erro));
+            }
         } catch (erro) {
             console.warn('Aparência pública indisponível, mantendo padrão:', erro.message);
         }
+    },
+    _aplicarAparencia(dados) {
+        const logo=document.getElementById('logoPortal');
+        if(logo)logo.src=dados?.logo||'img/logo.png';
+        this._renderCatalogo(this._ativas());
+        this._renderOferta(this.ofertaAtual);
     },
 
     _configEmBreve() {
@@ -81,6 +96,19 @@ const IndexPresenter = {
         this.ofertaAtual = atual || ativas[0] || null;
         this._renderCatalogo(ativas);
         this._renderOferta(this.ofertaAtual);
+        this._atualizarRanking(ativas);
+    },
+
+    _atualizarRanking(ativas) {
+        const ids = ativas.map(o=>String(o.id)).sort().join(',');
+        if (ids === this._rankingSolicitado) return;
+        this._rankingSolicitado = ids;
+        if (!ids) return;
+        RankingOfertas.carregar(ativas).then(() => {
+            // Nunca aplicar resultado de um conjunto desatualizado.
+            if (this._rankingSolicitado !== ids) return;
+            this._renderCatalogo(this._ativas());
+        }).catch(() => {});
     },
 
     _renderCatalogo(ativas) {
@@ -91,13 +119,22 @@ const IndexPresenter = {
         secao.hidden = ativas.length < 2;
         total.textContent = `${ativas.length} oferta${ativas.length === 1 ? '' : 's'} disponível${ativas.length === 1 ? '' : 'is'}`;
         grid.replaceChildren();
-        for (const oferta of ativas) {
+        const maisGerada = RankingOfertas.liderAtivas(ativas);
+        const ordenadas = maisGerada
+            ? [...ativas].sort((a,b) => Number(String(b.id) === maisGerada) - Number(String(a.id) === maisGerada))
+            : ativas;
+        for (const oferta of ordenadas) {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'catalogo-item';
             const selecionado = String(oferta.id) === String(this.ofertaAtual?.id);
             btn.setAttribute('aria-pressed', String(selecionado));
             if (selecionado) btn.classList.add('selecionada');
+            const destaque = String(oferta.id) === maisGerada;
+            if (destaque) {
+                btn.classList.add('mais-compartilhada');
+                btn.title = 'Mais compartilhada entre as ofertas disponíveis nos últimos 30 dias (inícios de compartilhamento, não vendas)';
+            }
             const img = document.createElement('img');
             img.src = oferta.urlImagem || 'img/produto.png';
             img.alt = '';
@@ -109,6 +146,12 @@ const IndexPresenter = {
             const texto = document.createElement('span');
             texto.textContent = oferta.tituloPagina || 'Oferta';
             btn.append(img, texto);
+            if (destaque) {
+                const selo=document.createElement('b');
+                selo.className='catalogo-tag-mais';
+                selo.textContent='★ MAIS COMPARTILHADA';
+                btn.appendChild(selo);
+            }
             btn.addEventListener('click', () => this.selecionarOferta(oferta.id));
             grid.appendChild(btn);
         }

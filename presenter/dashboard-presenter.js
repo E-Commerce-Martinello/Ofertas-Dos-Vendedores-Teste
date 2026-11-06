@@ -162,7 +162,7 @@ const DashboardPresenter = {
             if (consulta.truncado) status.textContent += ' Atenção: histórico limitado na consulta. Use um período menor.';
             if (CONFIG.environment === 'TESTE' && this.eventos.length === 0) {
                 try {
-                    const d = JSON.parse(localStorage.getItem('martTelemetriaDiagnostico_TESTE') || 'null');
+                    const d = JSON.parse(localStorage.getItem(`martTelemetriaDiagnostico_${CONFIG.environment}`) || 'null');
                     if (d?.status) status.textContent += ` Última tentativa neste navegador: ${d.status} — ${d.detalhe}`;
                 } catch (_) {}
             }

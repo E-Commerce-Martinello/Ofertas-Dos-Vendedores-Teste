@@ -1,6 +1,6 @@
 // ============================================
 // model/google-sheets.js
-// Cliente da API privada do Apps Script vinculado à planilha de TESTE.
+// Cliente da API privada do Apps Script vinculado à planilha operacional.
 // Todas as operações usam Firebase ID token temporário no corpo do POST.
 // ============================================
 const GoogleSheetsService = {
@@ -9,7 +9,8 @@ const GoogleSheetsService = {
     obterUrl() {
         // Usamos primeiro o endereço que já funcionou neste navegador, sem pedir que o usuário cole novamente.
         // CONFIG fornece um endereço inicial para outros dispositivos.
-        return localStorage.getItem('martVendedoresApiUrl_TESTE') || CONFIG.adminApiUrl || '';
+        // Nunca priorizar um endereco antigo guardado no navegador, para evitar consultar outra base.
+        return String(CONFIG.adminApiUrl || '');
     },
 
     configurar(apiUrl) {
