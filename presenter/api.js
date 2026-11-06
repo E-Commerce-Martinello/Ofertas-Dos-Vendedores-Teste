@@ -5,8 +5,9 @@
 const API = {
 
     async rastrear(codigo, navegador) {
-        // Nunca misturar registros de teste com o formulário oficial.
-        if (CONFIG.environment === 'TESTE') return { metodo: 'rastreamento-desativado-no-teste' };
+        // O coletor atual registra eventos de compartilhamento. O formulário legado
+        // permanece desativado, inclusive no site oficial, salvo ativação explícita.
+        if (CONFIG.rastreioFormularioLegado !== true) return { metodo: 'formulario-legado-desativado' };
         try {
             const fd = new FormData();
             fd.append(CONFIG.entryIdCodigo,  codigo);

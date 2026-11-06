@@ -7,7 +7,11 @@ const UI = {
     // ----- TEMA -----
     tema: {
         aplicar(t) {
-            document.body.classList.toggle('dark-mode', t === 'dark');
+            const escuro = t === 'dark';
+            // A classe usada pelo CSS inicial tinha !important e permanecia no HTML
+            // quando o usuario alterava para claro; isso deixava o fundo preto.
+            document.documentElement.classList.toggle('dark-mode-pre', escuro);
+            document.body.classList.toggle('dark-mode', escuro);
             Storage.salvarTema(t);
             const ic = document.querySelector('.dark-mode-toggle i');
             if (ic) ic.className = t === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
