@@ -16,6 +16,15 @@
         /* Aplicado antes do body carregar — evita flash branco */
         html.dark-mode-pre body { background: #1a1a1a !important; }
     
+        .catalogo-destaques{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:12px 0 18px}
+        .catalogo-destaques:empty{display:none}
+        .catalogo-destaques .oferta-destaque{display:flex;flex-direction:column;align-items:stretch;gap:7px;border:2px solid #d0252a;
+          padding:12px;border-radius:14px;background:rgba(208,37,42,.07);text-align:left;color:inherit;cursor:pointer;font:inherit;min-width:0}
+        .catalogo-destaques img{width:100%;height:165px;object-fit:cover;border-radius:9px}
+        .catalogo-destaques small{font-size:11px;font-weight:800;color:#ad2027}
+        .catalogo-destaques strong{font-size:13px;line-height:1.4}
+        .catalogo-destaques .selecionada{outline:3px solid #16a34a}
+        @media(max-width:580px){.catalogo-destaques{grid-template-columns:1fr}.catalogo-destaques img{height:190px}}
         /* v1.6.13 — solicitação opcional após consultar status oficial */
         #portalTelefoneModal[hidden]{display:none!important;}
         #portalTelefoneModal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);display:flex;justify-content:center;align-items:center;padding:16px;}
@@ -366,6 +375,7 @@
     <div class="card">
         <section id="secaoCatalogo" class="secao-catalogo" hidden aria-label="Ofertas disponíveis">
             <div class="catalogo-cabecalho"><strong>ESCOLHA SUA OFERTA</strong><small id="totalCatalogo"></small></div>
+            <div id="destaquesOfertas" class="catalogo-destaques" aria-label="Ofertas especiais"></div>
             <div id="catalogoOfertas" class="catalogo-grid"></div>
         </section>
         <h2 id="tituloPagina">DISPARO EM ANDAMENTO!</h2>
@@ -392,6 +402,7 @@
         <button class="btn-primary" onclick="enviar()" id="btnEnviar">
             <span class="btn-text">GERAR E ENVIAR NO WHATSAPP</span>
         </button>
+        <button type="button" onclick="TelefonePortal.cadastrarOutroTelefone()" style="background:transparent;border:0;color:inherit;text-decoration:underline;cursor:pointer;margin:10px auto;display:block;font-size:13px">Cadastrar outro número (pessoal ou profissional)</button>
 
 
         <div class="info-panel">
@@ -427,10 +438,21 @@
     <div id="portalTelefoneModal" hidden role="dialog" aria-modal="true" aria-labelledby="portalTelefoneTitulo">
   <div class="portal-telefone-card">
     <h3 id="portalTelefoneTitulo"><i class="fab fa-whatsapp"></i> Confirme seu WhatsApp</h3>
-    <p>A matrícula <strong id="portalTelefoneRubi"></strong> ainda não possui telefone validado na base. Informe seu número para análise da equipe.</p>
+    <p>Para a matrícula <strong id="portalTelefoneRubi"></strong>, informe um telefone pessoal ou profissional para análise. Os contatos já validados serão preservados.</p>
     <form id="portalTelefoneForm" onsubmit="event.preventDefault();TelefonePortal.enviar()">
       <label for="portalTelefoneNumero">Celular brasileiro com DDD (11 dígitos)</label>
       <input id="portalTelefoneNumero" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(65) 9 1234-5678" maxlength="16" required oninput="TelefonePortal.formatarCampo()">
+      <label for="portalTelefoneTipo">Tipo do número</label>
+      <select id="portalTelefoneTipo" required style="display:block;width:100%;padding:12px;border:1px solid #bbb;border-radius:9px">
+        <option value="">Selecione</option><option value="pessoal">Pessoal</option><option value="profissional">Profissional</option>
+      </select>
+      <label for="portalTelefoneGrupo">Este número está no grupo de ofertas?</label>
+      <select id="portalTelefoneGrupo" required style="display:block;width:100%;padding:12px;border:1px solid #bbb;border-radius:9px">
+        <option value="">Selecione uma resposta</option>
+        <option value="sim">Sim, está no grupo</option>
+        <option value="nao">Não está no grupo</option>
+      </select>
+      <small>A resposta será conferida com a lista importada do grupo; não valida o número automaticamente.</small>
       <div id="portalTelefoneErro" class="portal-telefone-erro" role="alert" aria-live="polite"></div>
       <div class="portal-telefone-acoes"><button id="portalTelefoneSalvar" type="submit">ENVIAR PARA ANÁLISE E CONTINUAR</button>
         <button id="portalTelefoneCancelar" type="button" onclick="TelefonePortal.fechar(false)">CANCELAR</button></div>
@@ -442,20 +464,20 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
-    <script src="shared/config.js?v=1.6.17"></script>
+    <script src="shared/config.js?v=1.6.18"></script>
     <script src="shared/utils.js"></script>
-    <script src="model/firebase-config.js?v=1.6.17"></script>
-    <script src="model/appearance.js?v=1.6.17"></script>
-    <script src="model/campanhas.js?v=1.6.17"></script>
-    <script src="model/link-track.js?v=1.6.17"></script>
-    <script src="model/analytics.js?v=1.6.17"></script>
-    <script src="model/ranking-ofertas.js?v=1.6.17"></script>
-    <script src="model/telefone-portal.js?v=1.6.17"></script>
+    <script src="model/firebase-config.js?v=1.6.18"></script>
+    <script src="model/appearance.js?v=1.6.18"></script>
+    <script src="model/campanhas.js?v=1.6.18"></script>
+    <script src="model/link-track.js?v=1.6.18"></script>
+    <script src="model/analytics.js?v=1.6.18"></script>
+    <script src="model/ranking-ofertas.js?v=1.6.18"></script>
+    <script src="model/telefone-portal.js?v=1.6.18"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js?v=1.6.17"></script>
-    <script src="model/validators.js?v=1.6.17"></script>
-    <script src="view/ui.js?v=1.6.17"></script>
+    <script src="model/storage.js?v=1.6.18"></script>
+    <script src="model/validators.js?v=1.6.18"></script>
+    <script src="view/ui.js?v=1.6.18"></script>
     <script src="presenter/api.js"></script>
-    <script src="presenter/index-presenter.js?v=1.6.17"></script>
+    <script src="presenter/index-presenter.js?v=1.6.18"></script>
 </body>
 </html>

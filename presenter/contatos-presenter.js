@@ -11,7 +11,7 @@ const ContatosPresenter = {
   bannerCache: null,
   configCarregada: false,
   configCarregando: false,
-  mensagemPadrao: 'Olá, [NOME]! Temos um grupo para compartilhar ofertas e novidades da Martinello. Gostaríamos de convidar você a participar: [LINK_GRUPO]',
+  mensagemPadrao: '[SAUDACAO] [NOME], temos um grupo para compartilhar ofertas e novidades da Martinello. Gostaríamos de convidar você a participar: [LINK_GRUPO]',
   _statusConfig(msg, erro=false) {
     const el = document.getElementById('contatosConfigStatus');
     if (el) { el.textContent = msg; el.className = erro ? 'contatos-config-status erro' : 'contatos-config-status'; }
@@ -71,8 +71,8 @@ const ContatosPresenter = {
   _candidatos() {
     if (!VendedoresPresenter.grupoCarregado) return [];
     return VendedoresPresenter.registros.filter(v => {
-      if (!v.ativo || v.statusTelefone !== 'VALIDADO') return false;
-      const n = GrupoWhatsAppModel.telefone(v.numero);
+      if (!v.ativo) return false;
+      const n = VendedoresPresenter._numeroPreferido(v);
       return n && VendedoresPresenter._situacaoGrupo(v).codigo === 'fora';
     });
   },
@@ -90,8 +90,9 @@ const ContatosPresenter = {
     const atual = select.value;
     const filiais = [...new Set(this._candidatos().map(v => v.filial))].filter(Boolean)
       .sort((a,b) => String(a).localeCompare(String(b),'pt-BR',{numeric:true}));
+    FiliaisUI.limparCache('contatosFilial');
     select.replaceChildren(new Option('Todas as filiais', ''));
-    filiais.forEach(f=> select.add(new Option(`Filial ${f}${VendedoresPresenter.filiais[f]?' — '+VendedoresPresenter.filiais[f]:''}`, f)));
+    filiais.forEach(f=> select.add(new Option(FiliaisUI.nome(f), f)));
     if (filiais.includes(atual)) select.value = atual;
   },
   init() {
@@ -128,7 +129,7 @@ const ContatosPresenter = {
     destino.innerHTML = lista.slice(0,this.limiteLista).map(v => {
       const id=this._rubi(v.matricula);
       return `<label class="contatos-linha" role="listitem"><input type="checkbox" data-selecionar="${id}" ${this.selecionados.has(id)?'checked':''}>
-        <span class="contatos-conteudo"><strong>${this._esc(v.nome)}</strong><small>Rubi ${this._esc(id)} · Filial ${this._esc(v.filial)} · ${this._esc(VendedoresPresenter._exibirTelefone(v.numero))}</small></span></label>`;
+        <span class="contatos-conteudo"><strong>${this._esc(v.nome)}</strong><small>Rubi ${this._esc(id)} · ${this._esc(FiliaisUI.nome(v.filial))} · ${this._esc(VendedoresPresenter._exibirTelefone(VendedoresPresenter._numeroPreferido(v)||v.numero))}</small></span></label>`;
     }).join('') || '<p class="vendor-empty">Nenhum vendedor elegível com esse filtro. Revise os telefones e a lista de participantes.</p>';
     const rodape = document.getElementById('contatosListaRodape');
     if (rodape) {
@@ -177,14 +178,16 @@ const ContatosPresenter = {
     return /^https:\/\/chat\.whatsapp\.com\/[a-zA-Z0-9]+(?:\?[a-zA-Z0-9_=&%-]+)?$/.test(url) ? url : '';
   },
   _mensagens(v, oferta) {
-    const n = GrupoWhatsAppModel.telefone(v.numero);
+    const n = VendedoresPresenter._numeroPreferido(v);
     if (!n) return null;
     const link = LinkTrack.urlCompartilhavel(oferta,this._rubi(v.matricula));
     const ofertaTexto = formatarTexto(String(oferta.textoOferta || ''), link, this._rubi(v.matricula));
     const conviteModelo = document.getElementById('contatosConviteModelo').value;
     const grupo = this._linkGrupo();
-    const conviteTexto = conviteModelo.replace(/\[(NOME|RUBI|FILIAL|LINK_GRUPO)\]/g, (_,k)=>({
-      NOME:v.nome, RUBI:this._rubi(v.matricula), FILIAL:v.filial, LINK_GRUPO:grupo
+    const h=Number(new Intl.DateTimeFormat('en-GB',{hour:'2-digit',hourCycle:'h23',timeZone:'America/Cuiaba'}).format(new Date()));
+    const saudacao=h>=6 && h<12?'Bom dia!':h>=12 && h<18?'Boa tarde!':'Boa noite!';
+    const conviteTexto = conviteModelo.replace(/\[(SAUDACAO|NOME|RUBI|FILIAL|LINK_GRUPO)\]/g, (_,k)=>({
+      SAUDACAO:saudacao, NOME:v.nome, RUBI:this._rubi(v.matricula), FILIAL:v.filial, LINK_GRUPO:grupo
     })[k]);
     return { n, ofertaTexto, conviteTexto, grupo, imagem: oferta.urlImagem || 'img/produto.png' };
   },
@@ -228,6 +231,8 @@ const ContatosPresenter = {
     try { podeCompartilhar = !!(navigator.share && navigator.canShare && this.bannerCache?.arquivo
       && navigator.canShare({files:[this.bannerCache.arquivo]})); }
     catch (_) { podeCompartilhar = false; }
+    const avisoEmoji=String(oferta.textoOferta||'').includes('\uFFFD')
+      ? '⚠️ O texto salvo desta oferta já contém caracteres substituídos (�). Revise-o no cadastro; não é possível recuperar automaticamente o emoji original.' : '';
     const avisoShare = this.bannerCache?.erro ? 'Banner indisponível: utilize Copiar banner.' :
       this.bannerCache?.arquivo ? (podeCompartilhar ? 'Compartilhe pelo menu nativo e selecione WhatsApp e a conversa.' : 'Seu navegador não oferece compartilhamento de arquivos. Use o envio manual.') : 'Preparando banner para compartilhar…';
     destino.innerHTML = participantes.map(v => {
@@ -238,8 +243,8 @@ const ContatosPresenter = {
         && c.status === 'MARCADO_PELO_OPERADOR' && c.confirmadoEm
         && new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Cuiaba',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(c.confirmadoEm)) === hoje);
       return `<article class="contatos-linha" role="listitem"><div class="contatos-conteudo"><strong>${this._esc(v.nome)}</strong>
-        <small>Rubi ${rubi} · ${this._esc(VendedoresPresenter._exibirTelefone(v.numero))} · ${linkGrupoOk?'Convite configurado':'Informe o link do grupo para habilitar o convite'}</small>
-        <small>${this._esc(avisoShare)} OFERTA DIRETA abre o contato com texto pronto e tenta copiar o banner para você colar. O WhatsApp não permite anexar imagem e legenda automaticamente em uma conversa escolhida por um site.</small></div>
+        <small>Rubi ${rubi} · ${this._esc(VendedoresPresenter._exibirTelefone(VendedoresPresenter._numeroPreferido(v)||v.numero))} · ${linkGrupoOk?'Convite configurado':'Informe o link do grupo para habilitar o convite'}</small>
+        ${avisoEmoji ? `<small style="color:#b3232a">${this._esc(avisoEmoji)}</small>` : ''}<small>${this._esc(avisoShare)} OFERTA DIRETA abre o contato com texto pronto e tenta copiar o banner para você colar. O WhatsApp não permite anexar imagem e legenda automaticamente em uma conversa escolhida por um site.</small></div>
         <div class="contatos-acoes">
           <button type="button" class="btn-outline" data-acao="copiar" data-rubi="${rubi}">COPIAR OFERTA</button>
           <button type="button" class="btn-outline" data-acao="imagem" data-rubi="${rubi}">COPIAR BANNER</button>

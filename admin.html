@@ -694,12 +694,11 @@
         </div>
         <div class="admin-card" id="painelCampanhaGeral">
             <h2><i class="fas fa-bullhorn"></i> CAMPANHA GERAL</h2>
-            <p class="vendor-subtext">Usada nas ofertas sem campanha individual. A atribuição interna funciona sem alterar o link compacto da Martinello.</p>
+            <p class="vendor-subtext">Usada nas ofertas sem campanha individual. O identificador também integra a UTM gerada automaticamente.</p>
             <div class="campanha-geral-grid">
                 <div class="form-group"><label for="campanhaGeral">Identificador da campanha</label>
                     <input id="campanhaGeral" maxlength="60" placeholder="ex: novembro_2026" autocomplete="off"></div>
-                <div class="form-group"><label for="linkGrupoCompacto">Link compacto enviado no grupo</label>
-                    <input id="linkGrupoCompacto" type="url" placeholder="https://www.martinello.com.br/ofertasvendedor"></div>
+
             </div>
             <div class="vendor-actions" style="margin-top:10px">
                 <button type="button" id="btnSalvarCampanhas" class="btn-primary" onclick="CampanhasPresenter.salvar()" style="width:auto"><i class="fas fa-save"></i> SALVAR CAMPANHA</button>
@@ -707,6 +706,34 @@
             </div>
             <p id="statusCampanhaGeral" class="vendor-last-update" role="status">Carregando configuração...</p>
         </div>
+        <details class="admin-card" id="importOfertasPainel">
+            <summary style="cursor:pointer;font-weight:800">📥 IMPORTAR OFERTAS POR PLANILHA (RASCUNHOS)</summary>
+            <p class="vendor-subtext">Aceita Excel (.xlsx) e CSV. Os textos gerados com IA e os emojis são preservados. As imagens são adicionadas manualmente. Nenhuma oferta é publicada automaticamente.</p>
+            <input type="file" id="importOfertasArquivo" accept=".xlsx,.csv" style="margin:12px 0;max-width:100%">
+            <button type="button" class="btn-outline" onclick="OfertasImportPresenter.analisar()">ANALISAR PLANILHA</button>
+            <div id="importOfertasMapeamento" hidden>
+                <h3 style="margin-top:14px">Correspondência de colunas</h3>
+                <div class="contatos-grid">
+                    <div class="form-group"><label>Título</label><select id="importMaptitulo" onchange="OfertasImportPresenter.prever()"></select></div>
+                    <div class="form-group"><label>URL do produto</label><select id="importMapurl" onchange="OfertasImportPresenter.prever()"></select></div>
+                    <div class="form-group"><label>SKU / código</label><select id="importMapsku" onchange="OfertasImportPresenter.prever()"></select></div>
+                    <div class="form-group"><label>Texto da oferta</label><select id="importMaptexto" onchange="OfertasImportPresenter.prever()"></select></div>
+                    <div class="form-group"><label>Campanha</label><select id="importMapcampanha" onchange="OfertasImportPresenter.prever()"></select></div>
+                    <div class="form-group"><label>Início</label><select id="importMapinicio" onchange="OfertasImportPresenter.prever()"></select></div>
+                    <div class="form-group"><label>Fim</label><select id="importMapfim" onchange="OfertasImportPresenter.prever()"></select></div>
+                </div>
+            </div>
+            <p id="importOfertasStatus" class="vendor-subtext" role="status"></p>
+            <div id="importOfertasPreviaCard" hidden style="overflow:auto">
+                <h3>Prévia (até 30 primeiras linhas)</h3>
+                <table style="width:100%;font-size:12px"><thead><tr><th>Linha</th><th>SKU</th><th>Título</th><th>Situação</th></tr></thead>
+                    <tbody id="importOfertasPrevia"></tbody></table>
+                <button type="button" class="btn-primary" id="importOfertasConfirmar" onclick="OfertasImportPresenter.importar()" disabled>IMPORTAR RASCUNHOS VÁLIDOS</button>
+            </div>
+        </details>
+        <div class="admin-card"><h3>📝 RASCUNHOS (PRIVADOS AOS ADMINISTRADORES)</h3>
+            <p class="vendor-subtext">Importações não ficam expostas no banco público. Adicione a imagem e publique manualmente.</p>
+            <div id="listaRascunhos"></div></div>
         <!-- LISTA -->
         <div class="admin-card">
             <h2>📋 OFERTAS PROGRAMADAS (SIMULTÂNEAS PERMITIDAS)</h2>
@@ -751,6 +778,17 @@
                 <input id="campanhaOferta" maxlength="60" placeholder="Vazio = usar campanha geral" autocomplete="off">
                 <small class="vendor-subtext">Quando preenchida, esta campanha substitui a geral apenas nesta oferta.</small>
             </div>
+            <div class="form-group"><label for="skuOferta">Código/SKU do produto (opcional)</label>
+                <input id="skuOferta" type="text" maxlength="40" placeholder="Ex.: 81367"></div>
+            <div class="form-group">
+                <label><input id="rascunhoOferta" type="checkbox"> Manter como rascunho (não aparece no portal)</label>
+            </div>
+            <div class="form-group"><label><input id="destaqueDiaOferta" type="checkbox"> Destacar na vitrine</label>
+                <small class="vendor-subtext">Uma oferta destacada aparece em tamanho maior acima das demais, somente durante o período programado.</small></div>
+            <div class="row"><div class="form-group"><label for="destaqueInicioOferta">Início do destaque (opcional)</label>
+                <input type="datetime-local" id="destaqueInicioOferta"></div>
+                <div class="form-group"><label for="destaqueFimOferta">Fim do destaque (opcional)</label>
+                <input type="datetime-local" id="destaqueFimOferta"></div></div>
             <div class="form-group">
                 <label>🖼️ IMAGEM DA OFERTA</label>
                 <div class="upload-area" id="dropArea">
@@ -862,17 +900,17 @@
                     <div class="dashboard-metrica"><strong id="dashInicios">0</strong><span>INÍCIOS REGISTRADOS</span></div>
                     <div class="dashboard-metrica"><strong id="dashVendedores">0</strong><span>VENDEDORES DISTINTOS</span></div>
                     <div class="dashboard-metrica"><strong id="dashOfertas">0</strong><span>OFERTAS UTILIZADAS</span></div>
-                    <div class="dashboard-metrica"><strong id="dashCliques">0</strong><span>CLIQUES RASTREADOS (HISTÓRICO)</span></div>
+                    <div class="dashboard-metrica"><strong id="dashOutros">0</strong><span>INÍCIOS SEM VENDEDOR ATIVO (HISTÓRICO)</span></div>
                     <div class="dashboard-metrica"><strong id="dashMaisPopular" style="font-size:16px">—</strong><span>OFERTA MAIS ACIONADA</span></div>
                 </div>
-                <div class="vendor-actions" style="margin:9px 0"><button type="button" class="btn-outline" style="width:auto" onclick="DashboardPresenter.copiarLinkGrupo()"><i class="fas fa-link"></i> COPIAR LINK COMPACTO DO GRUPO</button></div>
-                <p class="dashboard-explicacao">O link compacto do grupo permanece sem parâmetros: a campanha é atribuída no portal conforme a configuração vigente no momento da visita. Sem tag de origem, não é possível garantir que uma visita veio do grupo. Os links enviados ao cliente agora seguem diretamente o domínio oficial da Martinello. O histórico de cliques rastreados anteriormente permanece disponível, mas novas visitas ao link oficial não são mensuradas diretamente neste painel. A medição de cliques reais poderá voltar com apoio do domínio oficial ou futura integração ao Analytics. Acessos ao portal indicam sessões registradas, sem identificar a pessoa que clicou. A medição registra o início da preparação do compartilhamento, não o envio efetivo pelo WhatsApp. Para evitar duplo clique, conta no máximo um início por oferta e matrícula em uma janela de dez minutos. A coleta começou nesta versão; períodos anteriores não são recuperados automaticamente.</p>
+
+                <p class="dashboard-explicacao">Os dados deste painel são registros de acessos e inícios de preparação de compartilhamento; não comprovam que o WhatsApp enviou a mensagem. Cliques reais e conversões no domínio da Martinello dependem da confirmação no Analytics da empresa. Os registros são deduplicados em até dez minutos por oferta e matrícula.</p>
                 <p class="dashboard-explicacao" id="dashboardAvisoBase"></p>
             </div>
             <div class="admin-card dashboard-ranking-grid">
-                <div class="dashboard-ranking"><h3>🔗 OFERTAS / PRODUTOS MAIS CLICADOS</h3><div id="dashRankingCliquesOfertas"></div></div>
-                <div class="dashboard-ranking"><h3>👥 CLIQUES POR VENDEDOR</h3><div id="dashRankingCliquesVendedores"></div></div>
-                <div class="dashboard-ranking"><h3>🏬 CLIQUES POR FILIAL</h3><div id="dashRankingCliquesFiliais"></div></div>
+                
+                
+                
                 <div class="dashboard-ranking"><h3>🏆 OFERTAS MAIS ACIONADAS</h3><div id="dashRankingOfertas"></div></div>
                 <div class="dashboard-ranking"><h3>👥 VENDEDORES MAIS ATIVOS</h3><div id="dashRankingVendedores"></div></div>
                 <div class="dashboard-ranking"><h3>🏬 UTILIZAÇÃO POR FILIAL</h3><div id="dashRankingFiliais"></div></div>
@@ -890,7 +928,7 @@
               <div class="dashboard-metrica"><strong id="linksTotalPendentes">—</strong><span>SEM RESULTADO CONCLUSIVO</span></div>
             </div>
             <div class="links-secao-topo"><h3>Links por filial</h3><div class="links-ordenacao">
-              <select id="linksDashboardFilial" aria-label="Filtrar dashboard dos links por filial" onchange="VendedoresPresenter.renderizarPainelLinks()"><option value="">Todas as filiais</option></select>
+              <input type="search" id="buscalinksDashboardFilial" aria-label="Pesquisar filial por código ou município" placeholder="Buscar código ou cidade" oninput="FiliaisUI.buscar('linksDashboardFilial')" style="width:100%;min-width:120px;padding:9px;border:1px solid #bbb;border-radius:8px;margin-bottom:6px"><select id="linksDashboardFilial" aria-label="Filtrar dashboard dos links por filial" onchange="VendedoresPresenter.renderizarPainelLinks()"><option value="">Todas as filiais</option></select>
               <select id="linksOrdemFiliais" aria-label="Ordenar filiais por quantidade sem cadastro" onchange="VendedoresPresenter.renderizarPainelLinks()">
                 <option value="numero">Número da filial (crescente)</option>
                 <option value="mais-sem">Mais vendedores sem cadastro</option>
@@ -919,7 +957,7 @@
                         <option value="inativo">Sem cadastro</option>
                         <option value="redirecionamento">Cadastrados</option>
                       </select>
-                      <select id="filtroFilialLinks" aria-label="Filtrar links por filial" onchange="VendedoresPresenter.filtrarLinks()"><option value="">Todas as filiais</option></select>
+                      <input type="search" id="buscafiltroFilialLinks" aria-label="Pesquisar filial por código ou município" placeholder="Buscar código ou cidade" oninput="FiliaisUI.buscar('filtroFilialLinks')" style="width:100%;min-width:120px;padding:9px;border:1px solid #bbb;border-radius:8px;margin-bottom:6px"><select id="filtroFilialLinks" aria-label="Filtrar links por filial" onchange="VendedoresPresenter.filtrarLinks()"><option value="">Todas as filiais</option></select>
                       <input type="search" id="buscaLinkGeral" aria-label="Buscar link por vendedor ou matrícula" placeholder="Buscar vendedor ou Rubi..." oninput="VendedoresPresenter.agendarBuscaLinks()">
                     </div>
                     <div id="resumoLinks" class="vendor-last-update"></div>
@@ -979,7 +1017,7 @@
                         <option value="todos">Todos os cadastros</option>
                         <option value="inativos">Somente inativos</option>
                     </select>
-                    <select id="filtroFilialVendedor" aria-label="Filtrar por filial" onchange="VendedoresPresenter.filtrar()">
+                    <input type="search" id="buscafiltroFilialVendedor" aria-label="Pesquisar filial por código ou município" placeholder="Buscar código ou cidade" oninput="FiliaisUI.buscar('filtroFilialVendedor')" style="width:100%;min-width:120px;padding:9px;border:1px solid #bbb;border-radius:8px;margin-bottom:6px"><select id="filtroFilialVendedor" aria-label="Filtrar por filial" onchange="VendedoresPresenter.filtrar()">
                         <option value="">Todas as filiais</option>
                     </select>
                     <select id="filtroStatusVendedor" aria-label="Filtrar situação do telefone" onchange="VendedoresPresenter.filtrar()">
@@ -1099,15 +1137,15 @@
             <div id="contatosAviso" class="vendor-status" role="status">Carregando dados...</div>
             <div class="contatos-grid">
               <div class="form-group"><label for="contatosOferta">Oferta ativa</label><select id="contatosOferta" onchange="ContatosPresenter.atualizarOferta()"><option value="">Selecione uma oferta ativa</option></select></div>
-              <div class="form-group"><label for="contatosFilial">Filial</label><select id="contatosFilial" onchange="ContatosPresenter.filtrarLista()"><option value="">Todas as filiais</option></select></div>
+              <div class="form-group"><label for="contatosFilial">Filial</label><input type="search" id="buscacontatosFilial" aria-label="Pesquisar filial por código ou município" placeholder="Buscar código ou cidade" oninput="FiliaisUI.buscar('contatosFilial')" style="width:100%;min-width:120px;padding:9px;border:1px solid #bbb;border-radius:8px;margin-bottom:6px"><select id="contatosFilial" onchange="ContatosPresenter.filtrarLista()"><option value="">Todas as filiais</option></select></div>
               <div class="form-group"><label for="contatosBuscar">Buscar vendedor</label><input id="contatosBuscar" type="search" placeholder="Nome ou Rubi" oninput="ContatosPresenter.filtrarLista()"></div>
             </div>
             <details class="contatos-config" id="contatosConfigPainel">
               <summary><i class="fas fa-cog"></i> Link e mensagem do grupo <span>Configuração reutilizável</span></summary>
               <div class="form-group"><label for="contatosLinkGrupo">Link de convite do grupo</label><input id="contatosLinkGrupo" type="url" placeholder="https://chat.whatsapp.com/..." oninput="ContatosPresenter.renderizarFila()"></div>
               <div class="form-group"><label for="contatosConviteModelo">Mensagem de convite (separada da oferta)</label>
-                <textarea id="contatosConviteModelo" rows="3" maxlength="1000" oninput="ContatosPresenter.renderizarFila()">Olá, [NOME]! Temos um grupo para compartilhar ofertas e novidades da Martinello. Gostaríamos de convidar você a participar: [LINK_GRUPO]</textarea>
-                <small>Variáveis: [NOME], [RUBI], [FILIAL] e [LINK_GRUPO].</small>
+                <textarea id="contatosConviteModelo" rows="3" maxlength="1000" oninput="ContatosPresenter.renderizarFila()">[SAUDACAO] [NOME], temos um grupo para compartilhar ofertas e novidades da Martinello. Gostaríamos de convidar você a participar: [LINK_GRUPO]</textarea>
+                <small>Variáveis: [SAUDACAO], [NOME], [RUBI], [FILIAL] e [LINK_GRUPO]. A saudação utiliza o horário de Mato Grosso.</small>
               </div>
               <div class="contatos-config-rodape"><button type="button" id="btnSalvarConfigContatos" class="btn-primary" onclick="ContatosPresenter.salvarConfig()"><i class="fas fa-save"></i> SALVAR CONVITE</button></div>
             </details>
@@ -1216,6 +1254,16 @@
         <div class="form-group"><label for="editarNomeVendedor">Nome</label><input type="text" id="editarNomeVendedor" maxlength="160"></div>
         <div class="form-group"><label for="editarFilialVendedor">Número da filial</label><input type="text" id="editarFilialVendedor" maxlength="6" inputmode="numeric" pattern="[0-9]*" list="listaNumerosFiliais" oninput="VendedoresPresenter.atualizarLocalidadeFilial()"><datalist id="listaNumerosFiliais"></datalist><small id="localidadeFilialVendedor" style="display:block;color:#777;margin-top:6px;">Informe apenas o número da filial.</small></div>
         <div class="form-group"><label for="editarTelefoneVendedor">Telefone / WhatsApp</label><input type="tel" id="editarTelefoneVendedor" inputmode="tel" placeholder="(DDD) 9 1234-5678" oninput="VendedoresPresenter.aoAlterarTelefone()" onblur="VendedoresPresenter.formatarTelefoneDigitado()"></div>
+        <p class="vendor-subtext">O telefone acima é o contato legado preservado da base. Os novos campos permitem cadastrar dois números sem sobrescrever o legado.</p>
+        <div class="form-group"><label for="editarTelefoneProfissional">WhatsApp profissional</label>
+            <input type="tel" id="editarTelefoneProfissional" inputmode="tel" placeholder="(DDD) 9 1234-5678">
+            <select id="editarStatusProfissional"><option value="PENDENTE">Pendente</option><option value="VALIDADO">Validado pelo administrador</option></select>
+            <label><input type="checkbox" id="editarGrupoProfissional"> Vendedor declara participar do grupo</label></div>
+        <div class="form-group"><label for="editarTelefonePessoal">WhatsApp pessoal</label>
+            <input type="tel" id="editarTelefonePessoal" inputmode="tel" placeholder="(DDD) 9 1234-5678">
+            <select id="editarStatusPessoal"><option value="PENDENTE">Pendente</option><option value="VALIDADO">Validado pelo administrador</option></select>
+            <label><input type="checkbox" id="editarGrupoPessoal"> Vendedor declara participar do grupo</label></div>
+        <small class="vendor-subtext">A declaração do grupo NÃO comprova participação. Ela é verificada com a lista de participantes importada.</small>
         <div class="form-group"><label for="editarStatusTelefone">Validação do telefone</label><select id="editarStatusTelefone"><option value="PENDENTE">Pendente de validação</option><option value="VALIDADO">Validado manualmente</option></select></div>
         <div class="form-group"><label>Situação funcional atual</label><div id="editarSituacaoFuncional" class="vendor-help" style="margin:0;">Não informada</div></div>
         <label class="vendor-checkbox"><input type="checkbox" id="editarAtivoVendedor" checked> Cadastro ativo no painel</label>
@@ -1256,33 +1304,35 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
-    <script src="shared/config.js?v=1.6.17"></script>
+    <script src="shared/config.js?v=1.6.18"></script>
     <script src="shared/utils.js"></script>
-    <script src="model/firebase-config.js?v=1.6.17"></script>
-    <script src="model/appearance.js?v=1.6.17"></script>
-    <script src="model/campanhas.js?v=1.6.17"></script>
-    <script src="model/link-track.js?v=1.6.17"></script>
-    <script src="model/analytics.js?v=1.6.17"></script>
+    <script src="model/firebase-config.js?v=1.6.18"></script>
+    <script src="model/appearance.js?v=1.6.18"></script>
+    <script src="model/campanhas.js?v=1.6.18"></script>
+    <script src="model/link-track.js?v=1.6.18"></script>
+    <script src="model/analytics.js?v=1.6.18"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js?v=1.6.17"></script>
-    <script src="model/validators.js?v=1.6.17"></script>
-    <script src="model/auth.js?v=1.6.17"></script>
-    <script src="view/ui.js?v=1.6.17"></script>
-    <script src="presenter/campanhas-presenter.js?v=1.6.17"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.17"></script>
-    <script src="presenter/seguranca-presenter.js?v=1.6.17"></script>
-    <script src="presenter/dashboard-presenter.js?v=1.6.17"></script>
-    <script src="model/google-sheets.js?v=1.6.17"></script>
+    <script src="model/storage.js?v=1.6.18"></script>
+    <script src="model/validators.js?v=1.6.18"></script>
+    <script src="model/auth.js?v=1.6.18"></script>
+    <script src="view/ui.js?v=1.6.18"></script>
+    <script src="presenter/campanhas-presenter.js?v=1.6.18"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.18"></script>
+    <script src="presenter/ofertas-import-presenter.js?v=1.6.18"></script>
+    <script src="presenter/seguranca-presenter.js?v=1.6.18"></script>
+    <script src="model/filiais.js?v=1.6.18"></script>
+    <script src="presenter/dashboard-presenter.js?v=1.6.18"></script>
+    <script src="model/google-sheets.js?v=1.6.18"></script>
     <!-- SheetJS é carregado sob demanda, apenas quando alguém importa uma planilha. -->
-    <script src="model/planilha-loader.js?v=1.6.17"></script>
-    <script src="model/vendor-import.js?v=1.6.17"></script>
-    <script src="model/vendor-management.js?v=1.6.17"></script>
-    <script src="model/link-checker.js?v=1.6.17"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.17"></script>
-    <script src="model/whatsapp.js?v=1.6.17"></script>
-    <script src="presenter/pendencias-presenter.js?v=1.6.17"></script>
-    <script src="presenter/whatsapp-presenter.js?v=1.6.17"></script>
-    <script src="presenter/acessos-presenter.js?v=1.6.17"></script>
-    <script src="presenter/contatos-presenter.js?v=1.6.17"></script>
+    <script src="model/planilha-loader.js?v=1.6.18"></script>
+    <script src="model/vendor-import.js?v=1.6.18"></script>
+    <script src="model/vendor-management.js?v=1.6.18"></script>
+    <script src="model/link-checker.js?v=1.6.18"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.18"></script>
+    <script src="model/whatsapp.js?v=1.6.18"></script>
+    <script src="presenter/pendencias-presenter.js?v=1.6.18"></script>
+    <script src="presenter/whatsapp-presenter.js?v=1.6.18"></script>
+    <script src="presenter/acessos-presenter.js?v=1.6.18"></script>
+    <script src="presenter/contatos-presenter.js?v=1.6.18"></script>
 </body>
 </html>

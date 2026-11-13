@@ -50,7 +50,7 @@ function formatarParaInput(data) {
 }
 
 function isOfertaAtiva(oferta, agora) {
-    if (!oferta?.dataInicio || !oferta?.dataFim) return false;
+    if (oferta?.rascunho === true || !oferta?.dataInicio || !oferta?.dataFim) return false;
     const ini = new Date(oferta.dataInicio);
     const fim = new Date(oferta.dataFim);
     return !isNaN(ini) && !isNaN(fim) && agora >= ini && agora <= fim;

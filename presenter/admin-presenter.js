@@ -6,6 +6,10 @@
 const AdminPresenter = {
 
     ofertas: [],
+    rascunhos: [],
+    pararSyncRascunhos:null,
+    editandoRascunhoId:null,
+    editandoRascunhoBase:null,
     intervaloStatus: null,
     timerBloqueio: null,
     abaAtual: 'ofertas',
@@ -20,7 +24,7 @@ const AdminPresenter = {
         document.querySelectorAll('[data-mart-env-badge]').forEach(el => {
             el.textContent = MART_PORTAL_PRINCIPAL ? '✓ PORTAL PRINCIPAL' : '⚙ AMBIENTE DE HOMOLOGAÇÃO';
         });
-        document.title = `Admin Martinello | 1.6.17 ${MART_PORTAL_PRINCIPAL ? 'OFICIAL' : 'HOMOLOGAÇÃO'}`;
+        document.title = `Admin Martinello | 1.6.18 ${MART_PORTAL_PRINCIPAL ? 'OFICIAL' : 'HOMOLOGAÇÃO'}`;
         Storage.verificarQuota();
         UI.tema.aplicar(Storage.carregarTema());
         const url = GoogleSheetsService.obterUrl();
@@ -102,6 +106,7 @@ const AdminPresenter = {
 
     async logout() {
         this._pararSincronizacao();
+        if(this.pararSyncRascunhos){this.pararSyncRascunhos();this.pararSyncRascunhos=null;}
         clearInterval(this.intervaloStatus);
         this.intervaloStatus = null;
         this._autorizado = false;
@@ -123,6 +128,7 @@ const AdminPresenter = {
 
     async _abrirPainel(acesso = {}) {
         this._pararSincronizacao();
+        if(this.pararSyncRascunhos){this.pararSyncRascunhos();this.pararSyncRascunhos=null;}
         if (this.intervaloStatus) clearInterval(this.intervaloStatus);
         document.getElementById('loginBox').style.display    = 'none';
         document.getElementById('painelAdmin').style.display = 'block';
@@ -158,6 +164,7 @@ const AdminPresenter = {
         // pesadas dos mesmos banners e mantém a proteção de conflitos da v1.6.11.
         this.ofertas = [];
         this._sincronizarOfertas();
+        this._sincronizarRascunhos();
         this._carregarConfigEmBreve();
         this._setupDragDrop();
         if (typeof CampanhasPresenter !== 'undefined') CampanhasPresenter.carregar();
@@ -182,6 +189,13 @@ const AdminPresenter = {
         if (!el) return;
         el.textContent=texto;
         el.style.color=erro?'#bf2835':'';
+    },
+
+    _sincronizarRascunhos(){
+        if(this.pararSyncRascunhos)this.pararSyncRascunhos();
+        this.pararSyncRascunhos=Storage.escutarRascunhos(lista=>{
+            this.rascunhos=lista;this.renderLista();
+        },e=>console.warn('Rascunhos privados indisponíveis:',e));
     },
 
     _sincronizarOfertas() {
@@ -300,18 +314,28 @@ const AdminPresenter = {
         const con   = document.getElementById('listaOfertas');
         if (!con) return;
 
+        const listaRascunhos=document.getElementById('listaRascunhos');
+        if(listaRascunhos){
+            listaRascunhos.innerHTML=this.rascunhos.length ? this.rascunhos.map(o=>
+                `<div class="oferta-card"><strong>📝 RASCUNHO · ${this._esc(o.tituloPagina||'Sem título')} · SKU ${this._esc(o.sku||'—')}</strong>`+
+                `<div class="vendor-actions"><button type="button" class="btn-warning" data-rasc-editar="${this._esc(o.id)}">EDITAR / PUBLICAR</button>`+
+                `<button type="button" class="btn-danger" data-rasc-excluir="${this._esc(o.id)}">EXCLUIR</button></div></div>`).join('')
+                : '<p class="vendor-subtext">Nenhum rascunho privado.</p>';
+            listaRascunhos.querySelectorAll('[data-rasc-editar]').forEach(b=>b.addEventListener('click',()=>this.editarRascunho(b.dataset.rascEditar)));
+            listaRascunhos.querySelectorAll('[data-rasc-excluir]').forEach(b=>b.addEventListener('click',()=>this.excluirRascunho(b.dataset.rascExcluir)));
+        }
         const banner   = document.getElementById('bannerSemOferta');
         const temAtiva = this.ofertas.some(o => isOfertaAtiva(o, agora));
         if (banner) banner.style.display = temAtiva ? 'none' : 'block';
 
         const ativas = this.ofertas.filter(o => isOfertaAtiva(o, agora)).length;
-        const agendadas = this.ofertas.filter(o => new Date(o.dataInicio) > agora).length;
+        const agendadas = this.ofertas.filter(o => !o.rascunho && new Date(o.dataInicio) > agora).length;
         const resumo = document.getElementById('resumoCampanhas');
         if (resumo) {
             document.getElementById('totalOfertas').textContent = this.ofertas.length;
             document.getElementById('ofertasAtivas').textContent = ativas;
             document.getElementById('ofertasAgendadas').textContent = agendadas;
-            document.getElementById('ofertasEncerradas').textContent = Math.max(0, this.ofertas.length - ativas - agendadas);
+            document.getElementById('ofertasEncerradas').textContent = Math.max(0, this.ofertas.filter(o=>!o.rascunho).length - ativas - agendadas);
         }
 
         if (this.ofertas.length === 0) {
@@ -323,13 +347,13 @@ const AdminPresenter = {
             return;
         }
 
-        const sorted = this.ofertas.map((o,i) => ({o,i})).sort((a,b) => a.o.dataInicio.localeCompare(b.o.dataInicio));
+        const sorted = this.ofertas.map((o,i) => ({o,i})).sort((a,b) => String(a.o.dataInicio||'').localeCompare(String(b.o.dataInicio||'')));
         con.innerHTML = sorted.map(({o,i}) => {
             const ini   = new Date(o.dataInicio), fim = new Date(o.dataFim);
             const ativa = isOfertaAtiva(o, agora);
             const futura= agora < ini;
-            const badge = ativa ? 'status-ativa' : futura ? 'status-agendada' : 'status-expirada';
-            const label = ativa ? 'ATIVA'         : futura ? 'AGENDADA'        : 'EXPIRADA';
+            const badge = o.rascunho ? 'status-agendada' : ativa ? 'status-ativa' : futura ? 'status-agendada' : 'status-expirada';
+            const label = o.rascunho ? 'RASCUNHO' : ativa ? 'ATIVA' : futura ? 'AGENDADA' : 'EXPIRADA';
             const cd    = ativa ? countdownTexto(o.dataFim) : null;
 
             return `<div class="oferta-card ${ativa ? 'ativa' : ''}">
@@ -340,7 +364,7 @@ const AdminPresenter = {
                         <strong>${this._esc(o.tituloPagina || 'Sem título')}</strong><br>
                         📅 ${formatarBrasilia(ini)} → ${formatarBrasilia(fim)}<br>
                         🔗 ${this._esc((o.linkProduto||'').slice(0,45))}…<br>
-                        🏷️ Campanha: ${this._esc(o.campanha || 'Geral')}
+                        🏷️ Campanha: ${this._esc(o.campanha || 'Geral')}${o.destaqueDia?' · ★ DESTAQUE':''}
                     </div>
                     <div class="oferta-actions">
                         <button class="btn-warning" onclick="AdminPresenter.editarOferta(${i})" style="padding:10px 15px;width:auto;">✏️</button>
@@ -356,6 +380,8 @@ const AdminPresenter = {
     mostrarNovaOferta() {
         this.editandoId=null;
         this.editandoBase=null;
+        this.editandoRascunhoId=null;
+        this.editandoRascunhoBase=null;
         this._avisoConflito();
         document.getElementById('formTitulo').innerHTML     = '➕ NOVA OFERTA';
         document.getElementById('editandoIdx').value        = '';
@@ -365,6 +391,11 @@ const AdminPresenter = {
         document.getElementById('textoOferta').value        = '';
         document.getElementById('tituloPagina').value       = 'DISPARO EM ANDAMENTO!';
         document.getElementById('campanhaOferta').value     = '';
+        document.getElementById('skuOferta').value='';
+        document.getElementById('rascunhoOferta').checked=false;
+        document.getElementById('destaqueDiaOferta').checked=false;
+        document.getElementById('destaqueInicioOferta').value='';
+        document.getElementById('destaqueFimOferta').value='';
         this._removerImagem();
         this._atualizarPreview();
         document.getElementById('formNovaOferta').style.display = 'block';
@@ -374,6 +405,8 @@ const AdminPresenter = {
     editarOferta(idx) {
         const o = this.ofertas[idx];
         if (!o) { UI.erro('Oferta não encontrada'); return; }
+        this.editandoRascunhoId=null;
+        this.editandoRascunhoBase=null;
         this.editandoId=o.id;
         this.editandoBase=Storage.assinaturaOferta(o);
         this._avisoConflito();
@@ -387,6 +420,11 @@ const AdminPresenter = {
         document.getElementById('textoOferta').value        = o.textoOferta || '';
         document.getElementById('tituloPagina').value       = o.tituloPagina || 'DISPARO EM ANDAMENTO!';
         document.getElementById('campanhaOferta').value     = o.campanha || '';
+        document.getElementById('skuOferta').value=o.sku||'';
+        document.getElementById('rascunhoOferta').checked=o.rascunho===true;
+        document.getElementById('destaqueDiaOferta').checked=o.destaqueDia===true;
+        document.getElementById('destaqueInicioOferta').value=o.destaqueInicio||'';
+        document.getElementById('destaqueFimOferta').value=o.destaqueFim||'';
 
         const prev = document.getElementById('preview');
         const btnR = document.getElementById('btnRemoverImagem');
@@ -400,7 +438,37 @@ const AdminPresenter = {
         document.getElementById('formNovaOferta').scrollIntoView({ behavior: 'smooth' });
     },
 
+    editarRascunho(id){
+        const o=this.rascunhos.find(x=>String(x.id)===String(id));if(!o)return;
+        this.editandoId=null;this.editandoBase=null;
+        this.editandoRascunhoId=o.id;this.editandoRascunhoBase=Storage.assinaturaOferta(o);
+        this._avisoConflito();
+        document.getElementById('formTitulo').textContent='📝 EDITAR RASCUNHO';
+        document.getElementById('editandoIdx').value='';
+        for(const [campo,valor] of Object.entries({dataInicio:o.dataInicio||'',dataFim:o.dataFim||'',
+            linkProduto:o.linkProduto||'',textoOferta:o.textoOferta||'',tituloPagina:o.tituloPagina||'',
+            campanhaOferta:o.campanha||'',skuOferta:o.sku||'',destaqueInicioOferta:o.destaqueInicio||'',destaqueFimOferta:o.destaqueFim||''}))
+            document.getElementById(campo).value=valor;
+        document.getElementById('rascunhoOferta').checked=true;
+        document.getElementById('destaqueDiaOferta').checked=o.destaqueDia===true;
+        const arquivoPendente=document.getElementById('fileInput');if(arquivoPendente)arquivoPendente.value='';
+        const prev=document.getElementById('preview');
+        if(o.urlImagem){prev.src=o.urlImagem;prev.style.display='block';document.getElementById('btnRemoverImagem').style.display='inline-block';}
+        else this._removerImagem();
+        this._atualizarPreview();
+        document.getElementById('formNovaOferta').style.display='block';
+        document.getElementById('formNovaOferta').scrollIntoView({behavior:'smooth'});
+    },
+    async excluirRascunho(id){
+        const o=this.rascunhos.find(x=>String(x.id)===String(id));if(!o)return;
+        if(!confirm('Excluir o rascunho "'+(o.tituloPagina||o.id)+'"?'))return;
+        const r=await Storage.modificarRascunho({tipo:'excluir',id,base:Storage.assinaturaOferta(o)});
+        if(!r.ok)UI.erro('Rascunho mudou em outra sessão. Atualize antes de excluir.');
+        else UI.ok('Rascunho excluído.');
+    },
+
     cancelarEdicao() {
+        this.editandoRascunhoId=null;this.editandoRascunhoBase=null;
         this.editandoId=null;
         this.editandoBase=null;
         this._avisoConflito();
@@ -411,10 +479,12 @@ const AdminPresenter = {
     },
 
     async salvarOferta() {
+        const privado=this.editandoRascunhoId!=null;
         const emEdicao = this.editandoId != null;
-        const idAlvo = this.editandoId;
-        const original = emEdicao ? this.ofertas.find(o => String(o.id)===String(idAlvo)) : null;
-        if (emEdicao && !original) {
+        const idAlvo = privado?this.editandoRascunhoId:this.editandoId;
+        const original = privado?this.rascunhos.find(o=>String(o.id)===String(idAlvo))
+          :emEdicao ? this.ofertas.find(o => String(o.id)===String(idAlvo)) : null;
+        if ((emEdicao || privado) && !original) {
             this._avisoConflito('⚠️ Esta oferta foi excluída em outra sessão. Copie os dados e cancele a edição.');
             UI.erro('Oferta excluída por outro administrador. Nada foi alterado.');
             return;
@@ -426,25 +496,46 @@ const AdminPresenter = {
             textoOferta:document.getElementById('textoOferta').value,
             tituloPagina:document.getElementById('tituloPagina').value || 'DISPARO EM ANDAMENTO!',
             campanha:String(document.getElementById('campanhaOferta').value||'').trim().toLowerCase(),
+            sku:String(document.getElementById('skuOferta').value||'').trim(),
+            rascunho:document.getElementById('rascunhoOferta').checked,
+            destaqueDia:document.getElementById('destaqueDiaOferta').checked,
+            destaqueInicio:document.getElementById('destaqueInicioOferta').value,
+            destaqueFim:document.getElementById('destaqueFimOferta').value,
         };
         if(dados.campanha && !/^[a-z0-9][a-z0-9_-]{0,59}$/.test(dados.campanha)){
             UI.erro('Campanha individual inválida: até 60 letras minúsculas, números, _ ou -.');return;
         }
+        if(dados.sku && !/^[a-zA-Z0-9_-]{1,40}$/.test(dados.sku)){UI.erro('SKU deve conter apenas letras, números, traço ou _.');return;}
+        if(dados.destaqueInicio && dados.destaqueFim && new Date(dados.destaqueInicio)>new Date(dados.destaqueFim)) {
+            UI.erro('O fim do destaque deve ser posterior ao início.');return;
+        }
         const idxAtual = emEdicao ? this.ofertas.findIndex(o=>String(o.id)===String(idAlvo)) : null;
-        const val=Validators.oferta(dados,this.ofertas,idxAtual);
+        const val=dados.rascunho ? {valido:!!dados.tituloPagina,erros:['Rascunho precisa de título.']} : Validators.oferta(dados,this.ofertas,idxAtual);
         if (!val.valido) { UI.erro(val.erros[0]); return; }
         const fi=document.getElementById('fileInput');
-        let urlImagem=emEdicao ? original.urlImagem : '';
+        let urlImagem=(emEdicao || privado) ? original.urlImagem : '';
         if (fi.files?.[0]) {
             const vImg=Validators.imagem(fi.files[0]);
             if (!vImg.valido) { UI.erro(vImg.erro); return; }
             urlImagem=await UI.paraBase64(fi.files[0]);
         }
+        if(!dados.rascunho && !urlImagem){UI.erro('Adicione a imagem antes de publicar a oferta.');return;}
+        if(!dados.rascunho && dados.textoOferta.includes('\uFFFD')){UI.erro('O texto contém caracteres de substituição (�); revise os emojis antes de publicar.');return;}
+        if(emEdicao && dados.rascunho){UI.erro('Para retirar uma oferta pública, encerre seu período. Rascunhos são mantidos em área privada separada.');return;}
         const oferta={
-            id:emEdicao?idAlvo:`of_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
+            id:(emEdicao||privado)?idAlvo:`of_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
             ...dados, urlImagem,
-            dataCriacao:emEdicao?(original.dataCriacao || new Date().toISOString()):new Date().toISOString(),
+            dataCriacao:(emEdicao||privado)?(original.dataCriacao || new Date().toISOString()):new Date().toISOString(),
         };
+        if(dados.rascunho){
+            const r=await Storage.modificarRascunho({tipo:privado?'editar':'criar',id:oferta.id,
+                oferta:{...oferta,rascunho:true},base:privado?this.editandoRascunhoBase:null});
+            if(!r.ok){UI.erro('Não foi possível salvar o rascunho privado: '+r.motivo);return;}
+            this.cancelarEdicao();UI.ok('Rascunho salvo em área privada; não está visível aos vendedores.');return;
+        }
+        if(privado && Storage.assinaturaOferta(original)!==this.editandoRascunhoBase){
+            UI.erro('Rascunho alterado em outra sessão. Reabra para publicar a versão atual.');return;
+        }
         const resultado=await Storage.modificarOferta({
             tipo:emEdicao?'editar':'criar',id:oferta.id,oferta,
             base:emEdicao?this.editandoBase:null
@@ -457,12 +548,16 @@ const AdminPresenter = {
             return;
         }
         this.ofertas=resultado.ofertas;
+        if(privado){
+            const r=await Storage.modificarRascunho({tipo:'excluir',id:oferta.id,base:this.editandoRascunhoBase});
+            if(!r.ok)UI.erro('Oferta publicada, mas o rascunho privado não pôde ser excluído automaticamente. Exclua-o após atualizar a lista.');
+        }
         this.renderLista();
         this.cancelarEdicao();
         UI.ok('Oferta salva com segurança e sincronizada com os demais administradores.');
         if(typeof SegurancaPresenter!=='undefined')
             SegurancaPresenter.registrarFirebase(emEdicao?'oferta_editada':'oferta_criada',oferta.id,
-                ['dataInicio','dataFim','linkProduto','textoOferta','tituloPagina','campanha','urlImagem']
+                ['dataInicio','dataFim','linkProduto','textoOferta','tituloPagina','campanha','urlImagem','sku','rascunho','destaqueDia','destaqueInicio','destaqueFim']
                     .filter(k=>!emEdicao||String(original?.[k]??'')!==String(oferta[k]??'')));
     },
 

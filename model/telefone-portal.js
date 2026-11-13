@@ -67,6 +67,24 @@ const TelefonePortal = {
       document.head.appendChild(s);
     });
   },
+  _matriculasPendentes: new Map(),
+  consultarMatricula(rubi) {
+    const url=this._endpoint(); if(!url)return Promise.resolve(null);
+    const requestId=`ma_${Date.now()}_${Math.random().toString(36).slice(2,13)}`;
+    return new Promise(resolve=>{
+      const script=document.createElement('script'); script.async=true;
+      const concluir=d=>{clearTimeout(timer);this._matriculasPendentes.delete(requestId);script.remove();resolve(d);};
+      const timer=setTimeout(()=>concluir(null),9000);
+      this._matriculasPendentes.set(requestId,concluir);
+      script.onerror=()=>concluir(null);
+      const qs=new URLSearchParams({action:'consultarMatricula',matricula:rubi,requestId});
+      script.src=`${url}?${qs}`; document.head.appendChild(script);
+    });
+  },
+  receberMatricula(dados) {
+    const resolver=this._matriculasPendentes.get(String(dados?.requestId||''));
+    if(resolver)resolver(dados.disponivel===true ? dados.ativo===true : null);
+  },
   receber(dados) {
     const resolve=this._pending.get(String(dados?.requestId||''));
     if (resolve) resolve(dados.disponivel===false?null:dados.validado===true);
@@ -85,6 +103,13 @@ const TelefonePortal = {
     }
     return this.solicitar(rubi);
   },
+  async cadastrarOutroTelefone() {
+    const rubi=String(document.getElementById('cod')?.value||'').replace(/\D/g,'');
+    if(!/^\d{3,5}$/.test(rubi)) {this._erro('');UI.erro('Informe primeiro a matrícula do vendedor.');return;}
+    const ativo=await this.consultarMatricula(rubi);
+    if(ativo!==true) {UI.erro('Somente vendedores ativos podem solicitar cadastro de telefone.');return;}
+    await this.solicitar(rubi);
+  },
   solicitar(rubi) {
     if (this._resolucao) return Promise.resolve(false);
     return new Promise(resolve=>{
@@ -92,6 +117,8 @@ const TelefonePortal = {
       const el=document.getElementById('portalTelefoneModal');
       if (!el) {this.fechar(false);return;}
       document.getElementById('portalTelefoneNumero').value='';
+      document.getElementById('portalTelefoneTipo').value='';
+      document.getElementById('portalTelefoneGrupo').value='';
       document.getElementById('portalTelefoneRubi').textContent=rubi;
       this._erro('');el.hidden=false;
       document.getElementById('portalTelefoneNumero').focus();
@@ -114,7 +141,12 @@ const TelefonePortal = {
     const botao=document.getElementById('portalTelefoneSalvar');
     if (botao) {botao.disabled=true;botao.textContent='ENVIANDO...';}
     try {
-      const campos=new URLSearchParams({action:'solicitarTelefone',matricula:rubi,telefone:numero,
+      const tipo=document.getElementById('portalTelefoneTipo')?.value;
+      if(!['pessoal','profissional'].includes(tipo)){this._erro('Selecione o tipo do telefone.');return;}
+      const respostaGrupo=document.getElementById('portalTelefoneGrupo')?.value;
+      if(!['sim','nao'].includes(respostaGrupo)){this._erro('Informe se este número participa do grupo de ofertas.');return;}
+      const declaraGrupo=respostaGrupo==='sim';
+      const campos=new URLSearchParams({action:'solicitarTelefone',matricula:rubi,telefone:numero,tipoTelefone:tipo,declaraGrupo:String(declaraGrupo),
         origem:location.origin,requestId:`fone_${Date.now()}_${Math.random().toString(36).slice(2,9)}`});
       // Sem CORS: resposta opaca indica despacho, não prova de gravação.
       await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
@@ -127,3 +159,4 @@ const TelefonePortal = {
   }
 };
 window.MartinelloTelefoneReceber = dados => TelefonePortal.receber(dados);
+window.MartinelloMatriculaReceber = dados => TelefonePortal.receberMatricula(dados);

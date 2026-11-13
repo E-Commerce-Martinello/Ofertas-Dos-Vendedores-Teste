@@ -82,7 +82,7 @@ const GrupoWhatsAppModel = {
     const manual = manuais.find(v => this.telefone(v.telefone) === telefone);
     const porMatricula = new Map(vendedores.map(v => [this.digitos(v.matricula),v]));
     const rubi = this.rubiNoNome(nomeGrupo);
-    const oficiais = vendedores.filter(v => v.ativo && v.statusTelefone === 'VALIDADO' && this.telefone(v.numero) === telefone);
+    const oficiais = vendedores.filter(v => v.ativo && VendedoresPresenter._fonesValidados(v).some(f=>f.numero===telefone));
     if (manual && ['GERENTE','FUNCIONARIO','OUTRO'].includes(manual.tipo)) {
       return { situacao:'identificado', tipo:manual.tipo, matricula:'', vendedor:null, motivo:'Identificação manual preservada' };
     }
@@ -102,14 +102,14 @@ const GrupoWhatsAppModel = {
         return { situacao:'inativo', tipo:'INATIVO', matricula:rubiAtribuido, vendedor:vendedorRubi,
           motivo:'Cadastro inativo identificado pelo Rubi · avaliar remoção do grupo (não automática)' };
       }
-      if (vendedorRubi.statusTelefone === 'VALIDADO' && this.telefone(vendedorRubi.numero) !== telefone) {
+      if (VendedoresPresenter._fonesValidados(vendedorRubi).length && !VendedoresPresenter._fonesValidados(vendedorRubi).some(f=>f.numero===telefone)) {
         return { situacao:'revisar', tipo:'REVISAR', matricula:rubiAtribuido, vendedor:vendedorRubi, motivo:'Rubi reconhecido, mas telefone diferente do validado' };
       }
       return { situacao:'vendedor', tipo:'VENDEDOR', matricula:vendedorRubi.matricula, vendedor:vendedorRubi,
         motivo: vendedorRubi.statusTelefone==='VALIDADO' ? 'Rubi e telefone conferem' : 'Identificado pelo Rubi — telefone ainda pendente no cadastro' };
     }
     if (!rubiAtribuido && oficiais.length === 0) {
-      const antigos = vendedores.filter(v => !v.ativo && v.statusTelefone === 'VALIDADO' && this.telefone(v.numero) === telefone);
+      const antigos = vendedores.filter(v => !v.ativo && VendedoresPresenter._fonesValidados(v).some(f=>f.numero===telefone));
       if (antigos.length === 1) return { situacao:'inativo', tipo:'INATIVO', matricula:antigos[0].matricula, vendedor:antigos[0],
         motivo:'Telefone pertence a vendedor inativo · avaliar remoção do grupo (não automática)' };
       if (antigos.length > 1) return { situacao:'revisar', tipo:'REVISAR', matricula:'', vendedor:null,

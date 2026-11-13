@@ -89,6 +89,29 @@ const Storage = {
         }
     },
 
+    _rascunhosRef() {return database.ref('rascunhosOfertas'+sufixoAmbiente);},
+    async carregarRascunhos() {
+        const snap=await this._rascunhosRef().once('value');return Object.values(snap.val()||{});
+    },
+    escutarRascunhos(callback,onErro){
+        const ref=this._rascunhosRef();const cb=snap=>callback(Object.values(snap.val()||{}));
+        ref.on('value',cb,onErro);return ()=>ref.off('value',cb);
+    },
+    async modificarRascunho({tipo,id,oferta,base}) {
+        const ref=this._rascunhosRef().child(String(id));
+        let motivo='conflito';
+        try{
+            const resultado=await ref.transaction(atual=>{
+                if(tipo==='criar') {if(atual!=null){motivo='duplicado';return;}motivo='';return oferta;}
+                if(atual==null){motivo='excluido';return;}
+                if(this.assinaturaOferta(atual)!==base){motivo='conflito';return;}
+                if(tipo==='editar'){motivo='';return {...atual,...oferta,rascunho:true};}
+                if(tipo==='excluir'){motivo='';return null;}
+            },undefined,false);
+            return {ok:resultado.committed,motivo:resultado.committed?'':motivo};
+        }catch(e){return {ok:false,motivo:'erro',erro:e};}
+    },
+
     // ---------- OFERTAS ----------
 
     async carregarOfertas() {

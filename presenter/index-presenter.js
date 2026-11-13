@@ -112,49 +112,46 @@ const IndexPresenter = {
     },
 
     _renderCatalogo(ativas) {
-        const secao = document.getElementById('secaoCatalogo');
-        const grid = document.getElementById('catalogoOfertas');
-        const total = document.getElementById('totalCatalogo');
-        if (!secao || !grid) return;
-        secao.hidden = ativas.length < 2;
-        total.textContent = `${ativas.length} oferta${ativas.length === 1 ? '' : 's'} disponível${ativas.length === 1 ? '' : 'is'}`;
-        grid.replaceChildren();
-        const maisGerada = RankingOfertas.liderAtivas(ativas);
-        const ordenadas = maisGerada
-            ? [...ativas].sort((a,b) => Number(String(b.id) === maisGerada) - Number(String(a.id) === maisGerada))
-            : ativas;
-        for (const oferta of ordenadas) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'catalogo-item';
-            const selecionado = String(oferta.id) === String(this.ofertaAtual?.id);
-            btn.setAttribute('aria-pressed', String(selecionado));
-            if (selecionado) btn.classList.add('selecionada');
-            const destaque = String(oferta.id) === maisGerada;
-            if (destaque) {
-                btn.classList.add('mais-compartilhada');
-                btn.title = 'Mais compartilhada entre as ofertas disponíveis nos últimos 30 dias (inícios de compartilhamento, não vendas)';
-            }
-            const img = document.createElement('img');
-            img.src = oferta.urlImagem || 'img/produto.png';
-            img.alt = '';
-            img.loading = 'lazy';
-            img.decoding = 'async';
-            img.width = 160;
-            img.height = 120;
-            img.onerror = () => { img.onerror = null; img.src = 'img/produto.png'; };
-            const texto = document.createElement('span');
-            texto.textContent = oferta.tituloPagina || 'Oferta';
-            btn.append(img, texto);
-            if (destaque) {
-                const selo=document.createElement('b');
-                selo.className='catalogo-tag-mais';
-                selo.textContent='★ MAIS COMPARTILHADA';
-                btn.appendChild(selo);
-            }
-            btn.addEventListener('click', () => this.selecionarOferta(oferta.id));
-            grid.appendChild(btn);
-        }
+        const secao=document.getElementById('secaoCatalogo');
+        const grid=document.getElementById('catalogoOfertas');
+        const total=document.getElementById('totalCatalogo');
+        const painel=document.getElementById('destaquesOfertas');
+        if(!secao||!grid||!painel)return;
+        const lider=RankingOfertas.liderAtivas(ativas);
+        const ehDestaque=o=>{
+            if(o.destaqueDia!==true)return false;
+            const agora=getHorarioBrasilia();
+            const ini=o.destaqueInicio?new Date(o.destaqueInicio):new Date(o.dataInicio);
+            const fim=o.destaqueFim?new Date(o.destaqueFim):new Date(o.dataFim);
+            return Number.isFinite(+ini)&&Number.isFinite(+fim)&&agora>=ini&&agora<=fim;
+        };
+        const escolhida=[...ativas].filter(ehDestaque)
+            .sort((a,b)=>String(b.destaqueInicio||b.dataInicio||'').localeCompare(String(a.destaqueInicio||a.dataInicio||'')))[0];
+        const cards=[];
+        const mais=ativas.find(o=>String(o.id)===lider);
+        if(mais)cards.push({o:mais,selo:'★ MAIS ACIONADA'});
+        if(escolhida && String(escolhida.id)!==String(mais?.id))cards.push({o:escolhida,selo:'✦ DESTAQUE DO DIA'});
+        // Caso coincidam, exibir um único card com identificação combinada.
+        if(escolhida && mais && String(escolhida.id)===String(mais.id))cards[0].selo='★ MAIS ACIONADA · DESTAQUE DO DIA';
+        const ids=new Set(cards.map(c=>String(c.o.id)));
+        secao.hidden=ativas.length<2 && !cards.length;
+        total.textContent=`${ativas.length} oferta${ativas.length===1?'':'s'} disponível${ativas.length===1?'':'is'}`;
+        painel.replaceChildren();grid.replaceChildren();
+        const montar=(oferta,selo,classe)=>{
+            const btn=document.createElement('button');btn.type='button';btn.className=classe;
+            const selecionado=String(oferta.id)===String(this.ofertaAtual?.id);
+            btn.setAttribute('aria-pressed',String(selecionado));
+            if(selecionado)btn.classList.add('selecionada');
+            const img=document.createElement('img');img.src=oferta.urlImagem||'img/produto.png';img.alt='';
+            img.loading='lazy';img.decoding='async';img.onerror=()=>{img.onerror=null;img.src='img/produto.png';};
+            const texto=document.createElement('strong');texto.textContent=oferta.tituloPagina||'Oferta';
+            btn.append(img,texto);
+            if(selo){const tag=document.createElement('small');tag.textContent=selo;btn.prepend(tag);}
+            btn.addEventListener('click',()=>this.selecionarOferta(oferta.id));return btn;
+        };
+        for(const c of cards)painel.appendChild(montar(c.o,c.selo,'oferta-destaque'));
+        for(const oferta of ativas.filter(o=>!ids.has(String(o.id))))
+            grid.appendChild(montar(oferta,'','catalogo-item'));
     },
 
     selecionarOferta(id) {
@@ -245,18 +242,29 @@ const IndexPresenter = {
         btn.disabled = true;
         texto.textContent = 'PREPARANDO...';
         try {
-            const continuar = await TelefonePortal.garantir(cod);
-            if (!continuar) return;
+            // A classificação vem da planilha do ambiente, por consulta pública sem dados pessoais.
+            // Em caso de falha de rede, NUNCA presumimos que uma matrícula esteja ativa.
+            const vendedorAtivo = await TelefonePortal.consultarMatricula(cod);
+            if (vendedorAtivo !== true) {
+                UI.erro(vendedorAtivo === false
+                    ? 'Matrícula de não vendedor. A oferta será gerada com o link padrão da Martinello.'
+                    : 'Não foi possível verificar a matrícula. Por segurança, será usado o link padrão da Martinello.');
+            }
+            if (vendedorAtivo === true) {
+                const continuar = await TelefonePortal.garantir(cod);
+                if (!continuar) return;
+            }
             Storage.salvarUltimaMatricula(cod);
-            const link = LinkTrack.urlCompartilhavel(oferta,cod);
+            await CampanhasPortal.carregar().catch(()=>'');
+            const link = LinkTrack.urlCompartilhavel(oferta,cod,vendedorAtivo===true);
             const msg = formatarTexto(oferta.textoOferta, link, cod);
-            // A telemetria é indicativa e não pode bloquear o compartilhamento.
-            // Uma tentativa por oferta, matrícula e janela de dez minutos/navegador.
-            const registro = AnalyticsService.registrarInicio(oferta, cod)
-                .catch(e => { console.warn('Telemetria: erro inesperado:', e); return false; });
-            await API.rastrear(cod, getBrowserName());
-            // Aguarda no máximo um instante pelo despacho, sem bloquear o WhatsApp.
-            await Promise.race([registro, new Promise(resolve => setTimeout(resolve, 1200))]);
+            // Não atribuir acesso de não vendedor aos rankings de vendedores ativos.
+            if(vendedorAtivo===true){
+                const registro = AnalyticsService.registrarInicio(oferta, cod)
+                    .catch(e => { console.warn('Telemetria: erro inesperado:', e); return false; });
+                await API.rastrear(cod, getBrowserName());
+                await Promise.race([registro, new Promise(resolve => setTimeout(resolve, 1200))]);
+            }
             await API.compartilhar(msg, oferta.urlImagem || 'img/produto.png');
         } catch (e) {
             console.error('Falha na preparação do compartilhamento:', e);

@@ -1,5 +1,5 @@
 /**
- * Martinello v1.6.17 — IDENTICO nos repositorios de homologacao e oficial.
+ * Martinello v1.6.18 — IDENTICO nos repositorios de homologacao e oficial.
  * Configuracao de dois ambientes — publicar o MESMO arquivo nos dois GitHub Pages:
  * este arquivo e publico: nao inclua segredos, service accounts ou tokens nele.
  * Identificacao estrita por hostname + nome do repositorio.
@@ -97,7 +97,7 @@ const CONFIG = Object.freeze({
   rastreioTimeout:5000,
   rastreioFormularioLegado:false,
   urlBase:'https://www.martinello.com.br/parceiros/',
-  CACHE_VERSION:'1.6.17',
+  CACHE_VERSION:'1.6.18',
   SESSION_KEY:'adminSessao_'+MART_AMBIENTE,
   MAX_TENTATIVAS:5,
   BLOQUEIO_MS:5*60*1000,

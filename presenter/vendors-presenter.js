@@ -122,7 +122,7 @@ const VendedoresPresenter = {
                 matricula: get('matricula'),
                 nome: get('nome'),
                 filial: get('filial'),
-                localidadeFilial: this.filiais[get('filial')] || '',
+                localidadeFilial: FiliaisUI.nome(get('filial')),
                 codfil: get('codigo_filial'),
                 numero: telefone,
                 telefoneNormalizado: get('telefone_normalizado') || this._normalizarTelefone(telefone),
@@ -178,20 +178,34 @@ const VendedoresPresenter = {
         this._status('Consultando a aba Vendedores...');
         try {
             // Consultas independentes em paralelo: reduzem tempo de espera sem cachear dados pessoais.
-            const [base, consultaLinks] = await Promise.all([
+            const [base, consultaLinks, fonesExtras] = await Promise.all([
                 GoogleSheetsService.carregarVendedores(apiUrl),
                 GoogleSheetsService.listarLinks().catch(erro => {
                     console.warn('Não foi possível ler os status de links do Sheets:', erro);
                     return { resultados: [] };
+                }),
+                GoogleSheetsService.listarTelefonesExtras().catch(erro=>{
+                    console.warn('Contatos adicionais indisponíveis:',erro);return [];
                 })
             ]);
             const linhas = base.linhas;
             this.filiais = Object.fromEntries((base.filiais || [])
-                .filter(v => Array.isArray(v) && v.length >= 2 && /^\d+$/.test(String(v[0]))));
+                .filter(v => Array.isArray(v) && v.length >= 2 && /^\d+$/.test(String(v[0])))
+                .map(r=>[String(r[0]),String(r[2]||r[1])]));
+            FiliaisUI.definir(this.filiais);
             this.links = Object.fromEntries((consultaLinks.resultados || [])
                 .filter(x => /^\d+$/.test(String(x.matricula || '')))
                 .map(x => [`m${this._matricula(x.matricula)}`, x]));
             this.registros = this._mapearVendedores(linhas);
+            const extras=new Map(fonesExtras.map(r=>[String(r[0]),r]));
+            this.registros.forEach(v=>{
+                const r=extras.get(String(v.matricula));
+                v.telefonesExtras=r ? {
+                    pessoal:String(r[1]||''),statusPessoal:String(r[2]||'PENDENTE'),grupoPessoal:String(r[3])==='SIM',
+                    profissional:String(r[4]||''),statusProfissional:String(r[5]||'PENDENTE'),grupoProfissional:String(r[6])==='SIM',
+                    revision:String(r[7]||'')
+                } : null;
+            });
             if (!this.registros.length) throw new Error('A aba Vendedores foi lida, mas não contém linhas válidas.');
             this._atualizarFiltroFilial();
             this._atualizarFiltroFilialLinks();
@@ -230,8 +244,9 @@ const VendedoresPresenter = {
             .map(v => this._texto(v.filial))
             .filter(Boolean))]
             .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+        FiliaisUI.limparCache('filtroFilialVendedor');
         select.innerHTML = '<option value="">Todas as filiais</option>' + filiais.map(f =>
-            `<option value="${this._escapar(f)}">${this._escapar(f)}${this.filiais[f] ? ' — ' + this._escapar(this.filiais[f]) : ''}</option>`
+            `<option value="${this._escapar(f)}">${this._escapar(FiliaisUI.nome(f))}</option>`
         ).join('');
         const sugestoes = document.getElementById('listaNumerosFiliais');
         if (sugestoes) sugestoes.innerHTML = Object.entries(this.filiais)
@@ -246,8 +261,30 @@ const VendedoresPresenter = {
         if (!ajuda) return;
         const numero = String(input?.value || '').trim();
         ajuda.textContent = numero && this.filiais[numero]
-            ? `Localidade vinculada: ${this.filiais[numero]}`
+            ? `Localidade vinculada: ${FiliaisUI.nome(numero)}`
             : 'Informe apenas o número da filial; a localidade é vinculada pelo relatório.';
+    },
+
+    _fonesValidados(v) {
+        const extras=v.telefonesExtras || {};
+        const fones=[
+            {numero:extras.profissional,tipo:'profissional',status:extras.statusProfissional},
+            {numero:extras.pessoal,tipo:'pessoal',status:extras.statusPessoal},
+            {numero:v.numero,tipo:'legado',status:v.statusTelefone}
+        ];
+        const seen=new Set();
+        return fones.filter(f=>{
+            const n=GrupoWhatsAppModel.telefone(f.numero);
+            if(f.status!=='VALIDADO'||!n||seen.has(n))return false;
+            f.numero=n;seen.add(n);return true;
+        });
+    },
+    _numeroPreferido(v) {
+        const fones=this._fonesValidados(v);
+        // 1º número comprovadamente no grupo; 2º profissional; 3º pessoal; 4º legado.
+        fones.sort((a,b)=>Number(this.grupoTelefones.has(b.numero))-Number(this.grupoTelefones.has(a.numero))
+            ||({profissional:0,pessoal:1,legado:2}[a.tipo])-({profissional:0,pessoal:1,legado:2}[b.tipo]));
+        return fones[0]?.numero || '';
     },
 
     atualizarGrupo() {
@@ -258,11 +295,11 @@ const VendedoresPresenter = {
         this.grupoSufixos = new Set([...this.grupoTelefones].map(n => n.slice(-8)));
         const oficiais = new Map();
         this.registros.forEach(v => {
-            if (v.statusTelefone !== 'VALIDADO') return;
-            const n = GrupoWhatsAppModel.telefone(v.numero);
-            if (!n) return;
-            if (!oficiais.has(n)) oficiais.set(n, new Set());
-            oficiais.get(n).add(v.matricula);
+            for(const f of this._fonesValidados(v)){
+                const n=f.numero;
+                if(!oficiais.has(n))oficiais.set(n,new Set());
+                oficiais.get(n).add(v.matricula);
+            }
         });
         this.grupoDuplicados = new Set([...oficiais.entries()]
             .filter(([, matriculas]) => matriculas.size > 1).map(([telefone]) => telefone));
@@ -272,21 +309,19 @@ const VendedoresPresenter = {
     },
 
     _situacaoGrupo(v) {
-        if (!v.ativo) return { codigo:'inativo', texto:'Cadastro inativo', classe:'unknown' };
-        if (v.statusTelefone !== 'VALIDADO' || !GrupoWhatsAppModel.telefone(v.numero))
-            return { codigo:'pendente', texto:'Telefone pendente', classe:'review' };
-        const n = GrupoWhatsAppModel.telefone(v.numero);
-        if (this.grupoDuplicados.has(n))
-            return { codigo:'conflito', texto:'Número duplicado · revisar', classe:'review' };
-        if (!this.grupoCarregado)
-            return { codigo:'sem_dados', texto:'Aguardando lista do grupo', classe:'unknown' };
-        if (this.grupoTelefones.has(n))
-            return { codigo:'grupo', texto:'No grupo', classe:'in' };
-        // Não associar automaticamente pelo final do número; apenas destacar DDD divergente.
-        if (this.grupoSufixos.has(n.slice(-8)))
-            return { codigo:'revisar', texto:'Possível DDD diferente · revisar', classe:'review' };
-        return { codigo:'fora', texto:'Fora do grupo', classe:'out' };
+        if(!v.ativo)return {codigo:'inativo',texto:'Cadastro inativo',classe:'unknown'};
+        const fones=this._fonesValidados(v);
+        if(!fones.length)return {codigo:'pendente',texto:'Telefones pendentes',classe:'review'};
+        if(fones.some(f=>this.grupoDuplicados.has(f.numero)))
+            return {codigo:'conflito',texto:'Número duplicado · revisar',classe:'review'};
+        if(!this.grupoCarregado)return {codigo:'sem_dados',texto:'Aguardando lista do grupo',classe:'unknown'};
+        if(fones.some(f=>this.grupoTelefones.has(f.numero)))
+            return {codigo:'grupo',texto:'No grupo',classe:'in'};
+        if(fones.some(f=>this.grupoSufixos.has(f.numero.slice(-8))))
+            return {codigo:'revisar',texto:'Possível DDD diferente · revisar',classe:'review'};
+        return {codigo:'fora',texto:'Fora do grupo',classe:'out'};
     },
+
 
     agendarBusca() {
         clearTimeout(this._timerBusca);
@@ -372,10 +407,10 @@ const VendedoresPresenter = {
     // O segundo caminho não adiciona inativos à fila de campanhas.
     abrirContato(matricula) {
         const alvo = this.registros.find(v => String(v.matricula) === String(matricula));
-        if (!alvo || alvo.statusTelefone !== 'VALIDADO') {
+        if (!alvo || !this._numeroPreferido(alvo)) {
             UI.erro('Contato indisponível: o telefone precisa estar validado.'); return;
         }
-        const telefone = GrupoWhatsAppModel.telefone(alvo.numero);
+        const telefone = this._numeroPreferido(alvo);
         if (!telefone) { UI.erro('Contato indisponível: número brasileiro inválido.'); return; }
         const elegivel = typeof ContatosPresenter !== 'undefined' &&
             VendedoresPresenter._situacaoGrupo(alvo).codigo === 'fora' && alvo.ativo &&
@@ -406,14 +441,14 @@ const VendedoresPresenter = {
                     <span class="vendor-entry-meta">Link: ${this._statusLink(v.linkStatus)}</span>
                 </div>
                 <div class="vendor-entry-field"><span class="field-label">Filial</span>
-                    <strong>${this._escapar(v.filial || '—')}</strong><small>${this._escapar(v.localidadeFilial || '')}</small></div>
+                    <strong>${this._escapar(FiliaisUI.nome(v.filial))}</strong></div>
                 <div class="vendor-entry-field vendor-entry-phone"><span class="field-label">WhatsApp / telefone</span>
-                    <strong title="${this._escapar(this._exibirTelefone(v.numero))}">${this._escapar(this._exibirTelefone(v.numero))}</strong><small>${v.statusTelefone === 'VALIDADO' ? 'Validado' : 'Pendente de validação'}</small></div>
+                    <strong title="${this._escapar(this._exibirTelefone(this._numeroPreferido(v)||v.numero))}">${this._escapar(this._exibirTelefone(this._numeroPreferido(v)||v.numero))}</strong><small>${this._numeroPreferido(v) ? 'Contato validado' : 'Pendente de validação'}</small></div>
                 <div class="vendor-entry-field"><span class="field-label">Situação no grupo</span>
                     <span class="vendor-badge ${grupo.classe}">${this._escapar(grupo.texto)}</span></div>
                 <div class="vendor-entry-actions"><button class="vendor-small-btn" type="button" data-rubi="${rubi}">
                     <i class="fas fa-pen"></i> Editar</button>
-                    ${v.statusTelefone === 'VALIDADO' && !!GrupoWhatsAppModel.telefone(v.numero) ? `<button class="vendor-small-btn vendor-contact-btn" type="button" data-contato="${rubi}" title="${grupo.codigo === 'fora' && v.ativo ? 'Preparar oferta para o vendedor' : 'Abrir contato no WhatsApp (conversa individual)'}"><i class="fab fa-whatsapp"></i> Contatar</button>` : ''}</div>
+                    ${!!this._numeroPreferido(v) ? `<button class="vendor-small-btn vendor-contact-btn" type="button" data-contato="${rubi}" title="${grupo.codigo === 'fora' && v.ativo ? 'Preparar oferta para o vendedor' : 'Abrir contato no WhatsApp (conversa individual)'}"><i class="fab fa-whatsapp"></i> Contatar</button>` : ''}</div>
             </article>`;
         }).join('') || '<p class="vendor-empty">Nenhum vendedor encontrado com esses filtros.</p>';
         destino.querySelectorAll('[data-rubi]').forEach(b => b.addEventListener('click', () => this.abrirEdicao(b.dataset.rubi)));
@@ -445,6 +480,7 @@ const VendedoresPresenter = {
         this.atualizarLocalidadeFilial();
         document.getElementById('editarTelefoneVendedor').value = '';
         document.getElementById('editarStatusTelefone').value = 'PENDENTE';
+        this._preencherTelefonesExtras(null);
         document.getElementById('editarAtivoVendedor').checked = true;
         document.getElementById('editarObservacoesVendedor').value = '';
         document.getElementById('btnSalvarVendedor').textContent = 'CADASTRAR VENDEDOR';
@@ -466,11 +502,22 @@ const VendedoresPresenter = {
         this.atualizarLocalidadeFilial();
         document.getElementById('editarTelefoneVendedor').value = this._exibirTelefone(vendedor.numero) === '—' ? '' : this._exibirTelefone(vendedor.numero);
         document.getElementById('editarStatusTelefone').value = vendedor.statusTelefone || 'PENDENTE';
+        this._preencherTelefonesExtras(vendedor.telefonesExtras);
         document.getElementById('editarAtivoVendedor').checked = vendedor.ativo !== false;
         document.getElementById('editarObservacoesVendedor').value = vendedor.observacoes || '';
         document.getElementById('btnSalvarVendedor').textContent = 'SALVAR ALTERAÇÕES';
         document.getElementById('editarSituacaoFuncional').textContent = vendedor.situacaoFuncional || 'Não informada';
         document.getElementById('modalEditarVendedor').style.display = 'flex';
+    },
+
+    _preencherTelefonesExtras(extras) {
+        const f=extras||{};
+        for(const tipo of ['Pessoal','Profissional']) {
+            const chave=tipo.toLowerCase();
+            document.getElementById('editarTelefone'+tipo).value=this._exibirTelefone(f[chave]||'')==='—'?'':this._exibirTelefone(f[chave]);
+            document.getElementById('editarStatus'+tipo).value=f['status'+tipo]||'PENDENTE';
+            document.getElementById('editarGrupo'+tipo).checked=f['grupo'+tipo]===true;
+        }
     },
 
     formatarTelefoneDigitado() {
@@ -499,6 +546,19 @@ const VendedoresPresenter = {
         const telefoneInformado = this._digitos(document.getElementById('editarTelefoneVendedor').value);
         const numero = telefoneInformado ? GrupoWhatsAppModel.telefone(telefoneInformado) : '';
         const statusTelefone = this._texto(document.getElementById('editarStatusTelefone').value).toUpperCase();
+        const extras={matricula,
+            telefonePessoal:GrupoWhatsAppModel.telefone(document.getElementById('editarTelefonePessoal').value)||'',
+            telefoneProfissional:GrupoWhatsAppModel.telefone(document.getElementById('editarTelefoneProfissional').value)||'',
+            statusPessoal:document.getElementById('editarStatusPessoal').value,
+            statusProfissional:document.getElementById('editarStatusProfissional').value,
+            declaraGrupoPessoal:String(document.getElementById('editarGrupoPessoal').checked),
+            declaraGrupoProfissional:String(document.getElementById('editarGrupoProfissional').checked),
+            revision:this.registros.find(v=>v.matricula===matricula)?.telefonesExtras?.revision || ''};
+        for(const tipo of ['Pessoal','Profissional']) {
+            const raw=this._digitos(document.getElementById('editarTelefone'+tipo).value);
+            if(raw && !extras['telefone'+tipo]){UI.erro('Telefone '+tipo.toLowerCase()+' inválido.');return;}
+        }
+        if(extras.telefonePessoal && extras.telefonePessoal===extras.telefoneProfissional){UI.erro('Não repita o mesmo número nos dois campos.');return;}
         const ativo = document.getElementById('editarAtivoVendedor').checked;
         const observacoes = this._texto(document.getElementById('editarObservacoesVendedor').value);
         if (!matricula || !nome || !/^\d{1,6}$/.test(filial)) { UI.erro('Informe matrícula, nome e apenas o número da filial.'); return; }
@@ -528,6 +588,7 @@ const VendedoresPresenter = {
                 });
                 UI.ok('Cadastro atualizado diretamente na aba Vendedores.');
             }
+            await GoogleSheetsService.salvarTelefonesExtras(extras);
             this.fecharEdicao();
             await this._carregar(cfg.url, cfg.token);
         } catch (erro) {
@@ -554,10 +615,11 @@ const VendedoresPresenter = {
         const filiais = [...new Set(this.registros.filter(v=>v.ativo).map(v=>String(v.filial||'').trim()).filter(Boolean))]
           .sort((a,b)=>Number(a)-Number(b));
         for (const id of ['filtroFilialLinks','linksDashboardFilial']) {
+            FiliaisUI.limparCache(id);
             const el=document.getElementById(id);if (!el) continue;
             const anterior=el.value;
             el.replaceChildren(new Option('Todas as filiais',''));
-            for(const filial of filiais) el.add(new Option(`Filial ${filial}${this.filiais[filial]?' · '+this.filiais[filial]:''}`,filial));
+            for(const filial of filiais) el.add(new Option(FiliaisUI.nome(filial),filial));
             if (filiais.includes(anterior)) el.value=anterior;
         }
     },
@@ -598,10 +660,10 @@ const VendedoresPresenter = {
         const destino=document.getElementById('linksFiliaisLista');
         if (!destino) return;
         destino.innerHTML=lista.map(item => {
-            const nome=this.filiais[item.filial] || '';
+            const nome=FiliaisUI.nome(item.filial);
             const p=item.total || 1;
             return `<div class="links-ranking-item" role="listitem">
-                <div class="links-ranking-cabecalho"><span><strong>${this._escapar(item.filial)}.</strong> ${this._escapar(nome || 'Filial '+item.filial)}</span>
+                <div class="links-ranking-cabecalho"><span><strong>${this._escapar(nome)}</strong></span>
                     <small>${item.total} vendedores</small></div>
                 <div class="links-ranking-dados"><span class="links-vermelho">${item.sem} sem cadastro</span>
                     <span class="links-verde">${item.cadastrados} cadastrados</span>
@@ -646,7 +708,7 @@ const VendedoresPresenter = {
                 ? `Última consulta: ${this._escapar(String(v.linkStatus.verificadoEm).slice(0, 19).replace('T',' '))}`
                 : 'Ainda não consultado';
             return `<article class="vendor-link-row" role="listitem"><div><strong>${this._escapar(v.nome)}</strong>
-                <small>Rubi ${rubi} · Filial ${this._escapar(v.filial)} · ${detalhe}</small></div>
+                <small>Rubi ${rubi} · ${this._escapar(FiliaisUI.nome(v.filial))} · ${detalhe}</small></div>
                 ${estado}</article>`;
         }).join('') || '<p class="vendor-empty">Nenhum link encontrado com esse filtro.</p>';
         const resumo = document.getElementById('resumoLinks');
@@ -727,23 +789,30 @@ const VendedoresPresenter = {
                 const rubi=this._escapar(p.matricula),fone=this._escapar(this._exibirTelefone(p.telefone));
                 const vendedor=this.registros.find(v=>String(v.matricula)===String(p.matricula));
                 return `<article class="vendor-link-row"><div><strong>${this._escapar(vendedor?.nome||'Matrícula não localizada')} · Rubi ${rubi}</strong>
-                  <small>WhatsApp informado: ${fone} · ${this._escapar(String(p.criadoEm||'').slice(0,19))}</small></div>
-                  ${vendedor?`<button type="button" class="vendor-small-btn" data-pedido="${rubi}" data-numero="${this._escapar(p.telefone)}">REVISAR CADASTRO</button>`:'<span class="vendor-badge unknown">Revisar matrícula</span>'}</article>`;
+                  <small>WhatsApp ${this._escapar(p.tipoTelefone||'legado')}: ${fone} · Declara estar no grupo: ${p.declaradoNoGrupo?'SIM':'NÃO'} · ${this._escapar(String(p.criadoEm||'').slice(0,19))}</small></div>
+                  ${vendedor?`<button type="button" class="vendor-small-btn" data-pedido="${rubi}" data-numero="${this._escapar(p.telefone)}" data-tipo="${this._escapar(p.tipoTelefone||'legado')}" data-declara="${p.declaradoNoGrupo?'true':'false'}">REVISAR CADASTRO</button>`:'<span class="vendor-badge unknown">Revisar matrícula</span>'}</article>`;
             }).join('')||'<p class="vendor-empty">Nenhuma solicitação pendente de validação.</p>';
-            destino.querySelectorAll('[data-pedido]').forEach(btn=>btn.addEventListener('click',()=>this.abrirSolicitacaoTelefone(btn.dataset.pedido,btn.dataset.numero)));
+            destino.querySelectorAll('[data-pedido]').forEach(btn=>btn.addEventListener('click',()=>this.abrirSolicitacaoTelefone(btn.dataset.pedido,btn.dataset.numero,btn.dataset.tipo,btn.dataset.declara==='true')));
         } catch(e) {if(status)status.textContent=`Não foi possível carregar solicitações: ${e.message||'falha na API'}`;}
     },
 
-    abrirSolicitacaoTelefone(matricula,telefone) {
+    abrirSolicitacaoTelefone(matricula,telefone,tipo,declaraGrupo=false) {
         const vendedor=this.registros.find(v=>String(v.matricula)===String(matricula));
         if(!vendedor){UI.erro('Matrícula ausente. Confira o cadastro antes de atualizar.');return;}
         this.abrirEdicao(matricula);
-        const campo=document.getElementById('editarTelefoneVendedor');
-        if(campo)campo.value=this._exibirTelefone(telefone);
-        this.aoAlterarTelefone();
-        // A seleção VALIDADO só pode ser feita pelo administrador após a conferência.
-        document.getElementById('editarStatusTelefone').value='PENDENTE';
-        UI.ok('Número sugerido no formulário. Confirme a identidade antes de validar ou salvar.');
+        // Nunca sobrescrever o número legado ao revisar um pedido pessoal/profissional.
+        if(['pessoal','profissional'].includes(tipo)) {
+            const sufixo=tipo==='pessoal'?'Pessoal':'Profissional';
+            document.getElementById('editarTelefone'+sufixo).value=this._exibirTelefone(telefone);
+            document.getElementById('editarStatus'+sufixo).value='PENDENTE';
+            document.getElementById('editarGrupo'+sufixo).checked=declaraGrupo;
+        } else {
+            const campo=document.getElementById('editarTelefoneVendedor');
+            if(campo)campo.value=this._exibirTelefone(telefone);
+            this.aoAlterarTelefone();
+            document.getElementById('editarStatusTelefone').value='PENDENTE';
+        }
+        UI.ok('Pedido carregado no campo correto. Confirme a identidade e o grupo antes de validar.');
     },
 
     mudarPagina(direcao) {

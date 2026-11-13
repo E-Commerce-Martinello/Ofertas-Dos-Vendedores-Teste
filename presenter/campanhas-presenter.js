@@ -10,16 +10,14 @@ const CampanhasPresenter = {
             this.config=await GoogleSheetsService.listarCampanhas();
             CampanhasPortal.geral=CampanhasPortal.slug(this.config.campanhaGeral);
             const geral=document.getElementById('campanhaGeral');
-            const link=document.getElementById('linkGrupoCompacto');
             if(geral)geral.value=this.config.campanhaGeral||'';
-            if(link)link.value=this.config.linkGrupo||'https://www.martinello.com.br/ofertasvendedor';
             this._msg('Configuração compartilhada carregada. Campanha geral atual: '+(this.config.campanhaGeral||'sem campanha'));
         }catch(e){this._msg('Não foi possível carregar a campanha: '+e.message,true);}
         finally{this.carregando=false;}
     },
     async salvar() {
         const geral=String(document.getElementById('campanhaGeral')?.value||'').trim().toLowerCase();
-        const link=String(document.getElementById('linkGrupoCompacto')?.value||'').trim();
+        const link=this.config.linkGrupo||'https://www.martinello.com.br/ofertasvendedor'; // mantido apenas para compatibilidade com API existente
         if(geral&&!/^[a-z0-9][a-z0-9_-]{0,59}$/.test(geral)){
             this._msg('Use letras minúsculas, números, traços ou _. Até 60 caracteres.',true);return;
         }

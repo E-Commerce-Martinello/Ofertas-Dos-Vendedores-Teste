@@ -57,43 +57,30 @@ const DashboardPresenter = {
         const visitas=this.eventos.filter(ev=>ev.tipo==='acesso_portal' && daCampanha(ev));
         const eventos = this.eventos.filter(ev => ev.tipo==='inicio_compartilhamento' && daCampanha(ev) &&
           (!selecionada || String(ev.ofertaId)===selecionada));
-        const cliques=this.eventos.filter(ev=>ev.tipo==='clique_link' && daCampanha(ev) &&
-          (!selecionada || String(ev.ofertaId)===selecionada));
         const acesso=document.getElementById('dashAcessosPortal');
         const whats=document.getElementById('dashAcessosWhatsApp');
         if(acesso)acesso.textContent=visitas.length.toLocaleString('pt-BR');
         if(whats)whats.textContent=visitas.filter(ev=>ev.origem==='whatsapp_grupo').length.toLocaleString('pt-BR');
-        const unicos = new Set(eventos.map(e => e.matricula));
+        const eventosAtivos=eventos.filter(e=>mapa.get(String(e.matricula))?.ativo);
+        const unicos = new Set(eventosAtivos.map(e => e.matricula));
         const ofertas = new Set(eventos.map(e => String(e.ofertaId)));
         el('dashInicios').textContent = eventos.length.toLocaleString('pt-BR');
-        el('dashCliques').textContent = cliques.length.toLocaleString('pt-BR');
-        this._ranking('dashRankingCliquesOfertas', this._agrupar(cliques,
-            e=>String(e.ofertaId),e=>this._nomeOferta(e.ofertaId,e.tituloOferta)), 'Sem cliques nesta seleção.');
-        this._ranking('dashRankingCliquesVendedores', this._agrupar(cliques,
-            e=>String(e.matricula),e=>{
-                const v=mapa.get(String(e.matricula));
-                return v ? `${v.nome} · ${e.matricula}` : `Matrícula ${e.matricula}`;
-            }), 'Sem cliques por vendedor nesta seleção.');
-        this._ranking('dashRankingCliquesFiliais', this._agrupar(cliques,
-            e=>mapa.get(String(e.matricula))?.filial||'?',e=>{
-                const v=mapa.get(String(e.matricula));
-                return v?.filial ? `Filial ${v.filial}${v.localidadeFilial?' · '+v.localidadeFilial:''}` : 'Filial não identificada';
-            }), 'Sem cliques por filial nesta seleção.');
+        el('dashOutros').textContent = eventos.filter(e=>!mapa.get(String(e.matricula))?.ativo).length.toLocaleString('pt-BR');
         el('dashVendedores').textContent = unicos.size.toLocaleString('pt-BR');
         el('dashOfertas').textContent = ofertas.size.toLocaleString('pt-BR');
         const primeiro = this._agrupar(eventos, e => String(e.ofertaId), e => this._nomeOferta(e.ofertaId, e.tituloOferta), 1)[0];
         el('dashMaisPopular').textContent = primeiro?.titulo || '—';
         this._ranking('dashRankingOfertas', this._agrupar(eventos,
             e => String(e.ofertaId), e => this._nomeOferta(e.ofertaId,e.tituloOferta)), 'Nenhum registro neste período.');
-        this._ranking('dashRankingVendedores', this._agrupar(eventos,
+        this._ranking('dashRankingVendedores', this._agrupar(eventosAtivos,
             e => String(e.matricula), e => {
                 const v = mapa.get(String(e.matricula));
                 return v ? `${v.nome} · ${e.matricula}` : `Matrícula ${e.matricula}`;
             }), 'Nenhum vendedor registrado neste período.');
-        this._ranking('dashRankingFiliais', this._agrupar(eventos,
+        this._ranking('dashRankingFiliais', this._agrupar(eventosAtivos,
             e => mapa.get(String(e.matricula))?.filial || '?', e => {
                 const v = mapa.get(String(e.matricula));
-                return v?.filial ? `Filial ${v.filial}${v.localidadeFilial ? ' · '+v.localidadeFilial : ''}` : 'Filial não identificada';
+                return v?.filial ? FiliaisUI.nome(v.filial) : 'Sem filial cadastrada';
             }), 'Nenhum registro por filial.');
         const dias = this._agrupar(eventos,
             e => new Intl.DateTimeFormat('en-CA',{timeZone:'America/Cuiaba',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(e.iniciadoEm)),
@@ -131,14 +118,6 @@ const DashboardPresenter = {
             sel.add(new Option(nome, id));
         }
         if (map.has(anterior)) sel.value = anterior;
-    },
-
-    async copiarLinkGrupo() {
-        const link=typeof CampanhasPresenter!=='undefined' && CampanhasPresenter.config?.linkGrupo
-            ? CampanhasPresenter.config.linkGrupo
-            : 'https://www.martinello.com.br/ofertasvendedor';
-        try {await navigator.clipboard.writeText(link);UI.ok('Link compacto da Martinello copiado (sem alterar o endereço).');}
-        catch(_) {window.prompt('Copie o link compacto:',link);}
     },
 
     async atualizar() {

@@ -222,6 +222,13 @@ const GoogleSheetsService = {
         return resposta.resultado || { resultados: [] };
     },
 
+    async listarTelefonesExtras() {
+        const r=await this._post('listarTelefonesExtras'); return r.resultado?.registros || [];
+    },
+    async salvarTelefonesExtras(dados) {
+        const r=await this._post('salvarTelefonesExtras', dados);return r.resultado || {};
+    },
+
     async salvarVendedor(apiUrl, _naoUsado, dados) {
         this.configurar(apiUrl);
         return this._post('salvarVendedor', dados);
