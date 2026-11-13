@@ -254,7 +254,54 @@
         body.dark-mode .links-filial-total{color:#bbb;}
         @media(max-width:760px){#abaLinks .vendor-link-filters{grid-template-columns:1fr;} .links-titulo-linha{align-items:stretch;} .links-atualizar{width:100%!important;}}
 
-    </style>
+    
+        /* Busca de filiais: input pesquisável único, select interno para as funções existentes */
+        .filial-select-interno{display:none!important;}
+        .filial-combo{width:100%!important;min-width:0!important;border:1px solid #d3d3d3!important;border-radius:10px!important;padding:11px 13px!important;}
+        body.dark-mode .filial-combo{background:#363636!important;color:#eee!important;border-color:#666!important;}
+
+
+        /* Importador de ofertas — etapas e contraste consistente entre temas */
+        .import-ofertas{overflow:visible;}
+        .import-ofertas-cabecalho{display:flex;align-items:center;gap:13px;cursor:pointer;list-style:none;font-weight:800;}
+        .import-ofertas-cabecalho::-webkit-details-marker{display:none;}
+        .import-ofertas-icone{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#fff0f0;font-size:21px;flex:none;}
+        .import-ofertas-cabecalho small{display:block;font-size:12px;font-weight:500;opacity:.75;margin-top:3px;}
+        .import-ofertas-conteudo{padding-top:14px;}
+        .import-etapa{border:1px solid #e3e3e3;border-radius:14px;margin:14px 0;padding:16px;background:#fafafa;min-width:0;}
+        .import-etapa-titulo{display:flex;align-items:center;gap:10px;margin-bottom:13px;font-size:15px;}
+        .import-etapa-titulo span{display:grid;place-items:center;background:#d0252a;color:white;border-radius:9px;min-width:32px;height:32px;font-size:12px;font-weight:800;}
+        .import-arquivo-acoes{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+        .import-arquivo-acoes input{flex:1 1 250px;max-width:100%;font:inherit;font-size:13px;min-width:0;}
+        .import-arquivo-acoes button{width:auto;margin:0;}
+        .import-etapa small{display:block;color:#777;margin-top:10px;font-size:12px;}
+        .import-campos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;}
+        .import-campos-grid .form-group{margin:0;min-width:0;}
+        .import-campos-grid select{width:100%;min-width:0;background:#fff;color:#333;padding:11px;border:1px solid #ccc;border-radius:9px;}
+        .import-ofertas-status{margin:12px 0;font-size:13px;line-height:1.6;font-weight:700;}
+        body.dark-mode{--cor-importacao-erro:#ff8d90;}
+        .import-previa-table-wrap{overflow-x:auto;border:1px solid #dedede;border-radius:11px;}
+        .import-previa-table{width:100%;border-collapse:collapse;font-size:12px;min-width:570px;}
+        .import-previa-table th,.import-previa-table td{padding:11px 10px;text-align:left;vertical-align:top;border-bottom:1px solid #e6e6e6;}
+        .import-previa-table th{background:#efefef;font-weight:800;}
+        .import-previa-table tr:last-child td{border-bottom:0;}
+        .import-previa-table td:nth-child(4){min-width:200px;max-width:400px;overflow-wrap:anywhere;white-space:normal;}
+        .import-situacao{display:inline-block;font-weight:800;padding:5px 8px;border-radius:7px;line-height:1.35;}
+        .import-situacao.ok{color:#166534;background:#dcfce7;}
+        .import-situacao.existente{color:#854d0e;background:#fef3c7;}
+        .import-situacao.erro{color:#b91c1c;background:#fee2e2;}
+        #importOfertasConfirmar{margin-top:15px;}
+        #importOfertasConfirmar:disabled{opacity:.48;cursor:not-allowed;}
+        body.dark-mode .import-etapa{background:#343434;border-color:#555;}
+        body.dark-mode .import-ofertas-icone{background:#4f292a;}
+        body.dark-mode .import-etapa small{color:#c3c3c3;}
+        body.dark-mode .import-campos-grid select{background:#3d3d3d;color:#eee;border-color:#666;}
+        body.dark-mode .import-previa-table-wrap{border-color:#565656;}
+        body.dark-mode .import-previa-table th{background:#454545;color:#f6f6f6;}
+        body.dark-mode .import-previa-table td{border-color:#555;}
+        @media(max-width:650px){.import-etapa{padding:12px;}.import-arquivo-acoes button{width:100%;}.import-previa-table{min-width:490px;}}
+
+</style>
 
     <!-- Limpeza automática de cache antigo — resolve Safari/iPhone -->
     <script>
@@ -706,30 +753,44 @@
             </div>
             <p id="statusCampanhaGeral" class="vendor-last-update" role="status">Carregando configuração...</p>
         </div>
-        <details class="admin-card" id="importOfertasPainel">
-            <summary style="cursor:pointer;font-weight:800">📥 IMPORTAR OFERTAS POR PLANILHA (RASCUNHOS)</summary>
-            <p class="vendor-subtext">Aceita Excel (.xlsx) e CSV. Os textos gerados com IA e os emojis são preservados. As imagens são adicionadas manualmente. Nenhuma oferta é publicada automaticamente.</p>
-            <input type="file" id="importOfertasArquivo" accept=".xlsx,.csv" style="margin:12px 0;max-width:100%">
-            <button type="button" class="btn-outline" onclick="OfertasImportPresenter.analisar()">ANALISAR PLANILHA</button>
-            <div id="importOfertasMapeamento" hidden>
-                <h3 style="margin-top:14px">Correspondência de colunas</h3>
-                <div class="contatos-grid">
-                    <div class="form-group"><label>Título</label><select id="importMaptitulo" onchange="OfertasImportPresenter.prever()"></select></div>
-                    <div class="form-group"><label>URL do produto</label><select id="importMapurl" onchange="OfertasImportPresenter.prever()"></select></div>
-                    <div class="form-group"><label>SKU / código</label><select id="importMapsku" onchange="OfertasImportPresenter.prever()"></select></div>
-                    <div class="form-group"><label>Texto da oferta</label><select id="importMaptexto" onchange="OfertasImportPresenter.prever()"></select></div>
-                    <div class="form-group"><label>Campanha</label><select id="importMapcampanha" onchange="OfertasImportPresenter.prever()"></select></div>
-                    <div class="form-group"><label>Início</label><select id="importMapinicio" onchange="OfertasImportPresenter.prever()"></select></div>
-                    <div class="form-group"><label>Fim</label><select id="importMapfim" onchange="OfertasImportPresenter.prever()"></select></div>
-                </div>
+        <details class="admin-card import-ofertas" id="importOfertasPainel">
+          <summary class="import-ofertas-cabecalho">
+            <span class="import-ofertas-icone">📥</span>
+            <span><strong>IMPORTAR OFERTAS</strong><small>Excel ou CSV • Cadastro de rascunhos</small></span>
+          </summary>
+          <div class="import-ofertas-conteudo">
+            <p class="vendor-subtext">Importe títulos, links e textos com emojis. As imagens são incluídas depois. <strong>Nenhuma oferta é publicada automaticamente.</strong></p>
+            <div class="import-etapa">
+              <div class="import-etapa-titulo"><span>01</span><strong>Selecionar arquivo</strong></div>
+              <div class="import-arquivo-acoes">
+                <input type="file" id="importOfertasArquivo" accept=".xlsx,.csv" aria-label="Planilha de ofertas">
+                <button type="button" class="btn-outline" onclick="OfertasImportPresenter.analisar()">ANALISAR PLANILHA</button>
+              </div>
+              <small>CSV exportado do Google Sheets em UTF-8. Também aceitamos .xlsx.</small>
             </div>
-            <p id="importOfertasStatus" class="vendor-subtext" role="status"></p>
-            <div id="importOfertasPreviaCard" hidden style="overflow:auto">
-                <h3>Prévia (até 30 primeiras linhas)</h3>
-                <table style="width:100%;font-size:12px"><thead><tr><th>Linha</th><th>SKU</th><th>Título</th><th>Situação</th></tr></thead>
-                    <tbody id="importOfertasPrevia"></tbody></table>
-                <button type="button" class="btn-primary" id="importOfertasConfirmar" onclick="OfertasImportPresenter.importar()" disabled>IMPORTAR RASCUNHOS VÁLIDOS</button>
+            <div class="import-etapa" id="importOfertasMapeamento" hidden>
+              <div class="import-etapa-titulo"><span>02</span><strong>Confirmar colunas</strong></div>
+              <div class="import-campos-grid">
+                <div class="form-group"><label for="importMaptitulo">Título</label><select id="importMaptitulo" onchange="OfertasImportPresenter.prever()"></select></div>
+                <div class="form-group"><label for="importMapurl">URL do produto</label><select id="importMapurl" onchange="OfertasImportPresenter.prever()"></select></div>
+                <div class="form-group"><label for="importMapsku">SKU / código</label><select id="importMapsku" onchange="OfertasImportPresenter.prever()"></select></div>
+                <div class="form-group"><label for="importMaptexto">Texto da oferta</label><select id="importMaptexto" onchange="OfertasImportPresenter.prever()"></select></div>
+                <div class="form-group"><label for="importMapcampanha">Campanha</label><select id="importMapcampanha" onchange="OfertasImportPresenter.prever()"></select></div>
+                <div class="form-group"><label for="importMapinicio">Início</label><select id="importMapinicio" onchange="OfertasImportPresenter.prever()"></select></div>
+                <div class="form-group"><label for="importMapfim">Fim</label><select id="importMapfim" onchange="OfertasImportPresenter.prever()"></select></div>
+              </div>
             </div>
+            <p id="importOfertasStatus" class="import-ofertas-status" role="status" aria-live="polite"></p>
+            <div class="import-etapa" id="importOfertasPreviaCard" hidden>
+              <div class="import-etapa-titulo"><span>03</span><strong>Revisar antes de importar</strong></div>
+              <p class="vendor-subtext">As linhas já cadastradas serão preservadas. Verifique principalmente o texto de cada produto e as datas.</p>
+              <div class="import-previa-table-wrap">
+                <table class="import-previa-table"><thead><tr><th>Linha</th><th>SKU</th><th>Título</th><th>Trecho do texto</th><th>Situação</th></tr></thead>
+                  <tbody id="importOfertasPrevia"></tbody></table>
+              </div>
+              <button type="button" class="btn-primary" id="importOfertasConfirmar" onclick="OfertasImportPresenter.importar()" disabled>IMPORTAR SOMENTE RASCUNHOS NOVOS E VÁLIDOS</button>
+            </div>
+          </div>
         </details>
         <div class="admin-card"><h3>📝 RASCUNHOS (PRIVADOS AOS ADMINISTRADORES)</h3>
             <p class="vendor-subtext">Importações não ficam expostas no banco público. Adicione a imagem e publique manualmente.</p>
@@ -896,7 +957,6 @@
                 <div id="dashboardStatus" class="vendor-status" role="status">Selecione esta aba para carregar os dados.</div>
                 <div class="dashboard-grade" aria-label="Indicadores de utilização">
                     <div class="dashboard-metrica"><strong id="dashAcessosPortal">0</strong><span>ACESSOS AO PORTAL</span></div>
-                    <div class="dashboard-metrica"><strong id="dashAcessosWhatsApp">0</strong><span>VIA LINK IDENTIFICADO DO GRUPO</span></div>
                     <div class="dashboard-metrica"><strong id="dashInicios">0</strong><span>INÍCIOS REGISTRADOS</span></div>
                     <div class="dashboard-metrica"><strong id="dashVendedores">0</strong><span>VENDEDORES DISTINTOS</span></div>
                     <div class="dashboard-metrica"><strong id="dashOfertas">0</strong><span>OFERTAS UTILIZADAS</span></div>
@@ -1317,11 +1377,11 @@
     <script src="model/auth.js?v=1.6.18"></script>
     <script src="view/ui.js?v=1.6.18"></script>
     <script src="presenter/campanhas-presenter.js?v=1.6.18"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.18"></script>
-    <script src="presenter/ofertas-import-presenter.js?v=1.6.18"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.18.1"></script>
+    <script src="presenter/ofertas-import-presenter.js?v=1.6.18.1"></script>
     <script src="presenter/seguranca-presenter.js?v=1.6.18"></script>
-    <script src="model/filiais.js?v=1.6.18"></script>
-    <script src="presenter/dashboard-presenter.js?v=1.6.18"></script>
+    <script src="model/filiais.js?v=1.6.18.1"></script>
+    <script src="presenter/dashboard-presenter.js?v=1.6.18.1"></script>
     <script src="model/google-sheets.js?v=1.6.18"></script>
     <!-- SheetJS é carregado sob demanda, apenas quando alguém importa uma planilha. -->
     <script src="model/planilha-loader.js?v=1.6.18"></script>
@@ -1334,5 +1394,6 @@
     <script src="presenter/whatsapp-presenter.js?v=1.6.18"></script>
     <script src="presenter/acessos-presenter.js?v=1.6.18"></script>
     <script src="presenter/contatos-presenter.js?v=1.6.18"></script>
+    <script>FiliaisUI.ativarBuscas();</script>
 </body>
 </html>

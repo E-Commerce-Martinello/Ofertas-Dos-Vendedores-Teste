@@ -58,9 +58,7 @@ const DashboardPresenter = {
         const eventos = this.eventos.filter(ev => ev.tipo==='inicio_compartilhamento' && daCampanha(ev) &&
           (!selecionada || String(ev.ofertaId)===selecionada));
         const acesso=document.getElementById('dashAcessosPortal');
-        const whats=document.getElementById('dashAcessosWhatsApp');
         if(acesso)acesso.textContent=visitas.length.toLocaleString('pt-BR');
-        if(whats)whats.textContent=visitas.filter(ev=>ev.origem==='whatsapp_grupo').length.toLocaleString('pt-BR');
         const eventosAtivos=eventos.filter(e=>mapa.get(String(e.matricula))?.ativo);
         const unicos = new Set(eventosAtivos.map(e => e.matricula));
         const ofertas = new Set(eventos.map(e => String(e.ofertaId)));

@@ -40,6 +40,20 @@
         #portalTelefoneCancelar{background:#eee;color:#333;}
         .portal-telefone-card small{display:block;color:#666;font-size:11px;line-height:1.55;margin-top:10px;}
 
+
+        /* Ajustes de contraste e seleção única — v1.6.18.1 */
+        .portal-telefone-card select {display:block;width:100%;padding:12px;border:1px solid #bbb;border-radius:9px;background:#fff;color:#252525;font-family:inherit;}
+        .portal-telefone-card .portal-checkbox-grupo {display:flex;align-items:center;gap:12px;cursor:pointer;padding:13px 14px;margin:16px 0 0;border:1px solid #dedede;border-radius:11px;font-size:13px;font-weight:700;line-height:1.4;}
+        .portal-telefone-card .portal-checkbox-grupo input[type="checkbox"] {display:block;width:20px;height:20px;min-width:20px;margin:0;accent-color:#d0252a;cursor:pointer;}
+        body.dark-mode .portal-telefone-card{background:#2c2c2c;color:#f5f5f5;border:1px solid #555;}
+        body.dark-mode .portal-telefone-card h3{color:#ff6166;}
+        body.dark-mode .portal-telefone-card p,body.dark-mode .portal-telefone-card small{color:#d0d0d0;}
+        body.dark-mode .portal-telefone-card input:not([type="checkbox"]),body.dark-mode .portal-telefone-card select{background:#383838;color:#f5f5f5;border-color:#656565;}
+        body.dark-mode .portal-telefone-card input::placeholder{color:#aaa;}
+        body.dark-mode .portal-telefone-card .portal-checkbox-grupo{background:#343434;border-color:#646464;}
+        body.dark-mode #portalTelefoneCancelar{background:#464646;color:#f5f5f5;}
+        body.dark-mode .portal-telefone-card .portal-telefone-erro{color:#ff878b;}
+
 </style>
 
     <!-- LIMPEZA DE QUOTA — roda antes de tudo, resolve Safari/iPhone -->
@@ -446,12 +460,10 @@
       <select id="portalTelefoneTipo" required style="display:block;width:100%;padding:12px;border:1px solid #bbb;border-radius:9px">
         <option value="">Selecione</option><option value="pessoal">Pessoal</option><option value="profissional">Profissional</option>
       </select>
-      <label for="portalTelefoneGrupo">Este número está no grupo de ofertas?</label>
-      <select id="portalTelefoneGrupo" required style="display:block;width:100%;padding:12px;border:1px solid #bbb;border-radius:9px">
-        <option value="">Selecione uma resposta</option>
-        <option value="sim">Sim, está no grupo</option>
-        <option value="nao">Não está no grupo</option>
-      </select>
+      <label class="portal-checkbox-grupo" for="portalTelefoneGrupo">
+        <input id="portalTelefoneGrupo" type="checkbox">
+        <span>O número está no grupo de ofertas</span>
+      </label>
       <small>A resposta será conferida com a lista importada do grupo; não valida o número automaticamente.</small>
       <div id="portalTelefoneErro" class="portal-telefone-erro" role="alert" aria-live="polite"></div>
       <div class="portal-telefone-acoes"><button id="portalTelefoneSalvar" type="submit">ENVIAR PARA ANÁLISE E CONTINUAR</button>
@@ -472,7 +484,7 @@
     <script src="model/link-track.js?v=1.6.18"></script>
     <script src="model/analytics.js?v=1.6.18"></script>
     <script src="model/ranking-ofertas.js?v=1.6.18"></script>
-    <script src="model/telefone-portal.js?v=1.6.18"></script>
+    <script src="model/telefone-portal.js?v=1.6.18.1"></script>
     <script src="model/horario.js"></script>
     <script src="model/storage.js?v=1.6.18"></script>
     <script src="model/validators.js?v=1.6.18"></script>

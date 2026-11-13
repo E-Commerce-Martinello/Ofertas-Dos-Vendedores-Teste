@@ -118,7 +118,7 @@ const TelefonePortal = {
       if (!el) {this.fechar(false);return;}
       document.getElementById('portalTelefoneNumero').value='';
       document.getElementById('portalTelefoneTipo').value='';
-      document.getElementById('portalTelefoneGrupo').value='';
+      document.getElementById('portalTelefoneGrupo').checked=false;
       document.getElementById('portalTelefoneRubi').textContent=rubi;
       this._erro('');el.hidden=false;
       document.getElementById('portalTelefoneNumero').focus();
@@ -143,9 +143,8 @@ const TelefonePortal = {
     try {
       const tipo=document.getElementById('portalTelefoneTipo')?.value;
       if(!['pessoal','profissional'].includes(tipo)){this._erro('Selecione o tipo do telefone.');return;}
-      const respostaGrupo=document.getElementById('portalTelefoneGrupo')?.value;
-      if(!['sim','nao'].includes(respostaGrupo)){this._erro('Informe se este número participa do grupo de ofertas.');return;}
-      const declaraGrupo=respostaGrupo==='sim';
+      // Ausência da marcação significa que o número não participa do grupo.
+      const declaraGrupo=document.getElementById('portalTelefoneGrupo')?.checked===true;
       const campos=new URLSearchParams({action:'solicitarTelefone',matricula:rubi,telefone:numero,tipoTelefone:tipo,declaraGrupo:String(declaraGrupo),
         origem:location.origin,requestId:`fone_${Date.now()}_${Math.random().toString(36).slice(2,9)}`});
       // Sem CORS: resposta opaca indica despacho, não prova de gravação.

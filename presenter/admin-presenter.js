@@ -566,8 +566,6 @@ const AdminPresenter = {
         if(!oferta) return;
         const titulo = oferta.tituloPagina || oferta.id || 'oferta';
         if(!confirm('ATENÇÃO: excluir a oferta "'+titulo+'" é irreversível sem um backup. Deseja continuar?'))return;
-        const digitado=prompt('Para confirmar a exclusão, digite EXCLUIR em letras maiúsculas:');
-        if(digitado !== 'EXCLUIR'){UI.erro('Exclusão cancelada.');return;}
         const resultado=await Storage.modificarOferta({
             tipo:'excluir',id:oferta.id,base:Storage.assinaturaOferta(oferta)
         });
