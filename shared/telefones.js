@@ -65,6 +65,22 @@ var Telefones = (() => {
     return fones.filter(f => f.validado && !f.conflito).sort((a,b) => Number(b.noGrupo)-Number(a.noGrupo)
       || ({profissional:0,pessoal:1,legado:2}[a.tipo]-{profissional:0,pessoal:1,legado:2}[b.tipo]))[0] || null;
   }
-  return {ddds, digitos, normalizar, erro, valido, numero, formato, campos, avaliar, preferido};
+  function associarSolicitacoes(base, pedidos, participantes, identificacoes) {
+    // Associação derivada: conserva o histórico e nunca ocupa um campo já preenchido.
+    // O tipo vem da solicitação explícita, a titularidade vem de evidência independente.
+    const copia=base.map(v=>({...v,telefonesExtras:{...(v.telefonesExtras||{})}}));
+    for(const v of copia)for(const tipo of ['profissional','pessoal']){
+      if(v.telefonesExtras[tipo])continue;
+      const candidatos=[...new Set(pedidos.filter(p=>String(p.matricula)===String(v.matricula)&&p.tipoTelefone===tipo)
+        .map(p=>numero(String(p.telefone||''))).filter(Boolean))];
+      if(candidatos.length!==1)continue;
+      const n=candidatos[0],status=tipo==='pessoal'?'statusPessoal':'statusProfissional';
+      const alvo={...v,telefonesExtras:{...v.telefonesExtras,[tipo]:n,[status]:'PENDENTE'}};
+      const f=avaliar(alvo,copia,participantes,identificacoes).find(f=>f.tipo===tipo);
+      if(f?.noGrupo&&f.validado&&!f.conflito){v.telefonesExtras[tipo]=n;v.telefonesExtras[status]='PENDENTE';v.telefonesExtras[tipo+'Origem']='solicitacao_associada';}
+    }
+    return copia;
+  }
+  return {ddds, digitos, normalizar, erro, valido, numero, formato, campos, avaliar, preferido, associarSolicitacoes};
 })();
 if (typeof module !== 'undefined') module.exports = Telefones;

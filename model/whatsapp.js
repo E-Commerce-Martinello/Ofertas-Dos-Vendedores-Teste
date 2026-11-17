@@ -2,14 +2,7 @@
 // Identificação não altera o vendedor sem autorização explícita do administrador.
 const GrupoWhatsAppModel = {
   digitos(v) { return String(v ?? '').replace(/\D/g, ''); },
-  telefone(v) {
-    let n = this.digitos(v);
-    // O número exportado pode ter 55 e/ou omitir o nono dígito.
-    if ((n.length === 12 || n.length === 13) && n.startsWith('55')) n = n.slice(2);
-    if (/^[1-9][0-9][6-9]\d{7}$/.test(n)) n = n.slice(0, 2) + '9' + n.slice(2);
-    // Evita classificar telefones fixos e números sem DDD como celulares.
-    return /^[1-9][0-9]9\d{8}$/.test(n) ? n : '';
-  },
+  telefone(v) { return Telefones.numero(v); },
   rubiNoNome(nome) {
     const match = String(nome || '').match(/\((\d{2,8})\)/);
     return match ? match[1] : '';

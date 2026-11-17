@@ -29,3 +29,20 @@ test('prioridade de grupo e profissional; legado não é reclassificado', () => 
   assert.equal(v.numero,n); assert.equal(v.telefonesExtras.pessoal,undefined);
   assert.equal(T.avaliar({...v,numero:'6581234670'},[v],[]).find(f=>f.tipo==='legado').original,'6581234670');
 });
+test('solicitação associa apenas tipo explícito com evidência independente, sem sobrescrever',()=>{
+ const base=[{matricula:'19000',numero:'6581234670',telefonesExtras:{profissional:outro}}];
+ const pedidos=[{matricula:'19000',telefone:n,tipoTelefone:'pessoal'}];
+ assert.equal(T.associarSolicitacoes(base,pedidos,[{telefone:n,nome:'Contato'}],[])[0].telefonesExtras.pessoal,undefined);
+ const result=T.associarSolicitacoes(base,pedidos,[{telefone:n,nome:'(19000) Nome'}],[]);
+ assert.equal(result[0].telefonesExtras.pessoal,n);assert.equal(result[0].numero,'6581234670');assert.equal(base[0].telefonesExtras.pessoal,undefined);
+ assert.equal(T.associarSolicitacoes(base,[{...pedidos[0],tipoTelefone:'profissional'}],[{telefone:n,nome:'(19000) Nome'}],[])[0].telefonesExtras.profissional,outro);
+});
+test('cópias dos backends são idênticas à fonte compartilhada',()=>{
+ const fs=require('fs'),path=require('path'),source=fs.readFileSync(path.join(__dirname,'../shared/telefones.js'),'utf8');
+ for(const p of ['admin','coletor'])assert.equal(fs.readFileSync(path.join(__dirname,'../infrastructure/apps-script',p,'Telefones.gs'),'utf8'),source);
+});
+test('duas identificações para o mesmo número não ocultam divergência',()=>{
+ const v={matricula:'19000',numero:n,statusTelefone:'VALIDADO'};
+ assert.equal(T.avaliar(v,[v],[{telefone:n,nome:'(19000) Nome'},{telefone:n,nome:'(20000) Outro'}])[0].estado,'conflito');
+ assert.equal(T.avaliar(v,[v],[{telefone:n,nome:'Nome'}],[{telefone:n,tipo:'VENDEDOR',matricula:'19000'},{telefone:n,tipo:'VENDEDOR',matricula:'20000'}])[0].validado,false);
+});
