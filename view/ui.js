@@ -26,7 +26,9 @@ const UI = {
     notificar(msg, tipo = 'sucesso', ms = 3000) {
         const div = document.createElement('div');
         div.className = `notificacao notificacao-${tipo}`;
-        div.innerHTML = `<span class="notif-icone">${tipo === 'sucesso' ? '✅' : '❌'}</span><span>${msg}</span>`;
+        const icone=document.createElement('span'),texto=document.createElement('span');
+        icone.className='notif-icone';icone.textContent=tipo==='sucesso'?'✅':'❌';texto.textContent=String(msg);
+        div.setAttribute('role',tipo==='sucesso'?'status':'alert');div.append(icone,texto);
         document.body.appendChild(div);
         setTimeout(() => {
             div.classList.add('notificacao-saindo');
