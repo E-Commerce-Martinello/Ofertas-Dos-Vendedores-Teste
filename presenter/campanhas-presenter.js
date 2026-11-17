@@ -7,7 +7,9 @@ const CampanhasPresenter = {
         if(this.carregando)return;
         this.carregando=true;this._msg('Carregando configuração compartilhada…');
         try{
-            this.config=await GoogleSheetsService.listarCampanhas();
+            const recebido=await GoogleSheetsService.listarCampanhas();
+            if(EdicaoSegura.sujo('campanha'))return;
+            this.config=recebido;
             CampanhasPortal.geral=CampanhasPortal.slug(this.config.campanhaGeral);
             const geral=document.getElementById('campanhaGeral');
             if(geral)geral.value=this.config.campanhaGeral||'';
@@ -25,7 +27,7 @@ const CampanhasPresenter = {
         this._msg('Salvando a campanha geral…');
         try{
             const config=await GoogleSheetsService.salvarCampanhas(geral,link,this.config.revision||'');
-            this.config=config;
+            this.config=config;if(String(document.getElementById('campanhaGeral').value).trim().toLowerCase()===geral)EdicaoSegura.limpar('campanha');
             CampanhasPortal.geral=CampanhasPortal.slug(config.campanhaGeral);
             this._msg('Campanha geral salva: '+(config.campanhaGeral||'sem campanha')+'. Pode haver até um minuto de atraso no portal.');
             UI.ok('Campanha geral atualizada no Google Sheets.');

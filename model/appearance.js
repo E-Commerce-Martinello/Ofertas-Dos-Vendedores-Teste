@@ -33,11 +33,13 @@ const AparenciaPortal = {
         this.carregada = true;
         return this.dados || { ...this.padrao };
     },
-    async salvar(dados) {
+    async salvar(dados,revision) {
         const cfg = this._normalizar(dados);
         if (!cfg.titulo.trim()) throw new Error('Informe o título da tela Em breve.');
         const {logo, imagem, titulo, mensagem} = cfg;
-        await this.referencia.update({logo,imagem,titulo,mensagem});
+        if(typeof revision!=='string')throw new Error('Aguarde a leitura da aparência antes de salvar.');
+        const result=await this.referencia.transaction(atual=>JSON.stringify(atual)===revision?{logo,imagem,titulo,mensagem}:undefined,undefined,false);
+        if(!result.committed)throw new Error('CONFLITO: a aparência mudou em outra sessão. Revise suas alterações.');
         this.dados = { ...cfg };
         return this.dados;
     },

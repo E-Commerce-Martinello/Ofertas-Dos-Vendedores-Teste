@@ -5,6 +5,19 @@
 // ============================================
 const GoogleSheetsService = {
     apiUrl: '',
+    _leituras:new Map(), _snapshots:new Map(),
+    async _post(action,payload={}) {
+        const leitura=/^(listar|consultar|sincronizar)/.test(action);
+        const key=action+JSON.stringify(payload);
+        if(leitura&&this._snapshots.has(action)&&!payload.apenasResumo)return this._snapshots.get(action);
+        if(leitura&&this._leituras.has(key))return this._leituras.get(key);
+        const operacao=this._transport(action,payload).then(r=>{
+            if(!leitura){this._snapshots.clear();window.dispatchEvent(new Event('mart:gravado'));}
+            return r;
+        });
+        if(leitura)this._leituras.set(key,operacao);
+        try{return await operacao;}finally{if(leitura)this._leituras.delete(key);}
+    },
 
     obterUrl() {
         // Usamos primeiro o endereço que já funcionou neste navegador, sem pedir que o usuário cole novamente.
@@ -61,7 +74,7 @@ const GoogleSheetsService = {
         } finally { clearTimeout(timer); }
     },
 
-    async _post(action, payload = {}) {
+    async _transport(action, payload = {}) {
         // O gateway é optativo. Sem ele, mantemos a comunicação anterior do desktop.
         if (this.obterProxy()) return this._postProxy(action, payload);
 
@@ -199,8 +212,8 @@ const GoogleSheetsService = {
         return r.resultado || {};
     },
 
-    async salvarConfigContatos(linkGrupo, mensagemConvite) {
-        const r = await this._post('salvarConfigContatos', {linkGrupo, mensagemConvite});
+    async salvarConfigContatos(linkGrupo, mensagemConvite, revision) {
+        const r = await this._post('salvarConfigContatos', {linkGrupo, mensagemConvite, revision});
         return r.resultado || {};
     },
 
