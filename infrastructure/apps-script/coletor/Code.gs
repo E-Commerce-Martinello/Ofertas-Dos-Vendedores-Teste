@@ -124,33 +124,21 @@ const MART_EVT_DDDS = new Set(('11 12 13 14 15 16 17 18 19 21 22 24 27 28 31 32 
 const MART_EVT_FONE_ABA = 'Solicitacoes_Telefone';
 const MART_EVT_FONE_HEADERS = ['solicitacao_id','criado_em','matricula','telefone_informado','status','origem','tipo_telefone','declarado_no_grupo'];
 
-function martEvtCelular_(texto) {
-  const n = String(texto||'').replace(/\D/g,'');
-  return /^\d{11}$/.test(n) && MART_EVT_DDDS.has(n.slice(0,2)) && n.charAt(2)==='9'
-    && !/^(\d)\1{7}$/.test(n.slice(3)) && !['12345678','87654321'].includes(n.slice(3));
-}
+function martEvtCelular_(n) { return Telefones.valido(n); }
 
 function martEvtTelefoneValidadoCadastro_(rubi) {
-  const ss = SpreadsheetApp.openById(MART_EVT_SHEET_ID);
-  const sh = ss.getSheetByName('Vendedores');
-  if (!sh || sh.getLastRow()<2) return false;
-  const celulas=sh.getRange(2,1,sh.getLastRow()-1,1).createTextFinder(rubi).matchEntireCell(true).findAll();
-  if (celulas.length!==1) return false;
-  const r=sh.getRange(celulas[0].getRow(),1,1,13).getDisplayValues()[0];
-  const status=String(r[12]||'').toUpperCase();
-  let telefone=String(r[5]||r[4]||'').replace(/\D/g,'');
-  if(telefone.length===13&&telefone.startsWith('55')) telefone=telefone.slice(2);
-  // Cadastros validados antigos podem ter sido importados sem o nono dígito.
-  if(telefone.length===10 && MART_EVT_DDDS.has(telefone.slice(0,2)) && /^[6-9]$/.test(telefone.charAt(2)))
-    telefone=telefone.slice(0,2)+'9'+telefone.slice(2);
-  if(status==='VALIDADO' && martEvtCelular_(telefone))return true;
-  const extras=ss.getSheetByName('Telefones_Vendedores');
-  if(!extras||extras.getLastRow()<2)return false;
-  const encontrados=extras.getRange(2,1,extras.getLastRow()-1,1).createTextFinder(rubi).matchEntireCell(true).findAll();
-  if(encontrados.length!==1)return false;
-  const f=extras.getRange(encontrados[0].getRow(),1,1,8).getDisplayValues()[0];
-  return (String(f[2])==='VALIDADO'&&martEvtCelular_(f[1])) ||
-    (String(f[5])==='VALIDADO'&&martEvtCelular_(f[4]));
+  const ss=SpreadsheetApp.openById(MART_EVT_SHEET_ID);
+  const ler=nome=>{const sh=ss.getSheetByName(nome);if(sh&&sh.getLastRow()>20000)throw new Error('Base excede o limite seguro de consulta');return !sh||sh.getLastRow()<2?[]:sh.getRange(2,1,sh.getLastRow()-1,sh.getLastColumn()).getDisplayValues();};
+  const rows=ler('Vendedores'),extras=ler('Telefones_Vendedores');
+  if(rows.filter(r=>r[0]===rubi).length!==1)return false;
+  const grupo=ler('WhatsApp_Atual').map(r=>({telefone:r[0],nome:r[1]}));
+  const manuais=ler('Identificacoes_Manuais').map(r=>({telefone:r[0],tipo:r[2],matricula:r[3]}));
+  let base=rows.map(r=>{const f=extras.find(x=>x[0]===r[0])||[];return {matricula:r[0],numero:r[4],statusTelefone:r[12],
+    telefonesExtras:{pessoal:f[1]||'',statusPessoal:f[2],profissional:f[4]||'',statusProfissional:f[5]}};});
+  const pedidos=ler('Solicitacoes_Telefone').map(r=>({matricula:r[2],telefone:r[3],tipoTelefone:r[6]}));
+  base=Telefones.associarSolicitacoes(base,pedidos,grupo,manuais);
+  const v=base.find(v=>v.matricula===rubi);
+  return !!Telefones.preferido(Telefones.avaliar(v,base,grupo,manuais));
 }
 
 function martEvtOrigemPermitida_(origem) {
@@ -178,7 +166,7 @@ function martEvtAbaFone_() {
 function martEvtSolicitarTelefone_(p) {
   if(!martEvtOrigemPermitida_(p.origem)) return martEvtResposta_({ok:false});
   const rubi=String(p.matricula||'').trim();
-  const fone=String(p.telefone||'').replace(/\D/g,'');
+  const fone=Telefones.numero(String(p.telefone||''));
   const tipo=String(p.tipoTelefone||'');
   if(!['pessoal','profissional'].includes(tipo))return martEvtResposta_({ok:false});
   const declaraGrupo=String(p.declaraGrupo)==='true'?'SIM':'NAO';

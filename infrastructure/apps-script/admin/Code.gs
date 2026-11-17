@@ -63,7 +63,7 @@ function testarBaseVendedoresV153() {
  * A autenticação real ocorre exclusivamente em doPost com Firebase ID token.
  */
 // Diagnóstico sem dados privados: confirme a versão publicada via /exec?diagnostico=json.
-const MART_V1692_API_VERSION = '1.6.18';
+const MART_V1692_API_VERSION = '1.6.19';
 function doGet(e) {
   const modo = String((e && e.parameter && e.parameter.diagnostico) || '');
   if (modo === 'json') {
@@ -94,7 +94,16 @@ function doPost(e) {
     const payload = JSON.parse(textoPayload);
     let resultado;
 
-    if (p.action === 'listarVendedores') {
+    const escrita=!/^(listar|consultar|sincronizar)/.test(String(p.action||''));
+    if(escrita)mart19_invalidar_();
+    if (p.action === 'consultarCapacidades') {
+      resultado={versao:'1.6.19',sincronizacao:true,edicaoCompleta:typeof Sheets!=='undefined'&&!!mart1618_abaFones_(false),
+        push:PropertiesService.getScriptProperties().getProperty('MART19_PUSH_ATIVO')==='true'};
+    } else if (p.action === 'sincronizarAdmin') {
+      resultado=mart19_snapshot_(payload,acesso);
+    } else if (p.action === 'salvarCadastroCompleto') {
+      resultado=mart19_salvarVendedor_(payload,acesso.email);
+    } else if (p.action === 'listarVendedores') {
       const ss = obterPlanilhaVendedoresV153_();
       const sh = obterAbaVendedoresV153_(ss);
       const ultima = sh.getLastRow();
@@ -139,11 +148,11 @@ function doPost(e) {
     } else if (p.action === 'listarTelefonesExtras') {
       resultado = mart1618_listarTelefones_();
     } else if (p.action === 'salvarTelefonesExtras') {
-      resultado = mart1618_salvarTelefones_(payload, acesso.email);
+      throw new Error('Atualize o painel para v1.6.19 antes de editar cadastros.');
     } else if (p.action === 'salvarVendedor') {
-      resultado = salvarVendedorV153_(payload);
+      throw new Error('Atualize o painel para v1.6.19 antes de editar cadastros.');
     } else if (p.action === 'criarVendedor') {
-      resultado = criarVendedorV153_(payload);
+      throw new Error('Atualize o painel para v1.6.19 antes de editar cadastros.');
     } else if (p.action === 'importarFuncionarios') {
       resultado = importarFuncionariosV153_(payload);
     } else if (p.action === 'listarAuditoria') {
@@ -179,6 +188,7 @@ function doPost(e) {
           resultado.avisoAuditoria = 'Operação concluída; auditoria temporariamente indisponível.';
       }
     }
+    if(escrita)mart19_depoisEscrita_();
     return respostaPostV153_(requestId, true, '', resultado, parentOrigin, usarJson);
   } catch (erro) {
     // Mesmo que a origem seja inválida, o gateway recebe JSON com ok:false.
@@ -635,11 +645,8 @@ function textoV153_(valor, padrao) {
   return texto || String(padrao == null ? '' : padrao).trim();
 }
 function somenteDigitosV153_(valor) { return String(valor == null ? '' : valor).replace(/\D/g, ''); }
-function telefoneValidoV153_(numero) {
-  const n = somenteDigitosV153_(numero);
-  if (n.length === 10 || n.length === 11) return true;
-  return (n.length === 12 || n.length === 13) && n.indexOf('55') === 0;
-}
+function telefoneValidoV153_(numero) { return Telefones.valido(numero); }
+
 function normalizarTelefoneV153_(numero) {
   let n = somenteDigitosV153_(numero);
   if (!n) return '';
@@ -790,14 +797,8 @@ function mart164_aba_(ss, nome, headers, criar) {
   }
   return sh;
 }
-function mart164_telefone_(v) {
-  let n = String(v == null ? '' : v).replace(/\D/g, '');
-  // Importações antigas podem conter 55; exportações do grupo omitem o nono dígito.
-  if ((n.length === 12 || n.length === 13) && n.indexOf('55') === 0) n = n.slice(2);
-  if (/^[1-9][0-9][6-9]\d{7}$/.test(n)) n = n.slice(0,2) + '9' + n.slice(2);
-  // Evita transformar telefone fixo ou telefone sem DDD em celular validado.
-  return /^[1-9][0-9]9\d{8}$/.test(n) ? n : '';
-}
+function mart164_telefone_(v) { return Telefones.numero(typeof v==='string'?v:''); }
+
 function mart164_nome_(v) {
   const n = String(v == null ? '' : v).replace(/[\x00-\x1f\x7f]+/g,' ').trim().slice(0,180);
   if (!n || /^[=+@-]/.test(n)) throw new Error('Nome inválido ou semelhante a uma fórmula. Revise a lista importada.');
@@ -810,7 +811,7 @@ function mart164_lerGrupo_() {
   const vistos = new Set();
   return dados.filter(r => {
     const telefone = mart164_telefone_(r[0]);
-    if (!telefone || vistos.has(telefone)) return false;
+    if (!telefone) return false;
     vistos.add(telefone); return true;
   }).map(r => ({telefone:mart164_telefone_(r[0]),nome:r[1],telefoneOriginal:r[2]||r[0],importadoEm:r[3]}));
 }
@@ -821,12 +822,13 @@ function mart164_lerIdentificacoes_() {
   const vistos = new Set();
   return dados.filter(r => {
     const telefone = mart164_telefone_(r[0]);
-    if (!telefone || vistos.has(telefone)) return false;
+    if (!telefone) return false;
     vistos.add(telefone); return true;
   }).map(r=>({telefone:mart164_telefone_(r[0]),nome:r[1],tipo:r[2],matricula:r[3],observacao:r[4],atualizadoEm:r[7]}));
 }
 function mart164_listar_() {
-  return {participantes:mart164_lerGrupo_(),identificacoes:mart164_lerIdentificacoes_()};
+  const sh=obterPlanilhaVendedoresV153_().getSheetByName(MART164_GRUPO_ABA);
+  return {disponivel:!!sh&&sh.getLastRow()>1,participantes:mart164_lerGrupo_(),identificacoes:mart164_lerIdentificacoes_()};
 }
 function mart164_importar_(payload) {
   if (!payload || payload.confirmado!==true) throw new Error('Confirme a substituição da lista antes de importar.');
@@ -921,7 +923,8 @@ function mart164_salvarIdentificacao_(p,ator) {
   if (!telefone) throw new Error('Telefone inválido. Use DDD e número de celular.');
   const tipo=String(p.tipo||'').toUpperCase();
   if (!['VENDEDOR','GERENTE','FUNCIONARIO','OUTRO','REMOVER'].includes(tipo)) throw new Error('Classificação inválida.');
-  const atualizarTelefone=p.atualizarTelefone===true;
+  if(p.atualizarTelefone===true)throw new Error('Associe a pessoa e use os campos pessoal/profissional no cadastro. O histórico não será substituído.');
+  const atualizarTelefone=false;
   if (atualizarTelefone && (tipo!=='VENDEDOR' || p.confirmarSubstituicao!==true)) {
     throw new Error('A alteração oficial precisa ser confirmada para um vendedor.');
   }
@@ -932,6 +935,8 @@ function mart164_salvarIdentificacao_(p,ator) {
   const lock=LockService.getScriptLock(); lock.waitLock(30000);
   try {
     const ss=obterPlanilhaVendedoresV153_();
+    const revisaoAtual=mart19_hash_(mart164_lerIdentificacoes_().filter(i=>i.telefone===telefone));
+    if(p.revision!==revisaoAtual)throw new Error('CONFLITO: a identificação mudou. Reabra para revisar.');
     const participante=mart164_lerGrupo_().find(r=>r.telefone===telefone);
     if (!participante && tipo!=='REMOVER') throw new Error('Número não existe na lista atual do WhatsApp. Atualize a lista.');
     const nome=participante?.nome || 'Identificação manual';
@@ -1064,17 +1069,14 @@ function mart167_registrarContato_(payload, ator) {
     ? shVendedores.getRange(2, 1, shVendedores.getLastRow()-1, MART_V153_HEADERS.length).getDisplayValues() : [];
   const linha = linhas.find(l => somenteDigitosV153_(l[0]) === rubi);
   if (!linha) throw new Error('Vendedor não encontrado no cadastro oficial.');
-  const tel = mart164_telefone_(linha[4] || linha[5]);
-  if (!tel || String(linha[12]).trim().toUpperCase() !== 'VALIDADO') {
-    throw new Error('O vendedor não possui telefone validado.');
-  }
-  if (String(linha[7] || '').toUpperCase() === 'INATIVO' || /INATIV|DESLIG|DEMIT|REMOVID/i.test(String(linha[6] || ''))) {
-    throw new Error('Cadastro inativo.');
-  }
-  const repetido = linhas.some(l => somenteDigitosV153_(l[0]) !== rubi
-    && String(l[12]).trim().toUpperCase() === 'VALIDADO' && mart164_telefone_(l[4] || l[5]) === tel);
-  if (repetido) throw new Error('Telefone validado aparece em outra matrícula. Revise antes de registrar.');
-
+  const ctx=mart19_contexto_(obterPlanilhaVendedoresV153_());
+  const vendedor=ctx.registros.find(v=>v.matricula===rubi);
+  if(!vendedor?.ativo)throw new Error('Cadastro inativo.');
+  if(!ctx.grupo.disponivel)throw new Error('Lista do grupo indisponível.');
+  const fones=Telefones.avaliar(vendedor,ctx.registros,ctx.grupo.participantes,ctx.grupo.identificacoes);
+  const fone=Telefones.preferido(fones);
+  if(!fone||fones.some(f=>f.conflito||f.noGrupo))throw new Error('Contato inelegível ou alterado. Atualize a fila.');
+  const tel=fone.numero;
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
@@ -1109,13 +1111,13 @@ function mart169_listarConfigContatos_() {
   const ss = obterPlanilhaVendedoresV153_();
   const sheet = ss.getSheetByName(MART169_CONFIG_CONTACTS_SHEET);
   const result = { linkGrupo:'', mensagemConvite: MART169_DEFAULT_INVITE };
-  if (!sheet || sheet.getLastRow() < 2) return result;
+  if (!sheet || sheet.getLastRow() < 2) return {...result,revision:mart19_hash_([result.linkGrupo,result.mensagemConvite])};
   const values = sheet.getRange(2,1,sheet.getLastRow()-1,2).getDisplayValues();
   values.forEach(row => {
     if (row[0] === 'link_grupo') result.linkGrupo = String(row[1] || '').trim();
     if (row[0] === 'mensagem_convite' && row[1]) result.mensagemConvite = String(row[1]);
   });
-  return result;
+  return {...result,revision:mart19_hash_([result.linkGrupo,result.mensagemConvite])};
 }
 function mart169_salvarConfigContatos_(dados, email) {
   const linkGrupo = String(dados.linkGrupo || '').trim();
@@ -1130,6 +1132,8 @@ function mart169_salvarConfigContatos_(dados, email) {
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
+    const atual=mart169_listarConfigContatos_();
+    if(dados.revision!==mart19_hash_([atual.linkGrupo,atual.mensagemConvite]))throw new Error('CONFLITO: o convite foi alterado. Reabra após revisar.');
     const ss = obterPlanilhaVendedoresV153_();
     let sheet = ss.getSheetByName(MART169_CONFIG_CONTACTS_SHEET);
     if (!sheet) sheet = ss.insertSheet(MART169_CONFIG_CONTACTS_SHEET);
@@ -1141,7 +1145,7 @@ function mart169_salvarConfigContatos_(dados, email) {
       ['mensagem_convite',mensagemConvite,agora,email]
     ]);
     sheet.setFrozenRows(1);
-    return {linkGrupo, mensagemConvite};
+    return {linkGrupo, mensagemConvite, revision:mart19_hash_([linkGrupo,mensagemConvite])};
   } finally {lock.releaseLock();}
 }
 
@@ -1257,6 +1261,7 @@ function mart1615_celulaSegura_(texto, max) {
 function mart1615_eventoAuditavel_(acao,payload,resultado) {
   payload=payload || {};
   const matriz={
+    salvarCadastroCompleto:'cadastro_e_telefones_editados',
     salvarVendedor:'vendedor_editado', criarVendedor:'vendedor_criado',
     importarFuncionarios:'vendedores_importados', importarWhatsApp:'grupo_importado',
     normalizarWhatsApp:'whatsapp_normalizado',salvarIdentificacaoWhatsApp:'identificacao_whatsapp',
@@ -1266,7 +1271,7 @@ function mart1615_eventoAuditavel_(acao,payload,resultado) {
   };
   if (!Object.prototype.hasOwnProperty.call(matriz,acao)) return null;
   let alvo='',resumo='Alteração administrativa';
-  if (acao==='salvarVendedor'||acao==='criarVendedor') {
+  if (acao==='salvarCadastroCompleto'||acao==='salvarVendedor'||acao==='criarVendedor') {
     alvo=String(payload.matricula||'').replace(/\D/g,'').slice(0,10);
     const campos=Array.isArray(resultado&&resultado.camposAlterados)?resultado.camposAlterados:[];
     resumo=campos.length?'Campos: '+campos.join(', '):'Cadastro de vendedor atualizado';
@@ -1394,10 +1399,8 @@ function mart1618_listarTelefones_() {
   return {registros:sh.getRange(2,1,sh.getLastRow()-1,8).getDisplayValues()
     .filter(r=>/^\d{3,5}$/.test(String(r[0]||'')))};
 }
-function mart1618_foneValido_(s) {
-  return /^\d{11}$/.test(s) && /^(11|12|13|14|15|16|17|18|19|21|22|24|27|28|31|32|33|34|35|37|38|41|42|43|44|45|46|47|48|49|51|53|54|55|61|62|63|64|65|66|67|68|69|71|73|74|75|77|79|81|82|83|84|85|86|87|88|89|91|92|93|94|95|96|97|98|99)/.test(s)
-    && s[2]==='9' && !/^(\d)\1{7}$/.test(s.slice(3)) && !['12345678','87654321'].includes(s.slice(3));
-}
+function mart1618_foneValido_(s) { return Telefones.valido(s); }
+
 function mart1618_salvarTelefones_(p,ator) {
   const matricula=somenteDigitosV153_(p.matricula);
   if(!/^\d{3,5}$/.test(matricula))throw new Error('Matrícula inválida.');
