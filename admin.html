@@ -290,6 +290,23 @@
         .import-situacao.ok{color:#166534;background:#dcfce7;}
         .import-situacao.existente{color:#854d0e;background:#fef3c7;}
         .import-situacao.erro{color:#b91c1c;background:#fee2e2;}
+        .import-situacao.pendente{color:#92400e;background:#ffedd5;}
+        .ofertas-massa-acoes{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:12px 0 18px;padding:12px;
+            border:1px solid #ddd;border-radius:12px;background:rgba(127,127,127,.05);font-size:13px;}
+        .ofertas-massa-acoes label{display:flex;align-items:center;gap:7px;font-weight:650;cursor:pointer;}
+        .ofertas-massa-acoes button{width:auto;margin-left:auto;padding:9px 14px;}
+        .ofertas-massa-acoes button:disabled{opacity:.4;cursor:not-allowed;}
+        .oferta-selecao-linha{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+        .oferta-selecao{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:650;cursor:pointer;}
+        .rascunho-pendencias{font-size:12px;line-height:1.5;margin:8px 0;overflow-wrap:anywhere;}
+        .rascunho-pendencias.tem-pendencias{color:#a15d04;}
+        .rascunho-pendencias.sem-pendencias{color:#166534;}
+        body.dark-mode .ofertas-massa-acoes{border-color:#555;background:#343434;}
+        body.dark-mode .import-situacao.pendente{color:#ffdfb1;background:#59412a;}
+        body.dark-mode .rascunho-pendencias.tem-pendencias{color:#ffd18b;}
+        body.dark-mode .rascunho-pendencias.sem-pendencias{color:#b3f7cb;}
+        @media(max-width:650px){.ofertas-massa-acoes button{margin-left:0;width:100%;}}
+
         #importOfertasConfirmar{margin-top:15px;}
         #importOfertasConfirmar:disabled{opacity:.48;cursor:not-allowed;}
         body.dark-mode .import-etapa{background:#343434;border-color:#555;}
@@ -783,22 +800,32 @@
             <p id="importOfertasStatus" class="import-ofertas-status" role="status" aria-live="polite"></p>
             <div class="import-etapa" id="importOfertasPreviaCard" hidden>
               <div class="import-etapa-titulo"><span>03</span><strong>Revisar antes de importar</strong></div>
-              <p class="vendor-subtext">As linhas já cadastradas serão preservadas. Verifique principalmente o texto de cada produto e as datas.</p>
+              <p class="vendor-subtext">Produtos com campos faltantes ou link de busca podem entrar como <strong>rascunhos com pendências</strong>, para corrigir no site. Itens já cadastrados ou realmente duplicados serão ignorados.</p>
               <div class="import-previa-table-wrap">
                 <table class="import-previa-table"><thead><tr><th>Linha</th><th>SKU</th><th>Título</th><th>Trecho do texto</th><th>Situação</th></tr></thead>
                   <tbody id="importOfertasPrevia"></tbody></table>
               </div>
-              <button type="button" class="btn-primary" id="importOfertasConfirmar" onclick="OfertasImportPresenter.importar()" disabled>IMPORTAR SOMENTE RASCUNHOS NOVOS E VÁLIDOS</button>
+              <button type="button" class="btn-primary" id="importOfertasConfirmar" onclick="OfertasImportPresenter.importar()" disabled>IMPORTAR RASCUNHOS (INCLUSIVE COM PENDÊNCIAS)</button>
             </div>
           </div>
         </details>
         <div class="admin-card"><h3>📝 RASCUNHOS (PRIVADOS AOS ADMINISTRADORES)</h3>
-            <p class="vendor-subtext">Importações não ficam expostas no banco público. Adicione a imagem e publique manualmente.</p>
+            <p class="vendor-subtext">Importações não ficam expostas no banco público. Clique em EDITAR / PUBLICAR para corrigir textos, links, datas e imagens.</p>
+            <div class="ofertas-massa-acoes">
+                <label><input type="checkbox" id="marcarTodosRascunhos" onchange="AdminPresenter.selecionarTodas('rascunhos',this.checked)"> Selecionar todos os rascunhos</label>
+                <span id="contagemRascunhosSelecionados">0 selecionado(s)</span>
+                <button type="button" id="excluirRascunhosSelecionados" class="btn-danger" onclick="AdminPresenter.excluirSelecionados('rascunhos')" disabled>🗑 Excluir selecionados</button>
+            </div>
             <div id="listaRascunhos"></div></div>
         <!-- LISTA -->
         <div class="admin-card">
             <h2>📋 OFERTAS PROGRAMADAS (SIMULTÂNEAS PERMITIDAS)</h2>
             <p id="estadoSyncOfertas" class="vendor-subtext" role="status" style="margin-bottom:12px;">Conectando às atualizações das ofertas…</p>
+            <div class="ofertas-massa-acoes">
+                <label><input type="checkbox" id="marcarTodasOfertas" onchange="AdminPresenter.selecionarTodas('ofertas',this.checked)"> Selecionar todas as ofertas</label>
+                <span id="contagemOfertasSelecionadas">0 selecionado(s)</span>
+                <button type="button" id="excluirOfertasSelecionadas" class="btn-danger" onclick="AdminPresenter.excluirSelecionados('ofertas')" disabled>🗑 Excluir selecionadas</button>
+            </div>
             <div id="listaOfertas"></div>
         </div>
 
@@ -1372,13 +1399,13 @@
     <script src="model/link-track.js?v=1.6.18"></script>
     <script src="model/analytics.js?v=1.6.18"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js?v=1.6.18"></script>
+    <script src="model/storage.js?v=1.6.18.3"></script>
     <script src="model/validators.js?v=1.6.18"></script>
     <script src="model/auth.js?v=1.6.18"></script>
     <script src="view/ui.js?v=1.6.18"></script>
     <script src="presenter/campanhas-presenter.js?v=1.6.18"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.18.1"></script>
-    <script src="presenter/ofertas-import-presenter.js?v=1.6.18.1"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.18.3"></script>
+    <script src="presenter/ofertas-import-presenter.js?v=1.6.18.3"></script>
     <script src="presenter/seguranca-presenter.js?v=1.6.18"></script>
     <script src="model/filiais.js?v=1.6.18.1"></script>
     <script src="presenter/dashboard-presenter.js?v=1.6.18.1"></script>

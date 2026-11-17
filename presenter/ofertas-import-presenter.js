@@ -1,5 +1,5 @@
-// v1.6.18.1 — CSV UTF-8 sem conversão indevida; planilhas Excel continuam com SheetJS.
-// Importação nunca altera uma oferta publicada ou um rascunho já existente.
+// v1.6.18.3 — Importa linhas incompletas como rascunhos privados para edição posterior.
+// Não sobrescreve ofertas/rascunhos existentes; duplicidades reais são preservadas.
 const OfertasImportPresenter = {
     linhas:[],headers:[],mapeamento:{},previa:[],preparando:false,importando:false,
     campos:{sku:['sku','codigo','codigo_produto','id_produto','referencia'],
@@ -93,9 +93,19 @@ const OfertasImportPresenter = {
     _ler(linha,campo){const valor=document.getElementById('importMap'+campo)?.value;
         return valor!=='' && valor!=null ? String(linha[Number(valor)]??'').trim():'';},
     _produto(linha,i){
-        const raw=this._ler(linha,'url');let url='';
-        try{const u=new URL(raw);if(u.protocol==='https:'&&['www.martinello.com.br','martinello.com.br'].includes(u.hostname))url=u.origin+u.pathname;}catch(_){}
-        const sku=(this._ler(linha,'sku')||(url.match(/-(\d{3,12})\/?$/)||[])[1]||'').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,40);
+        const raw=this._ler(linha,'url').slice(0,2048);
+        let url=raw, busca=false, linkValido=false;
+        try{
+            const u=new URL(raw);
+            if(u.protocol==='https:'&&['www.martinello.com.br','martinello.com.br'].includes(u.hostname)){
+                busca=/^\/busca\/?$/i.test(u.pathname);
+                // Em /busca, o parâmetro ?busca= diferencia produtos. Nunca descartá-lo.
+                url=u.origin+u.pathname+(busca?u.search:'');
+                linkValido=true;
+            }
+        }catch(_){}
+        const sku=(this._ler(linha,'sku')||(url.match(/-(\d{3,12})\/?(?:\?|$)/)||[])[1]||'')
+            .replace(/[^a-zA-Z0-9_-]/g,'').slice(0,40);
         const titulo=this._ler(linha,'titulo').slice(0,160);
         const texto=this._ler(linha,'texto').slice(0,3000);
         const campanha=this._ler(linha,'campanha').toLowerCase();
@@ -103,71 +113,87 @@ const OfertasImportPresenter = {
         const inicio=this._data(inicioRaw),fim=this._data(fimRaw,true);
         const erros=[];
         if(!titulo)erros.push('Título ausente');
-        if(!url)erros.push('Link Martinello inválido');
+        if(!linkValido)erros.push('Link Martinello inválido');
+        if(busca)erros.push('Link de busca: substituir pelo link direto do produto');
+        if(!texto)erros.push('Texto ausente');
         if(texto.includes('\uFFFD'))erros.push('Texto contém caractere inválido (�)');
         if(campanha && !/^[a-z0-9][a-z0-9_-]{0,59}$/.test(campanha))erros.push('Campanha inválida');
-        if(inicio===null || fim===null)erros.push('Datas: informe dia, mês e ANO (ex.: 16/11/2026)');
+        if(inicio===null || fim===null)erros.push('Datas: informar dia, mês e ano');
+        if(!inicioRaw || !fimRaw)erros.push('Datas ausentes');
         if(inicio && fim && inicio>fim)erros.push('Data final anterior à inicial');
         const criadas=[...(AdminPresenter.ofertas||[]),...(AdminPresenter.rascunhos||[])];
-        const existente=criadas.some(o=>(sku&&String(o.sku||'')===sku)||(url && o.linkProduto===url));
-        return {index:i+2,sku,titulo,url,texto,campanha,inicio:inicio||'',fim:fim||'',erros,existente,avisos:[]};
+        // Identidade: SKU e URL DIRETA. URL de busca nunca identifica um único produto.
+        const existente=criadas.some(o=>(sku&&String(o.sku||'')===sku)
+            ||(url && linkValido && !busca && o.linkProduto===url));
+        return {index:i+2,sku,titulo,url,texto,campanha,inicio:inicio||'',fim:fim||'',
+            inicioRaw,fimRaw,erros,existente,busca,linkValido,duplicadoArquivo:false,avisos:[]};
     },
     prever(){
         if(!this.linhas.length)return;
         const m=this.linhas.map((r,i)=>this._produto(r,i));this.previa=m;
         const vistosSku=new Set(),vistosUrl=new Set(),textos=new Map();
         for(const x of m){
-            if((x.sku&&vistosSku.has(x.sku))||(x.url&&vistosUrl.has(x.url)))x.erros.push('Duplicado neste arquivo');
-            if(x.sku)vistosSku.add(x.sku);if(x.url)vistosUrl.add(x.url);
+            const urlIdentidade=x.url&&x.linkValido&&!x.busca?x.url:'';
+            if((x.sku&&vistosSku.has(x.sku))||(urlIdentidade&&vistosUrl.has(urlIdentidade)))
+                x.duplicadoArquivo=true;
+            if(x.sku)vistosSku.add(x.sku);
+            if(urlIdentidade)vistosUrl.add(urlIdentidade);
             const texto=x.texto.replace(/\s+/g,' ').trim();
             if(texto){if(!textos.has(texto))textos.set(texto,[]);textos.get(texto).push(x);}
         }
         for(const grupo of textos.values()){
             if(grupo.length>1 && new Set(grupo.map(x=>x.sku||x.url)).size>1)
-                grupo.forEach(x=>x.avisos.push('Mesmo texto utilizado em produtos diferentes — confira antes de publicar'));
+                grupo.forEach(x=>x.avisos.push('Mesmo texto em produtos diferentes — revisar antes de publicar'));
         }
-        const validos=m.filter(x=>!x.erros.length&&!x.existente);
+        const importaveis=m.filter(x=>!x.existente&&!x.duplicadoArquivo);
+        const prontos=importaveis.filter(x=>!x.erros.length).length;
+        const pendentes=importaveis.length-prontos;
         const existentes=m.filter(x=>x.existente).length;
-        const erros=m.filter(x=>!x.existente&&x.erros.length).length;
-        const alertas=m.filter(x=>x.avisos.length).length;
-        this._setStatus(`${m.length} analisados · ${validos.length} novos para rascunho · ${existentes} já cadastrados · ${erros} com dados inválidos${alertas?' · '+alertas+' com alerta de texto repetido':''}.`);
+        const repetidos=m.filter(x=>!x.existente&&x.duplicadoArquivo).length;
+        this._setStatus(`${m.length} analisados · ${prontos} prontos para rascunho · ${pendentes} importáveis com pendências · ${existentes} já cadastrados · ${repetidos} duplicados no arquivo.`);
         const corpo=document.getElementById('importOfertasPrevia');
         const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         corpo.innerHTML=m.slice(0,30).map(x=>{
-            const tipo=x.existente?'existente':x.erros.length?'erro':'ok';
-            const estado=x.existente?'Já cadastrado — preservado':x.erros.join(' · ')||'Pronto para rascunho';
+            const tipo=x.existente||x.duplicadoArquivo?'existente':x.erros.length?'pendente':'ok';
+            const estado=x.existente?'Já cadastrado — não importar':x.duplicadoArquivo?'Duplicado no arquivo — não importar':
+                x.erros.length?'Rascunho com pendências: '+x.erros.join(' · '):'Pronto para rascunho';
             const resumo=x.texto.replace(/\s+/g,' ').slice(0,100) || 'Texto vazio';
-            return `<tr><td>${x.index}</td><td>${esc(x.sku||'—')}</td><td>${esc(x.titulo)}</td>
+            return `<tr><td>${x.index}</td><td>${esc(x.sku||'—')}</td><td>${esc(x.titulo||'(sem título)')}</td>
               <td>${esc(resumo)}${x.avisos.length?'<small>⚠ '+esc(x.avisos.join(' · '))+'</small>':''}</td>
               <td><span class="import-situacao ${tipo}">${esc(estado)}</span></td></tr>`;
         }).join('');
         document.getElementById('importOfertasPreviaCard').hidden=false;
-        document.getElementById('importOfertasConfirmar').disabled=!validos.length;
+        document.getElementById('importOfertasConfirmar').disabled=!importaveis.length;
     },
     async importar(){
         if(this.importando)return;this.prever();
-        const aprovadas=(this.previa||[]).filter(x=>!x.erros.length&&!x.existente);
-        if(!aprovadas.length){this._setStatus('Nenhuma oferta nova válida para importar. Cadastros existentes não são substituídos.',true);return;}
-        if(!confirm(`Importar ${aprovadas.length} oferta(s) como RASCUNHO? Nenhuma será publicada automaticamente.`))return;
+        const importaveis=(this.previa||[]).filter(x=>!x.existente&&!x.duplicadoArquivo);
+        if(!importaveis.length){this._setStatus('Nenhuma linha nova para importar. Duplicados e cadastros existentes foram preservados.',true);return;}
+        const pendentes=importaveis.filter(x=>x.erros.length).length;
+        if(!confirm(`Importar ${importaveis.length} produto(s) como RASCUNHOS, incluindo ${pendentes} com pendências? Nenhuma oferta será publicada automaticamente.`))return;
         this.importando=true;let ok=0,falhas=0;
         const btn=document.getElementById('importOfertasConfirmar');btn.disabled=true;
         const vistosSku=new Set(),vistosUrl=new Set();
         try{
-            for(const item of aprovadas){
-                if((item.sku&&vistosSku.has(item.sku))||vistosUrl.has(item.url)){falhas++;continue;}
-                vistosSku.add(item.sku);vistosUrl.add(item.url);
+            for(const item of importaveis){
+                const urlIdentidade=item.url&&!item.busca&&item.linkValido?item.url:'';
+                if((item.sku&&vistosSku.has(item.sku))||(urlIdentidade&&vistosUrl.has(urlIdentidade))){falhas++;continue;}
+                if(item.sku)vistosSku.add(item.sku);
+                if(urlIdentidade)vistosUrl.add(urlIdentidade);
                 const id='of_'+Date.now()+'_'+Math.random().toString(36).slice(2,9);
                 const oferta={id,sku:item.sku,dataInicio:item.inicio||'',dataFim:item.fim||'',
-                    linkProduto:item.url,tituloPagina:item.titulo,textoOferta:item.texto,
-                    campanha:item.campanha,urlImagem:'',rascunho:true,destaqueDia:false,
+                    linkProduto:item.url,tituloPagina:item.titulo||`Revisar título - linha ${item.index}`,
+                    textoOferta:item.texto,campanha:item.campanha,urlImagem:'',
+                    rascunho:true,destaqueDia:false,
+                    pendenciasImportacao:[...item.erros,...item.avisos],
                     dataCriacao:new Date().toISOString()};
                 const r=await Storage.modificarRascunho({tipo:'criar',id,oferta});
                 if(r.ok)ok++;
                 else{falhas++;this._setStatus(`Falha de gravação após ${ok} cadastros. Revise os rascunhos antes de tentar novamente.`,true);break;}
             }
             AdminPresenter.renderLista();
-            this._setStatus(`${ok} rascunho(s) salvos; ${falhas} falharam. Adicione as imagens e publique após revisar os textos.`);
+            this._setStatus(`${ok} rascunho(s) importados (${pendentes} linhas originalmente com pendências); ${falhas} falharam. Abra EDITAR / PUBLICAR para corrigir antes de publicar.`);
             this.prever();
-        }finally{this.importando=false;btn.disabled=false;}
+        }finally{this.importando=false;btn.disabled=!(this.previa||[]).some(x=>!x.existente&&!x.duplicadoArquivo);}
     }
 };

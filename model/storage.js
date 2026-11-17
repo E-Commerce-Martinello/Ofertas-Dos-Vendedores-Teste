@@ -112,6 +112,30 @@ const Storage = {
         }catch(e){return {ok:false,motivo:'erro',erro:e};}
     },
 
+    // Exclusão de rascunhos em lote: tudo ou nada, com proteção contra edições simultâneas.
+    async excluirRascunhosEmMassa(selecionados){
+        if(!Array.isArray(selecionados)||!selecionados.length||selecionados.length>100)
+            return {ok:false,motivo:'quantidade'};
+        const ids=new Set(selecionados.map(x=>String(x.id)));
+        if(ids.size!==selecionados.length)return {ok:false,motivo:'duplicados'};
+        const ref=this._rascunhosRef();let motivo='conflito';
+        try{
+            const resultado=await ref.transaction(dados=>{
+                const atual=dados&&typeof dados==='object'&&!Array.isArray(dados)?dados:{};
+                for(const item of selecionados){
+                    const id=String(item.id);
+                    if(!Object.prototype.hasOwnProperty.call(atual,id) ||
+                        this.assinaturaOferta(atual[id])!==item.base){motivo='conflito';return;}
+                }
+                const novo={...atual};
+                for(const id of ids)delete novo[id];
+                motivo='';return Object.keys(novo).length?novo:null;
+            },undefined,false);
+            return {ok:resultado.committed,motivo:resultado.committed?'':motivo,
+                rascunhos:Object.values(resultado.snapshot.val()||{})};
+        }catch(e){return {ok:false,motivo:'erro',erro:e};}
+    },
+
     // ---------- OFERTAS ----------
 
     async carregarOfertas() {
@@ -221,6 +245,31 @@ const Storage = {
             console.error('Não foi possível gravar a transação de oferta:',e);
             return {ok:false, motivo:'erro', erro:e};
         } finally { this._salvando = false; }
+    },
+
+    // Exclusão de ofertas em lote numa ÚNICA transação: nunca apaga uma seleção parcial.
+    async excluirOfertasEmMassa(selecionados){
+        if(!Array.isArray(selecionados)||!selecionados.length||selecionados.length>100)
+            return {ok:false,motivo:'quantidade'};
+        const ids=new Set(selecionados.map(x=>String(x.id)));
+        if(ids.size!==selecionados.length)return {ok:false,motivo:'duplicados'};
+        if(this._salvando)return {ok:false,motivo:'ocupado'};
+        this._salvando=true;let motivo='conflito';
+        try{
+            const resultado=await ofertasRef.transaction(dados=>{
+                let atual;
+                try{atual=this._listaRemota(dados);}catch(_){motivo='formato';return;}
+                for(const item of selecionados){
+                    const existente=atual.find(o=>String(o.id)===String(item.id));
+                    if(!existente||this.assinaturaOferta(existente)!==item.base){motivo='conflito';return;}
+                }
+                motivo='';return atual.filter(o=>!ids.has(String(o.id)));
+            },undefined,false);
+            const lista=this._listaRemota(resultado.snapshot.val());
+            if(resultado.committed)this._cacheOfertas(lista);
+            return {ok:resultado.committed,motivo:resultado.committed?'':motivo,ofertas:lista};
+        }catch(e){return {ok:false,motivo:'erro',erro:e};}
+        finally{this._salvando=false;}
     },
 
     async salvarOfertas(ofertas) {

@@ -7,6 +7,8 @@ const AdminPresenter = {
 
     ofertas: [],
     rascunhos: [],
+    selecionadosOfertas:new Set(),
+    selecionadosRascunhos:new Set(),
     pararSyncRascunhos:null,
     editandoRascunhoId:null,
     editandoRascunhoBase:null,
@@ -307,6 +309,74 @@ const AdminPresenter = {
         return String(valor ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     },
 
+    _pendenciasRascunho(o){
+        const p=[];
+        if(!String(o.tituloPagina||'').trim() || /^Revisar título - linha \d+$/i.test(String(o.tituloPagina||'')))p.push('título');
+        let link=false,ehBusca=false;
+        try{const u=new URL(String(o.linkProduto||''));link=u.protocol==='https:'&&
+            ['martinello.com.br','www.martinello.com.br'].includes(u.hostname);
+            ehBusca=/^\/busca\/?$/i.test(u.pathname);}catch(_){}
+        if(!link||ehBusca)p.push('link direto do produto');
+        if(!String(o.textoOferta||'').trim()||String(o.textoOferta||'').includes('\uFFFD'))p.push('texto');
+        if(!o.dataInicio||!o.dataFim||!Number.isFinite(Date.parse(o.dataInicio))||
+            !Number.isFinite(Date.parse(o.dataFim))||Date.parse(o.dataFim)<=Date.parse(o.dataInicio))p.push('datas');
+        if(!o.urlImagem)p.push('imagem');
+        if(o.campanha&&!/^[a-z0-9][a-z0-9_-]{0,59}$/.test(String(o.campanha)))p.push('campanha');
+        if(Array.isArray(o.pendenciasImportacao) && o.pendenciasImportacao.some(a=>String(a).startsWith('Mesmo texto')))
+            p.push('conferir texto repetido');
+        return p;
+    },
+    selecionarUma(tipo,id,marcado){
+        const conjunto=tipo==='rascunhos'?this.selecionadosRascunhos:this.selecionadosOfertas;
+        if(marcado)conjunto.add(String(id));else conjunto.delete(String(id));
+        this.atualizarSelecaoMassa();
+    },
+    selecionarTodas(tipo,marcado){
+        const lista=tipo==='rascunhos'?this.rascunhos:this.ofertas;
+        const conjunto=tipo==='rascunhos'?this.selecionadosRascunhos:this.selecionadosOfertas;
+        conjunto.clear();if(marcado)lista.forEach(o=>conjunto.add(String(o.id)));
+        const container=document.getElementById(tipo==='rascunhos'?'listaRascunhos':'listaOfertas');
+        container?.querySelectorAll('input[data-selecao]').forEach(c=>{c.checked=marcado;});
+        this.atualizarSelecaoMassa();
+    },
+    atualizarSelecaoMassa(){
+        for(const tipo of ['ofertas','rascunhos']){
+            const lista=tipo==='rascunhos'?this.rascunhos:this.ofertas;
+            const conjunto=tipo==='rascunhos'?this.selecionadosRascunhos:this.selecionadosOfertas;
+            const ids=new Set(lista.map(o=>String(o.id)));
+            for(const id of conjunto)if(!ids.has(id))conjunto.delete(id);
+            const todos=document.getElementById(tipo==='rascunhos'?'marcarTodosRascunhos':'marcarTodasOfertas');
+            if(todos){todos.checked=!!lista.length&&conjunto.size===lista.length;todos.indeterminate=conjunto.size>0&&conjunto.size<lista.length;}
+            const status=document.getElementById(tipo==='rascunhos'?'contagemRascunhosSelecionados':'contagemOfertasSelecionadas');
+            if(status)status.textContent=`${conjunto.size} selecionado(s)`;
+            const btn=document.getElementById(tipo==='rascunhos'?'excluirRascunhosSelecionados':'excluirOfertasSelecionadas');
+            if(btn)btn.disabled=!conjunto.size;
+        }
+    },
+    async excluirSelecionados(tipo){
+        if(!['ofertas','rascunhos'].includes(tipo))return;
+        const lista=tipo==='rascunhos'?this.rascunhos:this.ofertas;
+        const conjunto=tipo==='rascunhos'?this.selecionadosRascunhos:this.selecionadosOfertas;
+        const selecionadas=lista.filter(o=>conjunto.has(String(o.id)));
+        if(!selecionadas.length){this.atualizarSelecaoMassa();return;}
+        if(selecionadas.length>100){UI.erro('Limite de 100 registros por exclusão. Selecione um lote menor.');return;}
+        const grupo=tipo==='rascunhos'?'rascunho(s) privado(s)':'oferta(s) publicada(s)';
+        if(!confirm(`Excluir permanentemente ${selecionadas.length} ${grupo}? Esta ação não pode ser desfeita sem backup.`))return;
+        const btn=document.getElementById(tipo==='rascunhos'?'excluirRascunhosSelecionados':'excluirOfertasSelecionadas');
+        if(btn)btn.disabled=true;
+        try{
+            const payload=selecionadas.map(o=>({id:o.id,base:Storage.assinaturaOferta(o)}));
+            const r=tipo==='rascunhos'?await Storage.excluirRascunhosEmMassa(payload):await Storage.excluirOfertasEmMassa(payload);
+            if(!r.ok){UI.erro(r.motivo==='conflito'?'Algum registro mudou em outra sessão. Nada foi excluído. Atualize a lista e tente novamente.':
+                'A exclusão em massa não foi concluída. Nenhum registro foi removido por essa operação.');return;}
+            if(tipo==='rascunhos')this.rascunhos=r.rascunhos;else this.ofertas=r.ofertas;
+            conjunto.clear();this.renderLista();
+            UI.ok(`${selecionadas.length} registro(s) excluído(s) com sucesso.`);
+            if(typeof SegurancaPresenter!=='undefined')
+                SegurancaPresenter.registrarFirebase(`${tipo}_exclusao_em_massa`,String(selecionadas.length),selecionadas.slice(0,20).map(o=>String(o.id)));
+        }finally{this.atualizarSelecaoMassa();}
+    },
+
     // ── LISTA DE OFERTAS ─────────────────────
 
     renderLista() {
@@ -316,13 +386,20 @@ const AdminPresenter = {
 
         const listaRascunhos=document.getElementById('listaRascunhos');
         if(listaRascunhos){
-            listaRascunhos.innerHTML=this.rascunhos.length ? this.rascunhos.map(o=>
-                `<div class="oferta-card"><strong>📝 RASCUNHO · ${this._esc(o.tituloPagina||'Sem título')} · SKU ${this._esc(o.sku||'—')}</strong>`+
-                `<div class="vendor-actions"><button type="button" class="btn-warning" data-rasc-editar="${this._esc(o.id)}">EDITAR / PUBLICAR</button>`+
-                `<button type="button" class="btn-danger" data-rasc-excluir="${this._esc(o.id)}">EXCLUIR</button></div></div>`).join('')
-                : '<p class="vendor-subtext">Nenhum rascunho privado.</p>';
+            listaRascunhos.innerHTML=this.rascunhos.length ? this.rascunhos.map(o=>{
+                const pendencias=this._pendenciasRascunho(o);
+                return `<div class="oferta-card"><div class="oferta-selecao-linha">
+                    <label class="oferta-selecao"><input type="checkbox" data-selecao="rascunhos" data-id="${this._esc(o.id)}"
+                        ${this.selecionadosRascunhos.has(String(o.id))?'checked':''} aria-label="Selecionar rascunho ${this._esc(o.tituloPagina||'Sem título')}"> Selecionar</label>
+                    <strong>📝 ${this._esc(o.tituloPagina||'Sem título')} · SKU ${this._esc(o.sku||'—')}</strong></div>
+                    <p class="rascunho-pendencias ${pendencias.length?'tem-pendencias':'sem-pendencias'}">${pendencias.length?
+                        '⚠ Pendências: '+this._esc(pendencias.join(', ')):'✓ Dados completos, pronto para revisão e publicação'}</p>
+                    <div class="vendor-actions"><button type="button" class="btn-warning" data-rasc-editar="${this._esc(o.id)}">EDITAR / PUBLICAR</button>
+                    <button type="button" class="btn-danger" data-rasc-excluir="${this._esc(o.id)}">EXCLUIR</button></div></div>`;
+            }).join('') : '<p class="vendor-subtext">Nenhum rascunho privado.</p>';
             listaRascunhos.querySelectorAll('[data-rasc-editar]').forEach(b=>b.addEventListener('click',()=>this.editarRascunho(b.dataset.rascEditar)));
             listaRascunhos.querySelectorAll('[data-rasc-excluir]').forEach(b=>b.addEventListener('click',()=>this.excluirRascunho(b.dataset.rascExcluir)));
+            listaRascunhos.querySelectorAll('[data-selecao]').forEach(c=>c.addEventListener('change',()=>this.selecionarUma('rascunhos',c.dataset.id,c.checked)));
         }
         const banner   = document.getElementById('bannerSemOferta');
         const temAtiva = this.ofertas.some(o => isOfertaAtiva(o, agora));
@@ -344,6 +421,7 @@ const AdminPresenter = {
                 <p>Nenhuma oferta cadastrada</p>
                 <p style="font-size:14px;">Clique em "NOVA" para começar</p>
             </div>`;
+            this.atualizarSelecaoMassa();
             return;
         }
 
@@ -357,6 +435,9 @@ const AdminPresenter = {
             const cd    = ativa ? countdownTexto(o.dataFim) : null;
 
             return `<div class="oferta-card ${ativa ? 'ativa' : ''}">
+                <div class="oferta-selecao-linha"><label class="oferta-selecao">
+                    <input type="checkbox" data-selecao="ofertas" data-id="${this._esc(o.id)}" ${this.selecionadosOfertas.has(String(o.id))?'checked':''}
+                    aria-label="Selecionar oferta ${this._esc(o.tituloPagina||'Sem título')}"> Selecionar</label></div>
                 <div class="status-badge ${badge}">${label}${cd ? ` · ${cd}` : ''}</div>
                 <div class="oferta-content">
                     <img src="${this._esc(o.urlImagem || 'img/produto.png')}" class="oferta-img" onerror="this.src='img/produto.png'">
@@ -373,6 +454,8 @@ const AdminPresenter = {
                 </div>
             </div>`;
         }).join('');
+        con.querySelectorAll('[data-selecao]').forEach(c=>c.addEventListener('change',()=>this.selecionarUma('ofertas',c.dataset.id,c.checked)));
+        this.atualizarSelecaoMassa();
     },
 
     // ── FORMULÁRIO ───────────────────────────
@@ -502,11 +585,11 @@ const AdminPresenter = {
             destaqueInicio:document.getElementById('destaqueInicioOferta').value,
             destaqueFim:document.getElementById('destaqueFimOferta').value,
         };
-        if(dados.campanha && !/^[a-z0-9][a-z0-9_-]{0,59}$/.test(dados.campanha)){
+        if(!dados.rascunho && dados.campanha && !/^[a-z0-9][a-z0-9_-]{0,59}$/.test(dados.campanha)){
             UI.erro('Campanha individual inválida: até 60 letras minúsculas, números, _ ou -.');return;
         }
-        if(dados.sku && !/^[a-zA-Z0-9_-]{1,40}$/.test(dados.sku)){UI.erro('SKU deve conter apenas letras, números, traço ou _.');return;}
-        if(dados.destaqueInicio && dados.destaqueFim && new Date(dados.destaqueInicio)>new Date(dados.destaqueFim)) {
+        if(!dados.rascunho && dados.sku && !/^[a-zA-Z0-9_-]{1,40}$/.test(dados.sku)){UI.erro('SKU deve conter apenas letras, números, traço ou _.');return;}
+        if(!dados.rascunho && dados.destaqueInicio && dados.destaqueFim && new Date(dados.destaqueInicio)>new Date(dados.destaqueFim)) {
             UI.erro('O fim do destaque deve ser posterior ao início.');return;
         }
         const idxAtual = emEdicao ? this.ofertas.findIndex(o=>String(o.id)===String(idAlvo)) : null;
@@ -521,6 +604,16 @@ const AdminPresenter = {
         }
         if(!dados.rascunho && !urlImagem){UI.erro('Adicione a imagem antes de publicar a oferta.');return;}
         if(!dados.rascunho && dados.textoOferta.includes('\uFFFD')){UI.erro('O texto contém caracteres de substituição (�); revise os emojis antes de publicar.');return;}
+        if(!dados.rascunho){
+            try{const u=new URL(dados.linkProduto);
+                if(!['martinello.com.br','www.martinello.com.br'].includes(u.hostname)||/^\/busca\/?$/i.test(u.pathname)){
+                    UI.erro('Antes de publicar, use o link direto do produto no site Martinello (não a página de busca).');return;
+                }
+            }catch(_){UI.erro('O link do produto é inválido.');return;}
+            if(/^Revisar título - linha \d+$/i.test(dados.tituloPagina)){
+                UI.erro('Corrija o título pendente antes de publicar.');return;
+            }
+        }
         if(emEdicao && dados.rascunho){UI.erro('Para retirar uma oferta pública, encerre seu período. Rascunhos são mantidos em área privada separada.');return;}
         const oferta={
             id:(emEdicao||privado)?idAlvo:`of_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
@@ -529,7 +622,7 @@ const AdminPresenter = {
         };
         if(dados.rascunho){
             const r=await Storage.modificarRascunho({tipo:privado?'editar':'criar',id:oferta.id,
-                oferta:{...oferta,rascunho:true},base:privado?this.editandoRascunhoBase:null});
+                oferta:{...oferta,rascunho:true,pendenciasImportacao:[]},base:privado?this.editandoRascunhoBase:null});
             if(!r.ok){UI.erro('Não foi possível salvar o rascunho privado: '+r.motivo);return;}
             this.cancelarEdicao();UI.ok('Rascunho salvo em área privada; não está visível aos vendedores.');return;
         }
