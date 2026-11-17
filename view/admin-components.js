@@ -60,7 +60,7 @@ const AdminComponents={
     input.addEventListener('focus',()=>abrir());input.addEventListener('input',()=>abrir(true));
     input.addEventListener('blur',()=>{fechar();refletir();});
     input.addEventListener('keydown',e=>{
-      if(e.key==='Escape'){e.preventDefault();fechar();refletir();}
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();fechar();refletir();}
       else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(list.hidden)abrir();destacar(Math.max(0,Math.min(options.length-1,ativo+(e.key==='ArrowDown'?1:-1))));}
       else if(e.key==='Enter'&&!list.hidden){e.preventDefault();if(ativo>=0)escolher(ativo);}
     });

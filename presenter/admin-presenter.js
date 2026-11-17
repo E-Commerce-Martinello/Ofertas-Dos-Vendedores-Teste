@@ -107,6 +107,8 @@ const AdminPresenter = {
     },
 
     async logout() {
+        if(EdicaoSegura.alterados.size&&!confirm('Há alterações não salvas. Deseja sair e descartá-las?'))return;
+        for(const grupo of Object.keys(EdicaoSegura.grupos))EdicaoSegura.limpar(grupo);
         this._pararSincronizacao();
         if(this.pararSyncRascunhos){this.pararSyncRascunhos();this.pararSyncRascunhos=null;}
         clearInterval(this.intervaloStatus);
@@ -554,6 +556,7 @@ const AdminPresenter = {
     },
 
     cancelarEdicao() {
+        EdicaoSegura.limpar('oferta');
         this.editandoRascunhoId=null;this.editandoRascunhoBase=null;
         this.editandoId=null;
         this.editandoBase=null;

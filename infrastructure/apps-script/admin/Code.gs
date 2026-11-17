@@ -1208,7 +1208,7 @@ function mart1614_linkGrupo_(valor) {
 function mart1614_listarCampanhas_() {
   const ss=obterPlanilhaVendedoresV153_(),sh=ss.getSheetByName(MART1614_CAMP_ABA);
   const dados={campanhaGeral:'', linkGrupo:MART1614_LINK_PADRAO, revision:''};
-  if(!sh || sh.getLastRow()<2)return dados;
+  if(!sh || sh.getLastRow()<2)return {...dados,revision:mart19_hash_([dados.campanhaGeral,dados.linkGrupo])};
   const linhas=sh.getRange(2,1,sh.getLastRow()-1,3).getDisplayValues();
   linhas.forEach(r=>{
     if(r[0]==='campanha_geral')dados.campanhaGeral=mart1614_slug_(r[1]);
@@ -1217,7 +1217,7 @@ function mart1614_listarCampanhas_() {
     }
     if(r[2] && (!dados.revision || r[2]>dados.revision))dados.revision=r[2];
   });
-  return dados;
+  return {...dados,revision:mart19_hash_([dados.campanhaGeral,dados.linkGrupo])};
 }
 function mart1614_salvarCampanhas_(payload,email) {
   const geral=mart1614_slug_(payload.campanhaGeral);
@@ -1240,7 +1240,7 @@ function mart1614_salvarCampanhas_(payload,email) {
       ['link_grupo',link,revision,email]
     ]);
     sh.setFrozenRows(1);
-    return {campanhaGeral:geral,linkGrupo:link,revision};
+    return {campanhaGeral:geral,linkGrupo:link,revision:mart19_hash_([geral,link])};
   }finally{lock.releaseLock();}
 }
 
