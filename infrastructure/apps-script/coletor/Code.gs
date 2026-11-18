@@ -59,7 +59,7 @@ function doPost(e) {
     if (!/^\d{3,5}$/.test(rubi)) throw new Error('Matricula invalida');
     const titulo = String(p.tituloOferta || 'Oferta').replace(/[\r\n\t\u0000-\u001f]/g, ' ').trim().slice(0, 100);
     const agora = new Date();
-    const dia = Utilities.formatDate(agora, 'America/Cuiaba', 'yyyyMMdd');
+    const dia = Utilities.formatDate(agora, 'America/Sao_Paulo', 'yyyyMMdd');
     const dezMin = Math.floor(agora.getTime() / 600000);
     const cacheKey = ('ev_' + oferta + '_' + rubi + '_' + dezMin).slice(0, 240);
     const lock = LockService.getScriptLock();
@@ -196,7 +196,7 @@ function martEvtSolicitarTelefone_(p) {
   if(!lock.tryLock(5000))return martEvtResposta_({ok:false});
   try {
     // Vendedor já validado também pode solicitar um segundo número (pessoal/profissional).
-    const agora=new Date(),dia=Utilities.formatDate(agora,'America/Cuiaba','yyyyMMdd');
+    const agora=new Date(),dia=Utilities.formatDate(agora,'America/Sao_Paulo','yyyyMMdd');
     const props=PropertiesService.getScriptProperties(),cache=CacheService.getScriptCache();
     const chave='fone_'+rubi+'_'+fone;
     if(cache.get(chave))return martEvtResposta_({ok:true,repetido:true});
@@ -220,7 +220,7 @@ function martEvtRegistrarVisita_(p) {
   const lock=LockService.getScriptLock();
   if(!lock.tryLock(5000))return martEvtResposta_({ok:false});
   try {
-    const agora=new Date(),dia=Utilities.formatDate(agora,'America/Cuiaba','yyyyMMdd');
+    const agora=new Date(),dia=Utilities.formatDate(agora,'America/Sao_Paulo','yyyyMMdd');
     const cache=CacheService.getScriptCache(),chave='vis_'+sessao;
     if(cache.get(chave))return martEvtResposta_({ok:true,repetido:true});
     const props=PropertiesService.getScriptProperties();
@@ -297,7 +297,7 @@ function mart1614_registrarClique_(p) {
   try {
     const cache=CacheService.getScriptCache(),chave='clk_'+session;
     if(cache.get(chave))return martEvtResposta_({ok:true,repetido:true});
-    const hoje=Utilities.formatDate(new Date(),'America/Cuiaba','yyyyMMdd');
+    const hoje=Utilities.formatDate(new Date(),'America/Sao_Paulo','yyyyMMdd');
     const props=PropertiesService.getScriptProperties();
     const total=props.getProperty('MART1614_CLICK_DIA')===hoje ? Number(props.getProperty('MART1614_CLICK_TOTAL')||0) : 0;
     if(total>=4000)throw new Error('Limite diario de cliques');
