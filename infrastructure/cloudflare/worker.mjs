@@ -1,7 +1,7 @@
 /**
  * Gateway administrativo Martinello v1.6.19.
  * Variáveis: APPS_SCRIPT_URL (obrigatória), PAGES_ORIGIN (opcional, domínio exato *.pages.dev).
- * A autenticação e a autorização dos administradores acontecem no Apps Script.
+ * A autenticação administrativa permanece no Apps Script; somente duas ações de gerente são públicas.
  */
 const ORIGEM_PERMITIDA = 'https://e-commerce-martinello.github.io';
 const LIMITE_BYTES = 600000;
@@ -94,6 +94,18 @@ export default {
         typeof dados.firebaseIdToken !== 'string' || dados.firebaseIdToken.length > 6000 ||
         typeof dados.requestId !== 'string' || !/^req_[A-Za-z0-9_]+$/.test(dados.requestId)) {
       return retorno({ erro: 'Campos inválidos.' }, 400);
+    }
+
+    // Somente as duas ações limitadas do gerente funcionam sem login.
+    // Uma matrícula identifica a filial, mas NÃO autentica a pessoa.
+    const consultaGerente = dados.action === 'consultarPainelGerente';
+    const pedidoGerente = dados.action === 'criarSolicitacaoGerente';
+    const publicoGerente = consultaGerente || pedidoGerente;
+    if (publicoGerente) {
+      if (dados.firebaseIdToken !== '' || JSON.stringify(dados.payload || {}).length > 2500)
+        return retorno({ erro: 'Requisição de gerente inválida.' }, 400);
+    } else if (dados.firebaseIdToken.length < 200) {
+      return retorno({ erro: 'Login administrativo obrigatório.' }, 401);
     }
 
     const campos = new URLSearchParams({
