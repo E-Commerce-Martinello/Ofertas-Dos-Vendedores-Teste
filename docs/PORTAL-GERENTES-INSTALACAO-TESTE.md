@@ -1,95 +1,78 @@
-# Portal de Gerentes — implantação controlada em homologação
+# Portal de Gerentes — instalação na homologação (matrícula apenas)
 
-**Preparado no código em 18/11/2026.** A nova página está no repositório GitHub de TESTE, mas **NÃO está liberada para dados reais até instalar o backend e cadastrar os gerentes autorizados**.
+**Preparado em 18/11/2026.** Os arquivos do GitHub de TESTE foram atualizados; Apps Script e Cloudflare **ainda não foram implantados por esta alteração**. Não mexer no ambiente OFICIAL.
 
-## Arquivos envolvidos
+## O que mudou
 
-| Local | Código no GitHub |
+- Admin: atalho **PORTAL DE GERENTES** no cabeçalho, abrindo `gerentes.html` em nova aba, **sem UTM ou parâmetros de rastreio**.
+- Gerente: digita somente a matrícula cadastrada. Não é necessário login Google.
+- A filial é **sempre definida no servidor**, pela aba `Gerentes_Autorizados`, nunca por uma filial informada no navegador.
+- Página recebe apenas ranking, status e dados limitados a essa filial. Nenhum telefone completo de vendedor é retornado no painel. Solicitações exigem um telefone digitado e tipo pessoal/profissional; vão à fila administrativa sem editar cadastros.
+- **Aviso importante:** matrícula não autentica uma pessoa. Quem descobrir uma matrícula ativa poderá ver resultados e nomes/status da filial e criar solicitações em nome dela. O registro no Sheets identifica **a matrícula informada**, não comprova o remetente. Antes de usar com dados reais, considere reintroduzir autenticação ou restringir a rede de acesso.
+
+## Arquivos finais para copiar (homologação)
+
+| Serviço | Arquivos |
 |---|---|
-| Página pública de login (sem dados antes da autenticação) | [gerentes.html](../gerentes.html) |
-| Interface JavaScript | [presenter/gerentes-presenter.js](../presenter/gerentes-presenter.js) |
-| CSS responsivo | [view/gerentes.css](../view/gerentes.css) |
-| Apps Script administrativo atualizado | [infrastructure/apps-script/admin/Code.gs](../infrastructure/apps-script/admin/Code.gs) |
-| Novo módulo no mesmo Apps Script administrativo | [infrastructure/apps-script/admin/Gerentes.gs](../infrastructure/apps-script/admin/Gerentes.gs) |
-| Integração com sincronização | [infrastructure/apps-script/admin/Refinamento.gs](../infrastructure/apps-script/admin/Refinamento.gs) |
-| Fila no administrador | [presenter/gerentes-solicitacoes-presenter.js](../presenter/gerentes-solicitacoes-presenter.js) |
+| Site GitHub (já alterado) | [admin.html](../admin.html), [gerentes.html](../gerentes.html), [model/gerentes-api.js](../model/gerentes-api.js), [presenter/gerentes-presenter.js](../presenter/gerentes-presenter.js) |
+| Apps Script **ADMIN** de TESTE | [Code.gs](../infrastructure/apps-script/admin/Code.gs), [Refinamento.gs](../infrastructure/apps-script/admin/Refinamento.gs), [Telefones.gs](../infrastructure/apps-script/admin/Telefones.gs), [Gerentes.gs](../infrastructure/apps-script/admin/Gerentes.gs), [appsscript.json](../infrastructure/apps-script/admin/appsscript.json) |
+| Cloudflare Worker **ADMIN** de TESTE | [worker.mjs](../infrastructure/cloudflare/worker.mjs) |
+| Apps Script **COLETOR** de TESTE | Sem mudanças específicas desta opção de matrícula. Se ainda não implantou a v1.6.19 anterior, veja o [guia geral](../infrastructure/GUIA-COPIAR-BACKEND-TESTE-v1.6.19.md). |
+| Firebase | **Nenhuma regra nova para liberar o gerente.** Admin mantém as regras existentes e o login Google para administrar. |
 
-Nenhum novo projeto Firebase, Cloudflare ou Google Sheets é necessário. O módulo de gerentes utiliza o **mesmo projeto Apps Script administrativo de TESTE**, a mesma API privada via Worker e abas adicionais na planilha de homologação.
+**Obrigatório:** atualizar **tanto o Code.gs + Gerentes.gs quanto o Worker**. Instalar somente a nova página sem esses dois serviços resultará em erro ao informar a matrícula. Os arquivos de Apps Script não devem ser juntados nem duplicados.
 
-**Não implantar no oficial sem validação.**
+## Passos
 
-## 1. Conferir e instalar no Apps Script ADMIN de TESTE
+1. Salve o backup dos arquivos atuais no Apps Script administrativo e Worker de TESTE, bem como uma cópia da planilha de homologação.
+2. No Apps Script administrativo de TESTE, substitua `Code.gs`, `Refinamento.gs`, `Telefones.gs` e o `appsscript.json` pelos correspondentes atuais. Crie/atualize `Gerentes.gs` no **mesmo projeto administrativo** (não no coletor público).
+3. Confira as Script Properties de TESTE: `MART_AMBIENTE=TESTE`, `MART_V153_SHEET_ID`, `MART_FIREBASE_WEB_API_KEY`, `MART_V153_ADMIN_EMAIL`. O login do ADMIN continua usando o Firebase e exigindo autorização. No editor, confira serviço avançado **Google Sheets API v4**.
+4. Execute `diagnosticarBackendV1619`; valide o diagnóstico. Depois execute `prepararEstruturaGerentesV1619` **com a conta administradora principal**. Ela apenas cria/confere as duas abas abaixo.
+5. Preencha manualmente a aba `Gerentes_Autorizados` com matrícula, nome, filial e status. **Apenas matrícula cadastrada como ATIVO** funciona na página de gerentes.
+6. Em Apps Script → **Implantar → Gerenciar implantações → Editar → Nova versão**, publique a atualização da implantação administrativa de TESTE existente. Preserve o `/exec`.
+7. No Worker administrativo de TESTE, substitua o código inteiro por `worker.mjs` e publique. Preserve a variável `APPS_SCRIPT_URL` com o `/exec` da API **administrativa de TESTE**.
+8. Teste acesso à página pelos links abaixo, com matrículas válidas, desativadas e inexistentes. Confira que outras ações administrativas continuam recusando solicitações sem token.
 
-1. Faça backup do código e registre a versão atual da implantação Web App.
-2. Atualize `Code.gs` e `Refinamento.gs` conforme os arquivos do GitHub; mantenha `Telefones.gs` e o manifesto `appsscript.json` existentes conforme `infrastructure/GUIA-COPIAR-BACKEND-TESTE-v1.6.19.md`.
-3. Crie **`Gerentes.gs`** no mesmo projeto administrativo e cole todo o conteúdo do arquivo correspondente no GitHub. Não copie para o coletor público.
-4. Confira as propriedades de TESTE (`MART_AMBIENTE=TESTE`, IDs da planilha e do Firebase TESTE, conta administradora). Não exponha segredos no GitHub.
-5. Execute, com a conta principal, **`prepararEstruturaGerentesV1619`**. A função apenas prepara as abas abaixo; nenhum vendedor é criado, alterado ou excluído.
-6. Preencha a aba `Gerentes_Autorizados` com os gerentes autorizados (veja tabela).
-7. Editar a implantação Web App de TESTE existente, selecionando **Nova versão**, e manter sua URL `/exec`.
-8. Testar com uma conta Google de gerente previamente autorizada e outra não autorizada. A segunda **não** pode ver vendedores nem resultados.
+### Gerentes_Autorizados — cinco colunas exatas
 
-## 2. Estrutura da aba privada Gerentes_Autorizados
-
-| Coluna | Nome exato | Exemplo fictício |
+| Coluna | Cabeçalho | Exemplo fictício |
 |---|---|---|
-| A | matricula_gerente | 12345 |
-| B | nome | Gerente Exemplo |
-| C | email_autorizado | gerente.exemplo@gmail.com |
-| D | filial_autorizada | 1 |
-| E | ativo | ATIVO |
-| F | atualizado_em | 2026-11-18 |
+| A | `matricula_gerente` | 12345 |
+| B | `nome` | Gerente Exemplo |
+| C | `filial_autorizada` | 1 |
+| D | `ativo` | ATIVO |
+| E | `atualizado_em` | 2026-11-18 |
 
-Cada vínculo deve estar autorizado por quem administra o sistema. **Não basta conhecer a matrícula**: o gerente deve entrar com o mesmo e-mail Google verificado cadastrado na coluna C.
+A filial é obtida dessa tabela; **não** é inferida de nome ou telefone do grupo WhatsApp. Gerentes que não aparecem na tabela `Vendedores` continuam podendo acessar, desde que constem aqui.
 
-Para revogar, altere `ativo` para `INATIVO` ou `NAO`. Não remova registros sem antes registrar quem autorizou a alteração. Uma filial por vínculo na versão inicial.
+O status de gerente deve ser `ATIVO`. Outros valores desativam o acesso. Matrícula duplicada bloqueia a consulta.
 
-Se os gerentes não constarem como vendedores no relatório RH, isso não impede o acesso: a autorização é feita por essa aba independente, não pela lista de WhatsApp.
+**Se você já criou `Gerentes_Autorizados` com as antigas seis colunas (incluindo `email_autorizado`):** não substitua dados por cima. Após backup, ajuste manualmente os cabeçalhos/colunas para as cinco colunas novas; o código detecta divergência e interrompe em vez de reinterpretar a coluna como filial.
 
-## 3. Estrutura da aba Solicitações
+### Solicitações
 
-`Solicitacoes_Gerentes` é criada automaticamente na preparação, com os cabeçalhos definidos no módulo. O gerente **não acessa essa planilha diretamente**: envia solicitações autenticadas pela API.
+`Solicitacoes_Gerentes` também será criada pelo preparo. A coluna `origem_acesso` registra `MATRICULA_<código>`, **não** a identidade verificada de quem digitou. Os pedidos têm status `PENDENTE` ou `CT_TEMPORARIO` (na interface, **CT Temporário**), além do número, tipo, filial e vendedor.
 
-Cada pedido contém gerente, filial, vendedor, número informado, tipo, indicador de contrato temporário, status e data.
+Somente o admin pode revisar, concluir ou rejeitar pedidos. Mesmo `CONCLUIDO` não altera cadastros ou valida telefones automaticamente.
 
-- Contrato temporário **NÃO**: status inicial `PENDENTE`.
-- Contrato temporário **SIM**: status inicial `CT_TEMPORARIO`, exibido como **CT Temporário** no administrador.
-- O cadastro do vendedor só deve ser alterado após revisão pela equipe administrativa.
-- Os pedidos idênticos ainda abertos são deduplicados. A API também limita pedidos por gerente/dia e recusa vendedores de outra filial.
+## Links sem UTM
 
-No admin, abra **Base de Vendedores → Solicitações de gerentes**, clique em **Revisar vendedor** para abrir o cadastro. Depois da revisão, marque **Concluir** ou **Rejeitar** com confirmação. Concluir a solicitação não valida o telefone automaticamente.
+- [Página de Gerentes de TESTE](https://e-commerce-martinello.github.io/Ofertas-Dos-Vendedores-Teste/gerentes.html)
+- [Administrador de TESTE](https://e-commerce-martinello.github.io/Ofertas-Dos-Vendedores-Teste/admin.html), atalho **PORTAL DE GERENTES** no cabeçalho do painel após login.
 
-## 4. Link para testar
+Os links são relativos, sem `utm_source`, `utm_medium`, `utm_campaign` nem outros parâmetros de campanha.
 
-[Portal de Gerentes de Homologação](https://e-commerce-martinello.github.io/Ofertas-Dos-Vendedores-Teste/gerentes.html)
+## Checklist de homologação
 
-O link existe no GitHub Pages após a publicação do commit; antes do Apps Script e das abas serem preparados, a autenticação deverá falhar de modo seguro, **sem liberar dados**.
+- [ ] Abrir portal a partir do admin; não há UTM na URL.
+- [ ] Inserir matrícula ativa cadastrada: carregar **somente** vendedores, ranking e status da sua filial, sem Google.
+- [ ] Matrícula inexistente/inativa/duplicada: acesso recusado.
+- [ ] Alterar payload para matrícula de outra filial: somente os dados vinculados àquela matrícula aparecem; **isso não autentica quem informa a matrícula**.
+- [ ] Chamar `listarVendedores`, `salvarCadastroCompleto` ou `listarSolicitacoesGerentes` sem token: acesso negado. Admin Google continua funcionando.
+- [ ] Tentar enviar pedido para vendedor de outra filial: acesso recusado.
+- [ ] Enviar pedido válido pessoal/profissional, com e sem CT Temporário; pedido aparece no admin e não muda telefone/cadastro automaticamente.
+- [ ] No admin, revisar e concluir pedido de teste; conferência periódica sem recarregar a página.
+- [ ] Conferir que todas as chamadas apontam exclusivamente para planilha, Worker e Apps Script **TESTE**.
+- [ ] Testar telas em desktop e celular.
 
-As duas abas são:
-1. **Resultados**: indicadores de início de compartilhamento por mês/campanha, ranking por vendedor da filial e última atividade.
-2. **Cadastros e solicitações**: situação funcional, status indicativo de link e telefone; envio obrigatório de celular brasileiro com DDD, tipo pessoal/profissional e opção CT Temporário.
-
-A contagem é **indicativa**, não prova de venda ou de mensagem enviada no WhatsApp. A origem de dados é a planilha do ambiente correspondente. Eventos antigos podem ficar fora da janela de leitura; a interface avisa quando houver truncamento.
-
-## 5. Testes de segurança obrigatórios
-
-- [ ] Conta sem autorização: matrícula válida + e-mail não cadastrado = acesso negado.
-- [ ] Mesmo e-mail com matrícula diferente = acesso negado.
-- [ ] Gerente de filial 1 não recebe dados de filial 2, mesmo alterando requisição diretamente no navegador.
-- [ ] Gerente não consegue chamar ações administrativas como `listarVendedores` ou `salvarCadastroCompleto`.
-- [ ] Vendedor de outra filial é rejeitado ao tentar criar solicitação.
-- [ ] Número inválido, tipo ausente, pedido duplicado e excesso de pedidos são recusados.
-- [ ] CT Temporário aparece no admin e não altera a situação funcional nem o status do telefone antes da revisão.
-- [ ] Admin recebe dados atualizados em sincronização automática sem recarregar a página.
-- [ ] Interface responsiva no Samsung e no desktop; tema claro/escuro e teclado.
-- [ ] Ambiente oficial não recebe solicitações, gravações nem consultas desta implantação.
-
-**Rollback:** restaurar versão anterior da implantação do Apps Script administrativo e do frontend se falhar. Não restaurar uma planilha inteira sobre registros recentes. As novas abas não devem ser apagadas automaticamente.
-
-## 6. Limitações e decisões
-
-O status “e-commerce cadastrado” não pode ser confirmado apenas pelo comportamento de redirecionamento do link. A UI exibe **“Link verificado / Link não localizado / Verificação pendente”**, sempre como indicação, não como confirmação de vínculo comercial.
-
-A matrícula do gerente não serve como senha. A autenticação Google é obrigatória para proteger dados dos funcionários sem introduzir um serviço pago adicional. Quando houver fonte interna de autorização de gerentes, ela poderá substituir o cadastro manual no Sheets.
-
-Não foram migrados dados ou implantados códigos nos serviços externos nesta entrega; o funcionamento completo dependerá dessas etapas manuais.
+**Nenhuma implantação externa ou alteração de dados foi feita automaticamente.**
