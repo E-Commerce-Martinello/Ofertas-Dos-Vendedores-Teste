@@ -9,15 +9,15 @@ const Telefones=require(path.join(raiz,'shared/telefones.js'));
 function montar(){
   const now=Date.now();
   const dados={
-    Gerentes_Autorizados:[['matricula_gerente','nome','email_autorizado','filial_autorizada','ativo','atualizado_em'],
-      ['12345','Gerente A','a@example.com','1','ATIVO',''],
-      ['67890','Gerente B','b@example.com','2','INATIVO','']],
+    Gerentes_Autorizados:[['matricula_gerente','nome','filial_autorizada','ativo','atualizado_em'],
+      ['12345','Gerente A','1','ATIVO',''],
+      ['67890','Gerente B','2','INATIVO','']],
     Vendedores:[['matricula','nome','filial','codigo_filial','telefone_original','telefone_normalizado','situacao_funcional',
       'status_cadastro','origem_cadastro','criado_em','atualizado_em','observacoes','status_telefone'],
       ['11111','Vendedor A','1','','65998124567','','OK','ATIVO','','','','','VALIDADO'],
       ['22222','Vendedor B','2','','65998124568','','OK','ATIVO','','','','','VALIDADO']],
   };
-  dados.Solicitacoes_Gerentes=[['solicitacao_id','criado_em','gerente_matricula','gerente_email','filial','vendedor_matricula',
+  dados.Solicitacoes_Gerentes=[['solicitacao_id','criado_em','gerente_matricula','origem_acesso','filial','vendedor_matricula',
     'vendedor_nome','telefone','tipo','contrato_temporario','status','observacao','atualizado_em','processado_por']];
   dados.Eventos_Portal=[['id','registrado_em','ms','oferta','titulo','mat','tipo'],
     ['evt-a','',now,'oferta','Produto','11111','inicio_compartilhamento'],
@@ -41,12 +41,7 @@ function montar(){
   const planilha={getSheetByName:folha};
   const formatDate=(d,tz,fmt)=>new Intl.DateTimeFormat('sv-SE',
     {timeZone:tz,year:'numeric',month:'2-digit',...(fmt==='yyyy-MM-dd'?{day:'2-digit'}:{})}).format(new Date(d));
-  let email='a@example.com',verified=true,disabled=false;
   const mocks={
-    UrlFetchApp:{fetch:()=>({getResponseCode:()=>200,getContentText:()=>JSON.stringify({users:[{
-      localId:'synthetic-uid-123',email,emailVerified:verified,disabled,providerUserInfo:[{providerId:'google.com'}]
-    }]})})},
-    MART_V160_FIREBASE_API_KEY:'AIza'+'A'.repeat(26),
     obterPlanilhaVendedoresV153_:()=>planilha,
     obterAbaVendedoresV153_:()=>folha('Vendedores'),
     MART_V153_HEADERS:dados.Vendedores[0],
@@ -60,19 +55,18 @@ function montar(){
   const keys=Object.keys(mocks);
   const api=new Function(...keys,fonte+'\nreturn {autorizar:mart20_autorizarGerente_,painel:mart20_consultarPainelGerente_,criar:mart20_criarSolicitacaoGerente_,listar:mart20_listarSolicitacoesGerentes_};')
     (...keys.map(k=>mocks[k]));
-  const ator={email:'a@example.com',matricula:'12345',nome:'Gerente A',filial:'1'};
-  return {dados,api,ator,formatDate,editarUsuario:(e,v=true,d=false)=>{email=e;verified=v;disabled=d}};
+  const ator={email:'MATRICULA_12345',matricula:'12345',nome:'Gerente A',filial:'1'};
+  return {dados,api,ator,formatDate};
 }
-test('matrícula isolada não libera acesso; email e status precisam corresponder',()=>{
-  const s=montar(),token='A'.repeat(300);
-  assert.equal(s.api.autorizar(token,'12345').filial,'1');
-  assert.throws(()=>s.api.autorizar(token,'67890'));
-  s.editarUsuario('desconhecido@example.com');
-  assert.throws(()=>s.api.autorizar(token,'12345'));
-  s.editarUsuario('b@example.com');
-  assert.throws(()=>s.api.autorizar(token,'67890'));
-  s.editarUsuario('a@example.com',false);
-  assert.throws(()=>s.api.autorizar(token,'12345'));
+test('matrícula ativa identifica a filial sem Google; inválida, inativa ou duplicada é recusada',()=>{
+  const s=montar();
+  assert.equal(s.api.autorizar('12345').filial,'1');
+  assert.equal(s.api.autorizar('12345').autenticado,false);
+  assert.throws(()=>s.api.autorizar('67890'));
+  assert.throws(()=>s.api.autorizar('abc'));
+  assert.throws(()=>s.api.autorizar('99999'));
+  s.dados.Gerentes_Autorizados.push(['12345','Duplicado','2','ATIVO','']);
+  assert.throws(()=>s.api.autorizar('12345'));
 });
 test('ranking e campanhas não revelam outra filial',()=>{
   const s=montar(),mes=s.formatDate(new Date(),'America/Sao_Paulo','yyyy-MM');
