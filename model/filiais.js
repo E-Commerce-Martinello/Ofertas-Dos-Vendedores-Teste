@@ -2,7 +2,18 @@
 // O identificador de filial permanece num select interno compatível com os apresentadores.
 const FiliaisUI = {
   fonte:{}, campos:new Map(),
-  definir(fonte){this.fonte=fonte||{};this.ativarBuscas();},
+  definir(fonte){
+    this.fonte=fonte||{};this.nomes=new Map();
+    const grupos=new Map();
+    for(const id of Object.keys(this.fonte).sort((a,b)=>Number(a)-Number(b))){
+      const cidade=this.municipio(id),chave=this.normalizar(cidade);
+      if(!cidade){this.nomes.set(id,`${id} • Município não cadastrado`);continue;}
+      if(!grupos.has(chave))grupos.set(chave,[]);
+      grupos.get(chave).push({id,cidade});
+    }
+    for(const lista of grupos.values())lista.forEach(({id,cidade},i)=>this.nomes.set(id,`${id} • ${cidade}${lista.length>1?' '+this.romano(i+1):''}`));
+    this.ativarBuscas();
+  },
   normalizar(x){return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();},
   // Exibe apenas o nome do município. A fonte preferida é a coluna C
   // "municipio" da aba Filiais. A coluna B "localidade" pode ter bairros,
@@ -53,10 +64,7 @@ const FiliaisUI = {
     const id=String(codigo||'').trim(),cidade=this.municipio(id);
     if(!id)return 'Não identificado';
     if(!cidade)return `${id} • Município não cadastrado`;
-    const pares=Object.keys(this.fonte).filter(k=>this.normalizar(this.municipio(k))===this.normalizar(cidade))
-      .sort((a,b)=>Number(a)-Number(b));
-    const pos=pares.indexOf(id);
-    return `${id} • ${cidade}${pares.length>1 && pos>=0?' '+this.romano(pos+1):''}`;
+    return this.nomes?.get(id)||`${id} • ${cidade}`;
   },
   ativarBuscas(){
     if(typeof AdminComponents==='undefined')return;
