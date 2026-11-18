@@ -75,14 +75,23 @@ test('ranking e campanhas não revelam outra filial',()=>{
   assert.equal(p.totais.compartilhamentos,1);
   assert.deepEqual(p.campanhas,['camp1']);
 });
-test('solicitação fora da filial é bloqueada, CT e duplicação são preservados',()=>{
+test('CT temporário não exige telefone/tipo e não permite outra filial',()=>{
   const s=montar();
-  const pedido={matriculaVendedor:'11111',telefone:'65998124567',tipo:'profissional',contratoTemporario:true};
+  const pedido={matriculaVendedor:'11111',telefone:'',tipo:'',contratoTemporario:true};
   assert.throws(()=>s.api.criar({...pedido,matriculaVendedor:'22222'},s.ator));
   assert.equal(s.api.criar(pedido,s.ator).status,'CT_TEMPORARIO');
-  assert.equal(s.api.criar(pedido,s.ator).duplicado,true);
-  assert.equal(s.api.listar().pedidos.length,1);
-  assert.equal(s.api.listar().pedidos[0].contratoTemporario,true);
+  assert.equal(s.api.criar({...pedido,telefone:'65998124567',tipo:'pessoal'},s.ator).duplicado,true);
+  const r=s.api.listar().pedidos[0];
+  assert.equal(r.contratoTemporario,true);
+  assert.equal(r.telefone,'');
+  assert.equal(r.tipo,'');
+});
+test('pedido comum exige telefone e tipo, inclusive quando há CT para o mesmo vendedor',()=>{
+  const s=montar();
+  s.api.criar({matriculaVendedor:'11111',contratoTemporario:true},s.ator);
+  assert.throws(()=>s.api.criar({matriculaVendedor:'11111',contratoTemporario:false},s.ator));
+  assert.equal(s.api.criar({matriculaVendedor:'11111',telefone:'65998124567',tipo:'profissional',contratoTemporario:false},s.ator).status,'PENDENTE');
+  assert.equal(s.api.listar().pedidos.length,2);
 });
 
 test('admin cadastra e edita gerente, preservando vínculo e revisão',()=>{
@@ -99,4 +108,14 @@ test('admin cadastra e edita gerente, preservando vínculo e revisão',()=>{
   assert.equal(s.api.listarCadastro().gerentes.find(g=>g.matricula===matricula).nome,'Gerente Editado');
   assert.throws(()=>s.api.salvarCadastro({...p,matricula:'22445',filial:'999'}));
   assert.throws(()=>s.api.salvarCadastro({...p,matricula:'22445',telefone:'65911111111'}));
+});
+
+test('gerente pode ser cadastrado sem celular e o número preenchido continua validado',()=>{
+  const s=montar();
+  const p={matricula:'33445',nome:'Gerente Sem Celular',filial:'1',telefone:'',ativo:true,revision:''};
+  const registro=s.api.salvarCadastro(p);
+  assert.equal(registro.telefone,'');
+  assert.equal(s.api.listarCadastro().gerentes.find(g=>g.matricula==='33445').telefone,'');
+  assert.equal(s.api.autorizar('33445').filial,'1');
+  assert.throws(()=>s.api.salvarCadastro({...p,matricula:'33446',telefone:'65911111111'}));
 });
