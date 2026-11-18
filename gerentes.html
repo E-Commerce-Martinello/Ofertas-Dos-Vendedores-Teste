@@ -6,12 +6,13 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="referrer" content="no-referrer">
   <title>Portal de Gerentes | Martinello</title>
-  <link rel="stylesheet" href="view/gerentes.css?v=1.6.19-ger1">
+  <script>try{if(localStorage.getItem('tema')==='dark')document.documentElement.classList.add('dark-mode');}catch(_){}</script>
+  <link rel="stylesheet" href="view/gerentes.css?v=1.6.19-ger4">
 </head>
 <body>
 <header class="topbar">
   <div class="brand"><div class="brand-mark" aria-hidden="true">M</div><span>Martinello<span>Portal de Gerentes</span></span></div>
-  <a class="link-simple" href="index.html">Voltar às ofertas</a>
+  <div class="topbar-actions"><a class="link-simple" href="index.html">Voltar às ofertas</a><button class="link-simple tema-gerentes" id="gerenteTema" type="button" aria-label="Alternar entre tema claro e escuro">☾ Tema</button></div>
 </header>
 <main>
   <section id="gerentesLogin" class="grid-login">
@@ -35,7 +36,7 @@
       <div class="info-list">
         <div><strong>Resultados por vendedor</strong><span class="small" style="display:block">Indicadores mensais de início de compartilhamento, campanhas e ranking.</span></div>
         <div><strong>Verificação dos cadastros</strong><span class="small" style="display:block">Situação dos links de e-commerce e dos telefones, somente da sua filial.</span></div>
-        <div><strong>Solicitações para o administrador</strong><span class="small" style="display:block">Informe o telefone, tipo de contato e se o contrato é temporário.</span></div>
+        <div><strong>Solicitações para o administrador</strong><span class="small" style="display:block">Solicite cadastro com telefone ou informe contrato temporário sem preencher contato.</span></div>
       </div>
     </aside>
   </section>
@@ -49,13 +50,14 @@
         <button type="button" class="tab" role="tab" aria-controls="gerenteResultados" id="gerenteAbaResultados" aria-selected="true" data-aba="resultados">Resultados</button>
         <button type="button" class="tab" role="tab" aria-controls="gerenteCadastros" id="gerenteAbaCadastros" aria-selected="false" data-aba="cadastros">Cadastros e solicitações</button>
       </div>
-      <div class="controls">
-        <div class="field"><label for="gerenteMes">Mês</label><select id="gerenteMes"></select></div>
-        <div class="field"><label for="gerenteCampanha">Campanha</label><select id="gerenteCampanha"><option value="">Todas as campanhas</option></select></div>
-        <div class="field"><label for="gerenteBusca">Buscar vendedor</label><input id="gerenteBusca" type="search" placeholder="Nome ou matrícula"></div>
-      </div>
       <div id="gerenteStatus" role="status" class="status" hidden></div>
       <section id="gerenteResultados" role="tabpanel" aria-labelledby="gerenteAbaResultados">
+        <div class="controls">
+          <div class="field"><label for="gerenteMes">Mês</label><select id="gerenteMes"></select></div>
+          <div class="field"><label for="gerenteCampanha">Campanha</label><select id="gerenteCampanha"><option value="">Todas as campanhas</option></select></div>
+          <div class="field"><label for="gerenteBusca">Buscar vendedor</label><input id="gerenteBusca" type="search" placeholder="Nome ou matrícula"></div>
+        </div>
+
         <div class="kpis">
           <div class="kpi"><strong id="gerenteTotal">—</strong><span>Vendedores</span></div>
           <div class="kpi"><strong id="gerenteAtivos">—</strong><span>Cadastros ativos</span></div>
@@ -82,10 +84,16 @@
   <form id="gerenteFormSolicitacao">
     <h2 id="gerenteDialogoTitulo">Solicitar cadastro ou revisão</h2>
     <p class="small" id="gerenteSolicitacaoVendedor"></p>
-    <div class="field"><label for="gerenteTelefone">Telefone do vendedor (obrigatório)</label><input id="gerenteTelefone" type="tel" inputmode="tel" autocomplete="off" maxlength="19" placeholder="(DD) 9 1234-5678" required><span id="gerenteErroTelefone" class="small" role="status"></span></div>
-    <div class="field"><label for="gerenteTipo">Tipo de telefone (obrigatório)</label><select id="gerenteTipo" required><option value="">Selecione o tipo</option><option value="profissional">Profissional</option><option value="pessoal">Pessoal</option></select></div>
-    <div class="field"><label class="toggle" for="gerenteCT"><input type="checkbox" id="gerenteCT"><span>Contrato temporário:</span><span class="on">SIM</span><span class="off">NÃO</span></label></div>
-    <div class="field"><label for="gerenteObservacao">Observação (opcional)</label><textarea id="gerenteObservacao" rows="2" maxlength="300" placeholder="Informação útil para a equipe administrativa"></textarea></div>
+    <div class="gerente-ct-topo">
+      <label class="toggle" for="gerenteCT"><input type="checkbox" id="gerenteCT"><span>Contrato temporário</span><span class="on">SIM</span><span class="off">NÃO</span></label>
+      <p class="small">Marque esta opção para informar que o funcionário é temporário e não precisa de cadastro no e-commerce.</p>
+    </div>
+    <p id="gerenteCTOrientacao" class="ct-aviso" hidden>Solicitação de <strong>CT Temporário</strong>. Não é necessário preencher telefone ou outras informações.</p>
+    <div id="gerenteCamposCadastro">
+      <div class="field"><label for="gerenteTelefone">Telefone do vendedor (obrigatório)</label><input id="gerenteTelefone" type="tel" inputmode="tel" autocomplete="off" maxlength="19" placeholder="(DD) 9 1234-5678" required><span id="gerenteErroTelefone" class="small" role="status"></span></div>
+      <div class="field"><label for="gerenteTipo">Tipo de telefone (obrigatório)</label><select id="gerenteTipo" required><option value="">Selecione o tipo</option><option value="profissional">Profissional</option><option value="pessoal">Pessoal</option></select></div>
+      <div class="field"><label for="gerenteObservacao">Observação (opcional)</label><textarea id="gerenteObservacao" rows="2" maxlength="300" placeholder="Informação útil para a equipe administrativa"></textarea></div>
+    </div>
     <p class="small">O pedido será enviado para revisão. Não altera o cadastro do vendedor automaticamente.</p>
     <div id="gerenteSolicitacaoStatus" class="status" role="status" hidden></div>
     <div class="dialog-actions"><button class="btn" type="button" id="gerenteCancelar">Cancelar</button><button class="btn btn-primary" type="submit" id="gerenteEnviar">ENVIAR SOLICITAÇÃO</button></div>
@@ -95,6 +103,6 @@
 <script src="shared/config.js?v=1.6.19"></script>
 <script src="shared/telefones.js?v=1.6.19-fix1"></script>
 <script src="model/gerentes-api.js?v=1.6.19-mat3"></script>
-<script src="presenter/gerentes-presenter.js?v=1.6.19-mat3"></script>
+<script src="presenter/gerentes-presenter.js?v=1.6.19-ger4"></script>
 </body>
 </html>
