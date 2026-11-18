@@ -1,7 +1,7 @@
 # Portal de Gerentes — proposta funcional e técnica
 
-**Data:** 18/11/2026 · **Ambiente de desenvolvimento:** homologação · **Status:** especificação para implementação.  
-**Não existe liberação de dados de gerentes/vendedores por matrícula nesta etapa.** Não foi criado endpoint público nem alterada a base de dados.
+**Data:** 18/11/2026 · **Ambiente de desenvolvimento:** homologação · **Status:** especificação funcional e código implementado na homologação; implantação externa pendente.  
+**Matrícula isolada continua sem permitir acesso.** Os endpoints e a interface já estão versionados, mas exigem autorização Google e implantação da API com vínculo explícito do gerente antes do uso.
 
 ## Objetivo
 Criar uma página separada, responsiva, para gerentes consultarem **somente vendedores da filial autorizada**, conhecerem a utilização do Portal de Ofertas e solicitarem novos cadastros/correções de telefone ao administrador.
@@ -94,4 +94,4 @@ Para a identidade de gerente, não usar o cadastro de WhatsApp como base de auto
 - Se “CT Temporário” é apenas categoria de solicitação (recomendado) ou se existe classificação funcional oficial a sincronizar com outra base (exigiria outra fonte confiável).
 - Se existe fonte oficial da situação “cadastrado no e-commerce”, além do verificador de links (hoje somente indicativo).
 
-**Nota:** documentação de implementação, não portal de gerentes funcional. Não criar uma página com matrícula como única credencial e não disponibilizar dados reais sem autorização.
+**Nota:** a implementação está preparada para testes, mas permanece sem implantação nos serviços externos. Procedimento e lista de verificação: [Instalação em homologação](PORTAL-GERENTES-INSTALACAO-TESTE.md). Não liberar dados sem autenticação Google e autorização da filial.
