@@ -1,4 +1,4 @@
-/* Portal de Gerentes: informações acessíveis apenas via API autenticada por filial. */
+/* Portal de Gerentes: identificação por matrícula cadastrada; dados limitados à filial no servidor. */
 const GerentesPresenter = {
   matricula:'',dados:null,ocupado:false,pendente:false,enviando:false,refresh:null,selecionado:null,aba:'resultados',
   el(id){return document.getElementById(id);},
@@ -40,8 +40,6 @@ const GerentesPresenter = {
       e.target.value=Telefones.formato(e.target.value);
       this.el('gerenteErroTelefone').textContent='';
     });
-    try{await Auth.iniciar();}
-    catch(e){this.status('gerenteLoginStatus','Falha ao iniciar login Google: '+e.message,'error');}
     this.refresh=setInterval(()=>{
       if(!document.hidden&&this.matricula&&this.dados&&!this.ocupado&&!this.enviando&&!this.el('gerenteDialogo').open)
         this.carregar(true);
@@ -51,11 +49,9 @@ const GerentesPresenter = {
     const matricula=this.el('gerenteMatricula').value.replace(/\D/g,'');
     if(!/^\d{3,8}$/.test(matricula)){this.status('gerenteLoginStatus','Informe uma matrícula válida.','error');return;}
     const btn=this.el('gerenteEntrar');btn.disabled=true;
-    this.status('gerenteLoginStatus','Autenticando e conferindo a filial autorizada...');
+    this.status('gerenteLoginStatus','Localizando os dados da filial...');
     try{
-      // Google identifica o usuário; a API valida o vínculo entre o e-mail, a
-      // matrícula e a filial. A matrícula isoladamente nunca libera dados.
-      await Auth.entrarGoogle();
+      // Apenas a matrícula cadastrada identifica a filial. Não há autenticação.
       this.matricula=matricula;
       await this.carregar();
       this.el('gerentesLogin').hidden=true;this.el('gerentesPainel').hidden=false;
@@ -81,7 +77,6 @@ const GerentesPresenter = {
   async sair(){
     this.limparDados();
     this.el('gerenteMatricula').value='';this.el('gerenteBusca').value='';
-    try{await Auth.sair();}catch(_){}
   },
   async carregar(silencioso=false){
     if(!this.matricula)return;
@@ -91,7 +86,7 @@ const GerentesPresenter = {
     const identidade=this.matricula,mes=this.el('gerenteMes').value,
       campanha=this.el('gerenteCampanha').value;
     try{
-      const resposta=await GoogleSheetsService._post('consultarPainelGerente',
+      const resposta=await GerentesAPI.executar('consultarPainelGerente',
         {matriculaGerente:identidade,mes,campanha});
       if(identidade!==this.matricula)return;
       // Requisições antigas não podem substituir novos filtros selecionados.
@@ -110,9 +105,9 @@ const GerentesPresenter = {
     }catch(e){
       if(identidade!==this.matricula)return;
       const mensagem=e.message||'Não foi possível atualizar os dados.';
-      if(/autorizad|autorização|conta Google sem|acesso restrito|sessão Google inválida/i.test(mensagem)){
+      if(/matrícula não cadastrada|matrícula.*desativada|filial do gerente não configurada|excedeu o limite de consulta/i.test(mensagem)){
         this.limparDados();
-        this.status('gerenteLoginStatus','Sua autorização não pôde ser confirmada. Entre novamente ou procure o administrador.','error');
+        this.status('gerenteLoginStatus','Matrícula não disponível. Consulte a equipe administrativa.','error');
       }else this.status('gerenteStatus',mensagem,'error');
       if(!silencioso)throw e;
     }finally{
@@ -213,7 +208,7 @@ const GerentesPresenter = {
     let concluido=false;
     this.status('gerenteSolicitacaoStatus','Registrando solicitação para a equipe administrativa...');
     try{
-      const resposta=await GoogleSheetsService._post('criarSolicitacaoGerente',{
+      const resposta=await GerentesAPI.executar('criarSolicitacaoGerente',{
         matriculaGerente:this.matricula,matriculaVendedor:this.selecionado.matricula,
         telefone:Telefones.numero(raw),tipo,contratoTemporario:this.el('gerenteCT').checked,
         observacao:this.el('gerenteObservacao').value.trim()
