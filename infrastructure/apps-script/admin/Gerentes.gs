@@ -96,7 +96,7 @@ function mart20_salvarCadastroGerente_(p){
     if(atual&&revision!==String(atual[4]||''))
       throw new Error('CONFLITO: este gerente foi alterado. Reabra o cadastro atualizado.');
     if(!atual&&revision)throw new Error('CONFLITO: este gerente foi excluído ou não existe.');
-    if(atual&&(!String(p.matriculaOriginal||'')||String(p.matriculaOriginal)===matricula)===false)
+    if(atual&&String(p.matriculaOriginal||matricula)!==matricula)
       throw new Error('A matrícula existente não pode ser alterada.');
     const agora=new Date().toISOString();
     const linha=[matricula,nome,filial,ativo?'ATIVO':'INATIVO',agora,telefone];
