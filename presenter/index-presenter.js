@@ -204,9 +204,9 @@ const IndexPresenter = {
         const ids = atual.map(o => String(o.id)).join(',');
         // Detectar também destaques que iniciam por agendamento sem gravar no Firebase.
         const destaqueAgora=PortalPreferencias.destaque(atual,agora);
-        const novoDestaque=Boolean(destaqueAgora && this._destaqueAnterior!==undefined
-            && String(destaqueAgora.id)!==this._destaqueAnterior);
-        if (ids !== this._assinatura || novoDestaque || (this.ofertaAtual && !isOfertaAtiva(this.ofertaAtual, agora))) {
+        const mudouDestaque=this._destaqueAnterior!==undefined
+            && String(destaqueAgora?.id||'')!==this._destaqueAnterior;
+        if (ids !== this._assinatura || mudouDestaque || (this.ofertaAtual && !isOfertaAtiva(this.ofertaAtual, agora))) {
             this._assinatura = ids;
             this._aplicarOfertas(this.ofertas);
             return;
