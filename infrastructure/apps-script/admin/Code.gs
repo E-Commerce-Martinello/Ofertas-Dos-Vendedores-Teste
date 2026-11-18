@@ -79,15 +79,28 @@ function doPost(e) {
   let parentOrigin = '';
   try {
     parentOrigin = validarOrigemPainelV153_(p.parentOrigin);
-    const acesso = exigirAdministradorV160_(p.firebaseIdToken);
     const textoPayload = String(p.payload || '{}');
     if (textoPayload.length > 500000) throw new Error('Solicitação muito grande. Reduza os dados e tente novamente.');
     const payload = JSON.parse(textoPayload);
+    const acaoGerente = ['consultarPainelGerente','criarSolicitacaoGerente'].includes(String(p.action||''));
+    // Acesso de gerente é uma permissão diferente da administração. A matrícula
+    // é conferida com a conta Google AUTORIZADA no servidor, nunca é uma senha.
+    const acesso = acaoGerente
+      ? mart20_autorizarGerente_(p.firebaseIdToken,payload.matriculaGerente)
+      : exigirAdministradorV160_(p.firebaseIdToken);
     let resultado;
 
     const escrita=!/^(listar|consultar|sincronizar)/.test(String(p.action||''));
     if(escrita)mart19_invalidar_();
-    if (p.action === 'consultarCapacidades') {
+    if (p.action === 'consultarPainelGerente') {
+      resultado = mart20_consultarPainelGerente_(payload,acesso);
+    } else if (p.action === 'criarSolicitacaoGerente') {
+      resultado = mart20_criarSolicitacaoGerente_(payload,acesso);
+    } else if (p.action === 'listarSolicitacoesGerentes') {
+      resultado = mart20_listarSolicitacoesGerentes_();
+    } else if (p.action === 'atualizarSolicitacaoGerente') {
+      resultado = mart20_atualizarSolicitacaoGerente_(payload,acesso.email);
+    } else if (p.action === 'consultarCapacidades') {
       resultado={versao:'1.6.19',sincronizacao:true,edicaoCompleta:typeof Sheets!=='undefined'&&!!mart1618_abaFones_(false),
         push:PropertiesService.getScriptProperties().getProperty('MART19_PUSH_ATIVO')==='true'};
     } else if (p.action === 'sincronizarAdmin') {
@@ -1170,6 +1183,8 @@ function mart1615_eventoAuditavel_(acao,payload,resultado) {
   payload=payload || {};
   const matriz={
     salvarCadastroCompleto:'cadastro_e_telefones_editados',
+    criarSolicitacaoGerente:'solicitacao_gerente_criada',
+    atualizarSolicitacaoGerente:'solicitacao_gerente_processada',
     salvarVendedor:'vendedor_editado', criarVendedor:'vendedor_criado',
     importarFuncionarios:'vendedores_importados', importarWhatsApp:'grupo_importado',
     normalizarWhatsApp:'whatsapp_normalizado',salvarIdentificacaoWhatsApp:'identificacao_whatsapp',
@@ -1179,7 +1194,12 @@ function mart1615_eventoAuditavel_(acao,payload,resultado) {
   };
   if (!Object.prototype.hasOwnProperty.call(matriz,acao)) return null;
   let alvo='',resumo='Alteração administrativa';
-  if (acao==='salvarCadastroCompleto'||acao==='salvarVendedor'||acao==='criarVendedor') {
+  if(acao==='criarSolicitacaoGerente') {
+    alvo=String(payload.matriculaVendedor||'').replace(/\D/g,'').slice(0,10);
+    resumo=payload.contratoTemporario===true?'Solicitação CT Temporário':'Solicitação de cadastro/telefone';
+  } else if(acao==='atualizarSolicitacaoGerente') {
+    alvo=String(payload.id||'').slice(0,50);resumo='Solicitação de gerente processada';
+  } else if (acao==='salvarCadastroCompleto'||acao==='salvarVendedor'||acao==='criarVendedor') {
     alvo=String(payload.matricula||'').replace(/\D/g,'').slice(0,10);
     const campos=Array.isArray(resultado&&resultado.camposAlterados)?resultado.camposAlterados:[];
     resumo=campos.length?'Campos: '+campos.join(', '):'Cadastro de vendedor atualizado';
