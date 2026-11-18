@@ -1,6 +1,6 @@
 /** v1.6.19: preparado para implantação, sem instalação automática. */
 const MART19_TABELAS = {
-  core:['Vendedores','Filiais','Telefones_Vendedores','WhatsApp_Atual','Identificacoes_Manuais','Solicitacoes_Telefone','Verificacao_Links','Solicitacoes_Gerentes'],
+  core:['Vendedores','Filiais','Telefones_Vendedores','WhatsApp_Atual','Identificacoes_Manuais','Solicitacoes_Telefone','Verificacao_Links','Solicitacoes_Gerentes','Gerentes_Autorizados'],
   contatos:['Config_Contatos','Historico_Contatos'], campanhas:['Config_Campanhas'],
   dashboard:['Eventos_Portal','Eventos_Campanhas'], auditoria:['Auditoria_Admin']
 };
