@@ -6,6 +6,14 @@ const CadastroGerentesPresenter={
     const el=this.el('cadastroGerentesStatus');if(!el)return;
     el.hidden=!texto;el.textContent=texto;el.classList.toggle('error',erro);
   },
+  mensagemErro(erro){
+    const texto=String(erro?.message||erro||'');
+    if(/a[cç][aã]o n[aã]o reconhecida|opera[cç][aã]o desconhecida/i.test(texto))
+      return 'A API administrativa instalada ainda não reconhece o cadastro de gerentes. Atualize Code.gs e Gerentes.gs do repositório de TESTE, implante uma nova versão do Apps Script e confira a URL /exec no Worker.';
+    if(/Cabe[cç]alhos inesperados na aba Gerentes_Autorizados/i.test(texto))
+      return texto+' Confira a estrutura da aba e execute prepararEstruturaGerentesV1619 após fazer backup.';
+    return texto||'Não foi possível completar a operação.';
+  },
   filiais(){
     const select=this.el('cadastroGerenteFilial');if(!select)return;
     const atual=select.value,base=VendedoresPresenter.filiais||{};
@@ -13,8 +21,9 @@ const CadastroGerentesPresenter={
     Object.entries(base).filter(([codigo])=>/^\d{1,6}$/.test(codigo))
       .sort((a,b)=>Number(a[0])-Number(b[0]))
       .forEach(([codigo,nome])=>{
-        const cidade=typeof FiliaisUI!=='undefined'?FiliaisUI.nome(codigo):nome;
-        select.add(new Option(codigo+' • '+cidade,codigo));
+        // FiliaisUI.nome já inclui o código, município completo e numeral romano.
+        const rotulo=typeof FiliaisUI!=='undefined'?FiliaisUI.nome(codigo):codigo+' • '+nome;
+        select.add(new Option(rotulo,codigo));
       });
     if(atual&&Array.from(select.options).some(o=>o.value===atual))select.value=atual;
   },
@@ -65,7 +74,7 @@ const CadastroGerentesPresenter={
       this.gerentes=lista;
       this.renderizar();
       if(!this.sujo)this.status(lista.length+' gerente(s) na base de acesso.');
-    }catch(erro){this.status(erro.message||'Não foi possível carregar os gerentes.',true);}
+    }catch(erro){this.status(this.mensagemErro(erro),true);}
     finally{this.carregando=false;}
   },
   renderizar(){
@@ -84,7 +93,7 @@ const CadastroGerentesPresenter={
       const bloco=document.createElement('div');bloco.className='cadastro-gerentes-identidade';
       const titulo=document.createElement('strong');titulo.textContent=g.nome+' • '+g.matricula;
       const info=document.createElement('small');
-      info.textContent='Filial '+g.filial+' • '+(typeof FiliaisUI!=='undefined'?FiliaisUI.nome(g.filial):g.filial)
+      info.textContent=(typeof FiliaisUI!=='undefined'?FiliaisUI.nome(g.filial):'Filial '+g.filial)
         +' • '+Telefones.formato(g.telefone);
       const status=document.createElement('span');status.className='cadastro-gerentes-status';
       status.dataset.ativo=String(g.ativo);status.textContent=g.ativo?'ATIVO':'INATIVO';
@@ -119,7 +128,7 @@ const CadastroGerentesPresenter={
       this.salvando=false;
       await this.carregar();
       this.status('Gerente salvo. A matrícula informada já pode ser usada na página de gerentes.');
-    }catch(e){this.status(e.message||'Não foi possível salvar o gerente.',true);}
+    }catch(e){this.status(this.mensagemErro(e),true);}
     finally{this.salvando=false;botao.disabled=false;}
   }
 };
