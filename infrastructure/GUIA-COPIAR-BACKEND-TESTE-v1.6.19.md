@@ -6,6 +6,12 @@
 
 **Esta alteração no GitHub NÃO atualizou os serviços externos.** Preserve o oficial sem mudanças. Faça backup de todos os códigos implantados e das regras Firebase antes de substituir qualquer coisa.
 
+## Complemento: módulo do Portal de Gerentes
+
+Após a revisão deste guia, também está preparado o módulo `infrastructure/apps-script/admin/Gerentes.gs`, que deve ser criado **no mesmo Apps Script ADMIN de TESTE** juntamente com `Code.gs`, `Refinamento.gs` e `Telefones.gs`. Ele implementa autorização Google + matrícula + filial e uma fila privada de solicitações.
+
+A nova página `gerentes.html` estará acessível pelo GitHub Pages, porém só mostrará dados após a implantação do código e cadastro explícito de gerentes na aba privada `Gerentes_Autorizados`. Consulte o procedimento completo em [docs/PORTAL-GERENTES-INSTALACAO-TESTE.md](../docs/PORTAL-GERENTES-INSTALACAO-TESTE.md).
+
 ## 1. Google Apps Script ADMIN — homologação
 
 Abrir o projeto **administrativo de TESTE** existente e atualizar estes arquivos separadamente:
