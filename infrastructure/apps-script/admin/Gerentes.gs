@@ -142,6 +142,18 @@ function mart20_consultarPainelGerente_(payload,acesso){
   const campanha=String(payload.campanha||'').trim();
   if(campanha&&campanha!=='__sem__'&&!/^[a-z0-9_-]{1,60}$/.test(campanha))
     throw new Error('Filtro de campanha inválido.');
+  // Cache curto por filial/mês/campanha; autorização é validada antes de chegar aqui.
+  // O perfil do gerente NÃO entra no cache compartilhado entre gerentes da filial.
+  const chave='mart20_painel_'+acesso.filial+'_'+mes+'_'+(campanha||'todas');
+  const cache=CacheService.getScriptCache();
+  const perfil=localidade=>({nome:acesso.nome,matricula:acesso.matricula,
+    filial:acesso.filial,localidade});
+  try {
+    const salvo=cache.get(chave);
+    if(salvo){const dados=JSON.parse(salvo);
+      return {...dados,gerente:perfil(dados.localidadeFilial||'')};
+    }
+  }catch(_){}
   const ss=obterPlanilhaVendedoresV153_();
   const vendedores=mart20_vendedoresFilial_(ss,acesso.filial);
   const ids=new Set(vendedores.map(r=>String(r[0]).replace(/\D/g,'')));
@@ -169,10 +181,9 @@ function mart20_consultarPainelGerente_(payload,acesso){
   });
   const locais=listarFiliaisV153_(ss);
   const local=locais.find(r=>mart20_filial_(r[0])===acesso.filial);
-  return {
-    gerente:{nome:acesso.nome,matricula:acesso.matricula,filial:acesso.filial,
-      localidade:String(local?.[2]||local?.[1]||'')},
-    mes,campanha,atualizadoEm:new Date().toISOString(),
+  const localidadeFilial=String(local?.[2]||local?.[1]||'');
+  const dados={
+    localidadeFilial,mes,campanha,atualizadoEm:new Date().toISOString(),
     campanhas:atividade.campanhas,truncado:atividade.truncado,
     totais:{vendedores:result.length,ativos:result.filter(v=>v.ativo).length,
       usando:result.filter(v=>v.compartilhamentos>0).length,
@@ -180,6 +191,8 @@ function mart20_consultarPainelGerente_(payload,acesso){
       ofertas:atividade.ofertas},
     vendedores:result.sort((a,b)=>b.compartilhamentos-a.compartilhamentos||a.nome.localeCompare(b.nome,'pt-BR'))
   };
+  try{cache.put(chave,JSON.stringify(dados),90);}catch(_){}
+  return {...dados,gerente:perfil(localidadeFilial)};
 }
 
 function mart20_listarSolicitacoesGerentes_(){
