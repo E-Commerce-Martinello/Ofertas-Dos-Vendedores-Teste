@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Portal de Gerentes | Martinello</title>
+  <link rel="stylesheet" href="view/gerentes.css?v=1.6.19-ger1">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="brand-mark" aria-hidden="true">M</div><span>Martinello<span>Portal de Gerentes</span></span></div>
+  <a class="link-simple" href="index.html">Voltar às ofertas</a>
+</header>
+<main>
+  <section id="gerentesLogin" class="grid-login">
+    <div class="panel">
+      <div class="intro">
+        <h1>Acompanhe os resultados da sua filial</h1>
+        <p>Consulte a utilização das ofertas pelos vendedores e solicite revisões de cadastro.</p>
+      </div>
+      <form id="formLoginGerente">
+        <div class="field">
+          <label for="gerenteMatricula">Sua matrícula</label>
+          <input id="gerenteMatricula" type="text" inputmode="numeric" autocomplete="off" maxlength="8" pattern="[0-9]{3,8}" required placeholder="Informe sua matrícula">
+        </div>
+        <button id="gerenteEntrar" class="btn btn-primary btn-full" type="submit">ENTRAR COM GOOGLE</button>
+      </form>
+      <p class="small" style="margin:15px 0 0">O acesso exige uma conta Google previamente autorizada. Informar apenas a matrícula não libera dados.</p>
+      <div class="status" id="gerenteLoginStatus" role="status" hidden></div>
+    </div>
+    <aside class="panel">
+      <h2>O que você poderá acompanhar</h2>
+      <div class="info-list">
+        <div><strong>Resultados por vendedor</strong><span class="small" style="display:block">Indicadores mensais de início de compartilhamento, campanhas e ranking.</span></div>
+        <div><strong>Verificação dos cadastros</strong><span class="small" style="display:block">Situação dos links de e-commerce e dos telefones, somente da sua filial.</span></div>
+        <div><strong>Solicitações para o administrador</strong><span class="small" style="display:block">Informe o telefone, tipo de contato e se o contrato é temporário.</span></div>
+      </div>
+    </aside>
+  </section>
+  <section id="gerentesPainel" hidden>
+    <div class="panel">
+      <div class="info-head">
+        <div><h1 id="gerenteNome">Painel da filial</h1><div class="meta"><span id="gerenteFilial" class="chip">Filial</span><span id="gerenteAtualizadoEm" class="small"></span></div></div>
+        <button type="button" class="btn btn-quiet" id="gerenteSair">Sair</button>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Áreas do painel">
+        <button type="button" class="tab" role="tab" aria-controls="gerenteResultados" id="gerenteAbaResultados" aria-selected="true" data-aba="resultados">Resultados</button>
+        <button type="button" class="tab" role="tab" aria-controls="gerenteCadastros" id="gerenteAbaCadastros" aria-selected="false" data-aba="cadastros">Cadastros e solicitações</button>
+      </div>
+      <div class="controls">
+        <div class="field"><label for="gerenteMes">Mês</label><select id="gerenteMes"></select></div>
+        <div class="field"><label for="gerenteCampanha">Campanha</label><select id="gerenteCampanha"><option value="">Todas as campanhas</option></select></div>
+        <div class="field"><label for="gerenteBusca">Buscar vendedor</label><input id="gerenteBusca" type="search" placeholder="Nome ou matrícula"></div>
+      </div>
+      <div id="gerenteStatus" role="status" class="status" hidden></div>
+      <section id="gerenteResultados" role="tabpanel" aria-labelledby="gerenteAbaResultados">
+        <div class="kpis">
+          <div class="kpi"><strong id="gerenteTotal">—</strong><span>Vendedores</span></div>
+          <div class="kpi"><strong id="gerenteAtivos">—</strong><span>Cadastros ativos</span></div>
+          <div class="kpi"><strong id="gerenteUsando">—</strong><span>Com atividade registrada</span></div>
+          <div class="kpi"><strong id="gerenteInicios">—</strong><span>Inícios de compartilhamento</span></div>
+          <div class="kpi"><strong id="gerenteOfertas">—</strong><span>Ofertas utilizadas</span></div>
+        </div>
+        <div class="section-title"><h2>Atividade por vendedor</h2><span class="small" id="gerenteRankingResumo"></span></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Vendedor</th><th>Matrícula</th><th>Inícios de compartilhamento</th><th>Última atividade</th></tr></thead>
+          <tbody id="gerenteRanking"><tr><td colspan="4">Aguardando consulta autorizada...</td></tr></tbody>
+        </table></div>
+        <p class="small" style="margin-top:16px">Os números medem inícios de compartilhamento, não comprovam envio no WhatsApp, cliques, compras ou vendas.</p>
+      </section>
+      <section id="gerenteCadastros" role="tabpanel" aria-labelledby="gerenteAbaCadastros" hidden>
+        <div class="section-title"><h2>Situação dos vendedores</h2><span class="small">Dados limitados à filial autorizada</span></div>
+        <p class="small">A situação do e-commerce é indicativa, baseada na última verificação do link do vendedor. Telefones completos não são exibidos nesta lista.</p>
+        <div id="gerenteListaCadastros" class="seller-grid"><div class="empty">Aguardando dados da filial...</div></div>
+      </section>
+    </div>
+  </section>
+</main>
+<dialog id="gerenteDialogo" aria-labelledby="gerenteDialogoTitulo">
+  <form id="gerenteFormSolicitacao">
+    <h2 id="gerenteDialogoTitulo">Solicitar cadastro ou revisão</h2>
+    <p class="small" id="gerenteSolicitacaoVendedor"></p>
+    <div class="field"><label for="gerenteTelefone">Telefone do vendedor (obrigatório)</label><input id="gerenteTelefone" type="tel" inputmode="tel" autocomplete="off" maxlength="19" placeholder="(DD) 9 1234-5678" required><span id="gerenteErroTelefone" class="small" role="status"></span></div>
+    <div class="field"><label for="gerenteTipo">Tipo de telefone (obrigatório)</label><select id="gerenteTipo" required><option value="">Selecione o tipo</option><option value="profissional">Profissional</option><option value="pessoal">Pessoal</option></select></div>
+    <div class="field"><label class="toggle" for="gerenteCT"><input type="checkbox" id="gerenteCT"><span>Contrato temporário:</span><span class="on">SIM</span><span class="off">NÃO</span></label></div>
+    <div class="field"><label for="gerenteObservacao">Observação (opcional)</label><textarea id="gerenteObservacao" rows="2" maxlength="300" placeholder="Informação útil para a equipe administrativa"></textarea></div>
+    <p class="small">O pedido será enviado para revisão. Não altera o cadastro do vendedor automaticamente.</p>
+    <div id="gerenteSolicitacaoStatus" class="status" role="status" hidden></div>
+    <div class="dialog-actions"><button class="btn" type="button" id="gerenteCancelar">Cancelar</button><button class="btn btn-primary" type="submit" id="gerenteEnviar">ENVIAR SOLICITAÇÃO</button></div>
+  </form>
+</dialog>
+<footer class="footer-note">Portal de Ofertas Martinello • Acesso individual e restrito por filial. Ambiente TESTE quando acessado pelo repositório de homologação.</footer>
+<script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
+<script src="shared/config.js?v=1.6.19"></script>
+<script src="shared/telefones.js?v=1.6.19-fix1"></script>
+<script src="model/firebase-config.js?v=1.6.19"></script>
+<script src="model/auth.js?v=1.6.19"></script>
+<script src="model/google-sheets.js?v=1.6.19"></script>
+<script src="presenter/gerentes-presenter.js?v=1.6.19-ger1"></script>
+</body>
+</html>
