@@ -1,16 +1,7 @@
-/**
- * Martinello Ofertas — API privada da base Vendedores (AMBIENTES ISOLADOS).
- * Cada projeto usa MART_V153_SHEET_ID de suas proprias Propriedades do Script.
- * A API aceita apenas ações explícitas e nunca recebe um ID de planilha do navegador.
- *
- * Observação de escopo: Apps Script Web Apps não têm contexto de planilha ativa.
- * Por isso, a API abre o documento pelo URL fixo e requer o escopo "spreadsheets".
- * O código valida a planilha fixa e o Firebase ID token no servidor antes de ler/gravar.
+/** API administrativa v1.6.19. Token Firebase e permissões conferidos no servidor.
+ * Configuração por projeto, em Script Properties:
+ * MART_V153_SHEET_ID, MART_FIREBASE_WEB_API_KEY, MART_V153_ADMIN_EMAIL, MART_AMBIENTE.
  */
-
-// Cada projeto Apps Script possui propriedades independentes, mantendo o MESMO Code.gs.
-// Configurar em Propriedades do script: MART_V153_SHEET_ID, MART_FIREBASE_WEB_API_KEY,
-// MART_V153_ADMIN_EMAIL, MART_AMBIENTE ('TESTE' ou 'OFICIAL').
 const MART_V153_TEST_SHEET_ID = String(PropertiesService.getScriptProperties().getProperty('MART_V153_SHEET_ID') || '').trim();
 const MART_V153_TEST_SHEET_URL = 'https://docs.google.com/spreadsheets/d/' + MART_V153_TEST_SHEET_ID + '/edit';
 const MART_V153_SHEET_NAME = 'Vendedores';
@@ -413,81 +404,6 @@ function sincronizarFiliaisV153_(ss, filiais) {
   return filiais.length;
 }
 
-function salvarVendedorV153_(p) {
-  const matricula = somenteDigitosV153_(p.matricula);
-  const nome = textoV153_(p.nome);
-  const filialDigitada = textoV153_(p.filial);
-  if (!/^\d{1,6}$/.test(filialDigitada) || Number(filialDigitada) === 0) throw new Error('Informe apenas o número da filial.');
-  const filial = String(Number(filialDigitada));
-  const telefone = somenteDigitosV153_(p.telefone);
-  if (!matricula || !nome) throw new Error('Matrícula e nome são obrigatórios.');
-  if (telefone && !telefoneValidoV153_(telefone)) throw new Error('Telefone inválido. Informe DDD e número com 10 ou 11 dígitos, ou o código 55 mais o telefone.');
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    const sh = obterAbaVendedoresV153_(obterPlanilhaVendedoresV153_());
-    const ultima = sh.getLastRow();
-    if (ultima < 2) throw new Error('A base Vendedores está vazia.');
-    const mats = sh.getRange(2, 1, ultima - 1, 1).getDisplayValues().map(r => somenteDigitosV153_(r[0]));
-    const indices = [];
-    mats.forEach((m, i) => { if (m === matricula) indices.push(i + 2); });
-    if (indices.length !== 1) throw new Error(indices.length ? 'Há matrículas duplicadas na base. Nenhuma alteração foi feita.' : 'Matrícula não encontrada na base Vendedores. Atualize a lista.');
-
-    const linha = indices[0];
-    const atual = sh.getRange(linha, 1, 1, 13).getValues()[0];
-    const statusCadastro = textoV153_(p.statusCadastro).toUpperCase() || textoV153_(atual[7]) || 'ATIVO';
-    const statusTelefone = telefone ? (textoV153_(p.statusTelefone).toUpperCase() === 'VALIDADO' ? 'VALIDADO' : 'PENDENTE') : 'PENDENTE';
-    const agora = new Date().toISOString();
-    const codigoFilial = String(atual[3] == null ? '' : atual[3]); // campo legado preservado sem aparecer no formulário
-    const nova = [
-      matricula, nome, filial, codigoFilial,
-      telefone, normalizarTelefoneV153_(telefone),
-      atual[6] || 'OK', statusCadastro, atual[8] || 'MIGRACAO_BANCO_DE_DADOS',
-      atual[9] || agora, agora, textoV153_(p.observacoes, atual[11]), statusTelefone
-    ];
-    const camposAuditaveis = {1:'nome',2:'filial',4:'telefone',7:'situacao_cadastro',11:'observacoes',12:'validacao_telefone'};
-    const camposAlterados=Object.keys(camposAuditaveis).filter(k=>String(atual[Number(k)]||'')!==String(nova[Number(k)]||'')).map(k=>camposAuditaveis[k]);
-    gravarLinhaTextoV153_(sh, linha, nova);
-    return { matricula, linha, atualizadoEm: agora, statusTelefone, camposAlterados };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function criarVendedorV153_(p) {
-  const matricula = somenteDigitosV153_(p.matricula);
-  const nome = textoV153_(p.nome);
-  const filialDigitada = textoV153_(p.filial);
-  if (!/^\d{1,6}$/.test(filialDigitada) || Number(filialDigitada) === 0) throw new Error('Informe apenas o número da filial.');
-  const filial = String(Number(filialDigitada));
-  const telefone = somenteDigitosV153_(p.telefone);
-  if (!matricula || !nome || !filial) throw new Error('Matrícula, nome e filial são obrigatórios.');
-  if (telefone && !telefoneValidoV153_(telefone)) throw new Error('Telefone inválido. Informe DDD e número com 10 ou 11 dígitos, ou o código 55 mais o telefone.');
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  try {
-    const sh = obterAbaVendedoresV153_(obterPlanilhaVendedoresV153_());
-    const ultima = sh.getLastRow();
-    const existentes = ultima >= 2 ? sh.getRange(2, 1, ultima - 1, 1).getDisplayValues().map(r => somenteDigitosV153_(r[0])) : [];
-    if (existentes.includes(matricula)) throw new Error('Esta matrícula já existe na base. Atualize a lista e edite o cadastro existente.');
-    const agora = new Date().toISOString();
-    const statusTelefone = telefone && textoV153_(p.statusTelefone).toUpperCase() === 'VALIDADO' ? 'VALIDADO' : 'PENDENTE';
-    const linha = [
-      matricula, nome, filial, '',
-      telefone, normalizarTelefoneV153_(telefone),
-      'PENDENTE_VALIDACAO', 'ATIVO', 'CADASTRO_MANUAL',
-      agora, agora, textoV153_(p.observacoes), statusTelefone
-    ];
-    const destino = sh.getLastRow() + 1;
-    gravarLinhaTextoV153_(sh, destino, linha);
-    return { matricula, linha: destino, criadoEm: agora, statusTelefone };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
 /**
  * Importação controlada do relatório de funcionários.
  * Atualiza nome/filial/situação pela matrícula, preservando telefones, validações,
@@ -645,14 +561,6 @@ function textoV153_(valor, padrao) {
   return texto || String(padrao == null ? '' : padrao).trim();
 }
 function somenteDigitosV153_(valor) { return String(valor == null ? '' : valor).replace(/\D/g, ''); }
-function telefoneValidoV153_(numero) { return Telefones.valido(numero); }
-
-function normalizarTelefoneV153_(numero) {
-  let n = somenteDigitosV153_(numero);
-  if (!n) return '';
-  if ((n.length === 10 || n.length === 11) && n.indexOf('55') !== 0) n = '55' + n;
-  return n;
-}
 function mensagemErroV153_(erro) { return String(erro && erro.message ? erro.message : erro || 'Erro não identificado.').slice(0, 500); }
 
 // ============================================
@@ -1400,36 +1308,3 @@ function mart1618_listarTelefones_() {
     .filter(r=>/^\d{3,5}$/.test(String(r[0]||'')))};
 }
 function mart1618_foneValido_(s) { return Telefones.valido(s); }
-
-function mart1618_salvarTelefones_(p,ator) {
-  const matricula=somenteDigitosV153_(p.matricula);
-  if(!/^\d{3,5}$/.test(matricula))throw new Error('Matrícula inválida.');
-  const pessoal=somenteDigitosV153_(p.telefonePessoal),profissional=somenteDigitosV153_(p.telefoneProfissional);
-  for(const n of [pessoal,profissional])if(n&&!mart1618_foneValido_(n))throw new Error('Telefone deve ser celular brasileiro válido com 11 dígitos.');
-  if(pessoal&&profissional&&pessoal===profissional)throw new Error('Os dois telefones não podem ser iguais.');
-  const status=(n,s)=>n&&(String(s).toUpperCase()==='VALIDADO')?'VALIDADO':'PENDENTE';
-  const lock=LockService.getScriptLock();lock.waitLock(30000);
-  try {
-    const base=obterAbaVendedoresV153_(obterPlanilhaVendedoresV153_());
-    const mats=base.getLastRow()>1?base.getRange(2,1,base.getLastRow()-1,1).getDisplayValues().map(r=>somenteDigitosV153_(r[0])):[];
-    if(mats.filter(x=>x===matricula).length!==1)throw new Error('Matrícula ausente ou duplicada.');
-    const sh=mart1618_abaFones_(true);
-    const all=sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,8).getDisplayValues():[];
-    const rows=all.map((r,i)=>String(r[0])===matricula?i+2:-1).filter(x=>x>0);
-    if(rows.length>1)throw new Error('Matrícula duplicada em Telefones_Vendedores.');
-    // Nenhum telefone validado fica indisponível por importações de funcionários.
-    const atual=rows.length?all[rows[0]-2]:null;
-    if(atual && p.revision && String(atual[7]||'')!==String(p.revision))throw new Error('Os telefones foram alterados por outra conta. Atualize os dados.');
-    const fonesBase=base.getLastRow()>1?base.getRange(2,5,base.getLastRow()-1,1).getDisplayValues():[];
-    const limparNumero=x=>String(x||'').replace(/\D/g,'').replace(/^55(?=\d{11}$)/,'');
-    const numeroEmOutro=(numero)=>numero&&(all.some(r=>String(r[0])!==matricula && (limparNumero(r[1])===numero||limparNumero(r[4])===numero))
-      || mats.some((m,i)=>m!==matricula && limparNumero(fonesBase[i]?.[0])===numero));
-    if(numeroEmOutro(pessoal)||numeroEmOutro(profissional))throw new Error('Número já vinculado a outra matrícula. Corrija o conflito antes de salvar.');
-    const agora=new Date().toISOString();
-    const linha=[matricula,pessoal,status(pessoal,p.statusPessoal),String(p.declaraGrupoPessoal)==='true'?'SIM':'NAO',
-      profissional,status(profissional,p.statusProfissional),String(p.declaraGrupoProfissional)==='true'?'SIM':'NAO',agora];
-    const row=rows[0]||sh.getLastRow()+1;
-    sh.getRange(row,1,1,8).setNumberFormat('@').setValues([linha]);
-    return {matricula,atualizadoEm:agora};
-  } finally {lock.releaseLock();}
-}
