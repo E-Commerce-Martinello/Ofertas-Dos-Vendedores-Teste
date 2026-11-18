@@ -676,6 +676,7 @@
 <div class="admin-container">
     <div class="admin-atalhos">
         <a href="index.html" class="voltar-portal"><i class="fas fa-arrow-left"></i> VOLTAR AO PORTAL</a>
+        <a href="gerentes.html" class="voltar-portal" target="_blank" rel="noopener noreferrer"><i class="fas fa-user-tie" aria-hidden="true"></i> PORTAL DE GERENTES</a>
         <button type="button" class="tema-admin dark-mode-toggle" onclick="TEMA.toggle()" aria-label="Alternar modo claro ou escuro" title="Alternar tema"><i class="fas fa-moon"></i> <span>TEMA</span></button>
     </div>
 
@@ -707,7 +708,6 @@
                     <button class="logout-button" onclick="logout()">SAIR</button>
                 </div>
                 <div class="toolbar">
-                    <a href="gerentes.html" class="voltar-portal" target="_blank" rel="noopener noreferrer" aria-label="Abrir Portal de Gerentes em outra aba"><i class="fas fa-user-tie" aria-hidden="true"></i> PORTAL DE GERENTES</a>
                     <button class="btn-nova" id="btnNovaOfertaTopo" aria-label="Cadastrar nova oferta" title="Cadastrar nova oferta" onclick="mostrarNovaOferta()">
                         <i class="fas fa-plus" aria-hidden="true"></i><span class="nova-oferta-texto"> Nova oferta</span>
                     </button>
@@ -1091,6 +1091,47 @@
                   <div id="pedidosTelefoneStatus" class="vendor-last-update">Abra para consultar os pedidos.</div>
                   <div id="pedidosTelefoneLista" class="vendor-links-lista"></div>
                 </details>
+                <details class="vendor-tools" id="painelCadastroGerentes" ontoggle="if(this.open)CadastroGerentesPresenter.carregar()">
+                  <summary><span><i class="fas fa-user-tie"></i> CADASTRO DE GERENTES</span><span class="vendor-tools-help">Matrícula, nome, telefone e filial</span></summary>
+                  <p class="vendor-subtext">Cadastre os gerentes que poderão consultar os resultados da própria filial. O sistema encontra a filial pela matrícula informada.</p>
+                  <form id="cadastroGerentesForm" onsubmit="CadastroGerentesPresenter.salvar(event)" oninput="CadastroGerentesPresenter.sujo=true">
+                    <h3 id="cadastroGerenteTitulo">Cadastrar gerente</h3>
+                    <input id="cadastroGerenteRevision" type="hidden">
+                    <div class="cadastro-gerentes-form-grid">
+                      <div class="form-group">
+                        <label for="cadastroGerenteMatricula">Matrícula do gerente *</label>
+                        <input id="cadastroGerenteMatricula" type="text" inputmode="numeric" pattern="[0-9]{3,8}" maxlength="8" required placeholder="Ex.: 12345" autocomplete="off">
+                      </div>
+                      <div class="form-group">
+                        <label for="cadastroGerenteNome">Nome completo *</label>
+                        <input id="cadastroGerenteNome" type="text" maxlength="160" minlength="2" required placeholder="Nome do gerente" autocomplete="off">
+                      </div>
+                      <div class="form-group">
+                        <label for="cadastroGerenteTelefone">Telefone com DDD *</label>
+                        <input id="cadastroGerenteTelefone" type="tel" inputmode="numeric" maxlength="16" required placeholder="(65) 9 1234-5678" oninput="CadastroGerentesPresenter.telefoneInput()" autocomplete="off">
+                      </div>
+                      <div class="form-group">
+                        <label for="cadastroGerenteFilial">Filial *</label>
+                        <select id="cadastroGerenteFilial" required><option value="">Selecione uma filial</option></select>
+                      </div>
+                    </div>
+                    <label class="admin-switch-label" for="cadastroGerenteAtivo">
+                      <input id="cadastroGerenteAtivo" class="admin-switch" type="checkbox" checked onchange="CadastroGerentesPresenter.estadoAtivo()">
+                      <span class="admin-switch-state"><span class="switch-on">SIM</span><span class="switch-off">NÃO</span></span>
+                      <span id="cadastroGerenteEstado" class="admin-switch-description">ATIVO — acesso liberado</span>
+                    </label>
+                    <div class="cadastro-gerentes-acoes">
+                      <button id="cadastroGerenteSalvar" type="submit" class="btn-primary"><i class="fas fa-save"></i> SALVAR GERENTE</button>
+                      <button type="button" class="btn-outline" onclick="CadastroGerentesPresenter.novo()">NOVO / LIMPAR</button>
+                    </div>
+                  </form>
+                  <p id="cadastroGerentesStatus" class="vendor-status" role="status" aria-live="polite" hidden></p>
+                  <div class="form-group" style="margin-top:16px">
+                    <label for="cadastroGerentesBusca">Buscar gerente cadastrado</label>
+                    <input id="cadastroGerentesBusca" type="search" placeholder="Nome, matrícula, telefone ou filial" oninput="CadastroGerentesPresenter.renderizar()">
+                  </div>
+                  <div id="cadastroGerentesLista" class="cadastro-gerentes-lista"></div>
+                </details>
                 <details class="vendor-tools" id="painelSolicitacoesGerentes" ontoggle="if(this.open)GerentesSolicitacoesPresenter.carregar()">
                   <summary><span><i class="fas fa-user-tie"></i> SOLICITAÇÕES DE GERENTES</span><span class="vendor-tools-help">Cadastros, telefones e contratos temporários</span></summary>
                   <p class="vendor-subtext">Solicitações de gerentes autorizados. A aprovação não atualiza automaticamente o cadastro: revise o vendedor antes de concluir.</p>
@@ -1428,6 +1469,7 @@
     <script>FiliaisUI.ativarBuscas();</script>
 <script src="view/admin-components.js?v=1.6.19"></script>
     <script src="presenter/gerentes-solicitacoes-presenter.js?v=1.6.19-ger1"></script>
+    <script src="presenter/gerentes-cadastro-presenter.js?v=1.6.19-ger2"></script>
     <script src="model/admin-sync.js?v=1.6.19-ger1"></script>
 </body>
 </html>
