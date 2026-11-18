@@ -19,8 +19,12 @@ const GerentesAPI = {
       let dados;
       try { dados = await resposta.json(); }
       catch (_) { throw new Error('A API do gerente respondeu em formato inesperado.'); }
-      if (!resposta.ok || !dados.ok)
-        throw new Error(dados.erro || 'Não foi possível consultar o Portal de Gerentes.');
+      if (!resposta.ok || !dados.ok) {
+        const erro=String(dados.erro||'Não foi possível consultar o Portal de Gerentes.');
+        if (/a[cç][aã]o n[aã]o reconhecida|opera[cç][aã]o desconhecida/i.test(erro))
+          throw new Error('O Apps Script administrativo de TESTE ainda não reconhece o Portal de Gerentes. Publique a versão atual de Code.gs e Gerentes.gs e confira o /exec configurado no Worker.');
+        throw new Error(erro);
+      }
       if (dados.tipo !== 'MART_VENDEDORES_API' || dados.requestId !== requestId)
         throw new Error('Confirmação da API inválida.');
       return dados;
