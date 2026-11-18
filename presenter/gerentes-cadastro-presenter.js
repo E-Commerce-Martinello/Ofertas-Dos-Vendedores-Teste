@@ -93,11 +93,18 @@ const CadastroGerentesPresenter={
       const bloco=document.createElement('div');bloco.className='cadastro-gerentes-identidade';
       const titulo=document.createElement('strong');titulo.textContent=g.nome+' • '+g.matricula;
       const info=document.createElement('small');
-      info.textContent=(typeof FiliaisUI!=='undefined'?FiliaisUI.nome(g.filial):'Filial '+g.filial)
-        +' • '+Telefones.formato(g.telefone);
+      info.textContent=(typeof FiliaisUI!=='undefined'?FiliaisUI.nome(g.filial):'Filial '+g.filial);
+      const contato=document.createElement('span');
+      contato.className='cadastro-gerente-contato';
+      if(Telefones.valido(String(g.telefone||''))){
+        contato.textContent=Telefones.formato(g.telefone);
+      }else{
+        contato.textContent='Telefone pendente';
+        contato.classList.add('pendente');
+      }
       const status=document.createElement('span');status.className='cadastro-gerentes-status';
       status.dataset.ativo=String(g.ativo);status.textContent=g.ativo?'ATIVO':'INATIVO';
-      bloco.append(titulo,info,status);
+      bloco.append(titulo,info,contato,status);
       const editar=document.createElement('button');editar.type='button';editar.className='vendor-small-btn';
       editar.textContent='EDITAR';editar.addEventListener('click',()=>this.editar(g.matricula));
       card.append(bloco,editar);area.appendChild(card);
@@ -110,7 +117,7 @@ const CadastroGerentesPresenter={
     const nome=this.el('cadastroGerenteNome').value.trim();
     const filial=this.el('cadastroGerenteFilial').value;
     const telefone=this.el('cadastroGerenteTelefone').value.trim();
-    const msg=Telefones.erro(telefone,false);
+    const msg=Telefones.erro(telefone,true);
     if(!/^\d{3,8}$/.test(matricula)){this.status('Informe uma matrícula com 3 a 8 dígitos.',true);return;}
     if(nome.length<2||nome.length>160){this.status('Informe nome com 2 a 160 caracteres.',true);return;}
     if(!filial){this.status('Selecione uma filial da lista.',true);return;}
