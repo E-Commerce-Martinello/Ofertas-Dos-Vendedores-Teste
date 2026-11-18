@@ -625,7 +625,7 @@ function listarEventosPortalV1632_(payload) {
   const agora = Date.now();
   const inicio = periodo === 'hoje' ? 0 : agora - Number(periodo) * 86400000;
   const hojeLocal = periodo === 'hoje'
-    ? Utilities.formatDate(new Date(agora), 'America/Cuiaba', 'yyyyMMdd') : '';
+    ? Utilities.formatDate(new Date(agora), 'America/Sao_Paulo', 'yyyyMMdd') : '';
   const eventos = [];
   for (const linha of valores) {
     const ms = Number(linha[2]);
@@ -633,7 +633,7 @@ function listarEventosPortalV1632_(payload) {
     const rubi = String(linha[5] || '').replace(/\D/g, '');
     if (!Number.isFinite(ms) || ms <= 0 || ms > agora + 60000) continue;
     if (periodo === 'hoje') {
-      if (Utilities.formatDate(new Date(ms), 'America/Cuiaba', 'yyyyMMdd') !== hojeLocal) continue;
+      if (Utilities.formatDate(new Date(ms), 'America/Sao_Paulo', 'yyyyMMdd') !== hojeLocal) continue;
     } else if (ms < inicio) continue;
     const tipo=String(linha[6]||'');
     if(tipo==='acesso_portal') {
@@ -661,7 +661,7 @@ function listarEventosPortalV1632_(payload) {
       const ms=Number(r[2]);
       if(!Number.isFinite(ms) || ms<=0 || ms>agora+60000)continue;
       if(periodo==='hoje'){
-        if(Utilities.formatDate(new Date(ms),'America/Cuiaba','yyyyMMdd')!==hojeLocal)continue;
+        if(Utilities.formatDate(new Date(ms),'America/Sao_Paulo','yyyyMMdd')!==hojeLocal)continue;
       }else if(ms<inicio)continue;
       const tipo=String(r[3]||'');
       const campanha=mart1614_slug_(r[6]);
@@ -990,7 +990,7 @@ function mart167_registrarContato_(payload, ator) {
   try {
     const aba = mart167_aba_('Historico_Contatos', MART167_CONTATO_HEADERS);
     // Evitar dupla marcação no mesmo dia para a mesma matrícula/oferta.
-    const hoje = Utilities.formatDate(new Date(), 'America/Cuiaba', 'yyyy-MM-dd');
+    const hoje = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd');
     const last = aba.getLastRow();
     if (last > 1) {
       const qtd = Math.min(500, last - 1);
@@ -998,7 +998,7 @@ function mart167_registrarContato_(payload, ator) {
       const duplicado = recentes.some(l => {
         if (String(l[1]) !== rubi || String(l[3]) !== ofertaId || String(l[4]) !== 'MARCADO_PELO_OPERADOR' || !l[7]) return false;
         const data = l[7] instanceof Date ? l[7] : new Date(l[7]);
-        return !isNaN(data.getTime()) && Utilities.formatDate(data, 'America/Cuiaba', 'yyyy-MM-dd') === hoje;
+        return !isNaN(data.getTime()) && Utilities.formatDate(data, 'America/Sao_Paulo', 'yyyy-MM-dd') === hoje;
       });
       if (duplicado) return { registrado:false, duplicado:true, matricula:rubi };
     }
