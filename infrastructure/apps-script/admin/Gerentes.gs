@@ -70,12 +70,14 @@ function mart20_listarCadastroGerentes_(){
 
 function mart20_salvarCadastroGerente_(p){
   const matricula=String(p.matricula||'').trim(),nome=String(p.nome||'').replace(/[\x00-\x1f\x7f]/g,' ').trim();
-  const filial=mart20_filial_(p.filial),telefone=Telefones.numero(String(p.telefone||''));
+  const filial=mart20_filial_(p.filial);
+  const telefoneInformado=String(p.telefone||'').trim();
+  const telefone=telefoneInformado?Telefones.numero(telefoneInformado):'';
   const revision=String(p.revision||''),ativo=p.ativo===true;
   if(!/^\d{3,8}$/.test(matricula))throw new Error('Matrícula deve conter de 3 a 8 dígitos.');
   if(nome.length<2||nome.length>160||/^[=+@-]/.test(nome))throw new Error('Informe um nome válido (até 160 caracteres).');
   if(!filial)throw new Error('Selecione uma filial válida.');
-  if(!telefone)throw new Error('Informe um celular com DDD brasileiro válido.');
+  if(telefoneInformado&&!telefone)throw new Error('Se informar telefone, use celular brasileiro com DDD válido.');
   if(revision&&(!/^\d{4}-/.test(revision)||revision.length>45))
     throw new Error('Revisão do gerente inválida.');
   const lock=LockService.getScriptLock();lock.waitLock(15000);
@@ -259,12 +261,15 @@ function mart20_listarSolicitacoesGerentes_(){
 
 function mart20_criarSolicitacaoGerente_(p,acesso){
   const matricula=String(p.matriculaVendedor||'').replace(/\D/g,'');
-  const numero=Telefones.numero(String(p.telefone||''));
-  const tipo=String(p.tipo||'').toLowerCase();
-  if(!/^\d{3,8}$/.test(matricula)||!numero||!['pessoal','profissional'].includes(tipo))
-    throw new Error('Informe o vendedor, um celular com DDD válido e o tipo de telefone.');
   const ct=p.contratoTemporario===true;
-  const observacao=String(p.observacao||'').replace(/[\x00-\x1f\x7f]+/g,' ').trim().slice(0,300);
+  // CT Temporário é apenas classificação para a equipe; não coleta telefone.
+  const numero=ct?'':Telefones.numero(String(p.telefone||''));
+  const tipo=ct?'':String(p.tipo||'').toLowerCase();
+  if(!/^\d{3,8}$/.test(matricula))
+    throw new Error('Informe a matrícula do vendedor.');
+  if(!ct&&(!numero||!['pessoal','profissional'].includes(tipo)))
+    throw new Error('Informe um celular com DDD válido e o tipo de telefone.');
+  const observacao=ct?'':String(p.observacao||'').replace(/[\x00-\x1f\x7f]+/g,' ').trim().slice(0,300);
   if(/^[=+\-@]/.test(observacao))throw new Error('Observação inválida.');
   const lock=LockService.getScriptLock();lock.waitLock(30000);
   try{
@@ -276,7 +281,8 @@ function mart20_criarSolicitacaoGerente_(p,acesso){
     const n=sh.getLastRow()>1?Math.min(1000,sh.getLastRow()-1):0;
     const atuais=n?sh.getRange(sh.getLastRow()-n+1,1,n,MART20_SOLICITACOES_CAB.length).getDisplayValues():[];
     const abertas=atuais.filter(r=>['PENDENTE','CT_TEMPORARIO','EM_ANALISE'].includes(String(r[10]||'')));
-    const duplicado=abertas.find(r=>String(r[5])===matricula&&String(r[7])===numero&&r[8]===tipo);
+    const duplicado=abertas.find(r=>String(r[5])===matricula&&
+      (ct?String(r[9])==='SIM':String(r[9])!=='SIM'&&String(r[7])===numero&&r[8]===tipo));
     if(duplicado)return {registrado:false,duplicado:true,id:String(duplicado[0])};
     const hoje=Utilities.formatDate(new Date(),MART20_TZ,'yyyy-MM-dd');
     const totalDia=atuais.filter(r=>{
