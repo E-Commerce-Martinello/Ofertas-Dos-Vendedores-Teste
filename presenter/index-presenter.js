@@ -298,7 +298,7 @@ const IndexPresenter = {
             // A classificação vem da planilha do ambiente, por consulta pública sem dados pessoais.
             // Em caso de falha de rede, NUNCA presumimos que uma matrícula esteja ativa.
             const vendedorAtivo = await TelefonePortal.consultarMatricula(cod);
-            if(vendedorAtivo===false)await this._avisarNaoVendedor(cod);
+            // O aviso será exibido depois de preparar a mensagem, imediatamente antes do compartilhamento.
             else if(vendedorAtivo!==true)UI.erro('Não foi possível verificar a matrícula. Por segurança, será usado o link padrão da Martinello.');
             if (vendedorAtivo === true) {
                 const continuar = await TelefonePortal.garantir(cod);
@@ -315,6 +315,7 @@ const IndexPresenter = {
                 await API.rastrear(cod, getBrowserName());
                 await Promise.race([registro, new Promise(resolve => setTimeout(resolve, 1200))]);
             }
+            if(vendedorAtivo===false)await this._avisarNaoVendedor(cod);
             await API.compartilhar(msg, oferta.urlImagem || 'img/produto.png');
         } catch (e) {
             console.error('Falha na preparação do compartilhamento:', e);
