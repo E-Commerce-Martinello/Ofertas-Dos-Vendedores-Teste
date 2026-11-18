@@ -5,10 +5,10 @@
 ## O que mudou
 
 - Admin: atalho **PORTAL DE GERENTES** ao lado de **VOLTAR AO PORTAL**, abrindo `gerentes.html` em nova aba, **sem UTM ou parâmetros de rastreio**.
-- Admin → **Vendedores → Cadastro de gerentes**: cadastrar/editar matrícula, nome, celular, filial e situação ATIVO/INATIVO, sem abrir o Google Sheets. A lista apresenta todos os gerentes e oferece busca e edição.
+- Admin → **Vendedores → Cadastro de gerentes**: cadastrar/editar matrícula, nome, celular opcional, filial e situação ATIVO/INATIVO, sem abrir o Google Sheets. A lista apresenta todos os gerentes e oferece busca e edição.
 - Gerente: digita somente a matrícula cadastrada. Não é necessário login Google.
 - A filial é **sempre definida no servidor**, pela aba `Gerentes_Autorizados`, nunca por uma filial informada no navegador.
-- Página recebe apenas ranking, status e dados limitados a essa filial. Nenhum telefone completo de vendedor é retornado no painel. Solicitações exigem um telefone digitado e tipo pessoal/profissional; vão à fila administrativa sem editar cadastros.
+- Página recebe apenas ranking, status e dados limitados a essa filial. Nenhum telefone completo de vendedor é retornado no painel. Solicitações comuns exigem telefone digitado e tipo pessoal/profissional; CT Temporário não exige telefone nem outros campos e vai à fila administrativa sem editar cadastros.
 - **Aviso importante:** matrícula não autentica uma pessoa. Quem descobrir uma matrícula ativa poderá ver resultados e nomes/status da filial e criar solicitações em nome dela. O registro no Sheets identifica **a matrícula informada**, não comprova o remetente. Antes de usar com dados reais, considere reintroduzir autenticação ou restringir a rede de acesso.
 
 ## Arquivos finais para copiar (homologação)
@@ -29,7 +29,7 @@
 2. No Apps Script administrativo de TESTE, substitua `Code.gs`, `Refinamento.gs`, `Telefones.gs` e o `appsscript.json` pelos correspondentes atuais. Crie/atualize `Gerentes.gs` no **mesmo projeto administrativo** (não no coletor público).
 3. Confira as Script Properties de TESTE: `MART_AMBIENTE=TESTE`, `MART_V153_SHEET_ID`, `MART_FIREBASE_WEB_API_KEY`, `MART_V153_ADMIN_EMAIL`. O login do ADMIN continua usando o Firebase e exigindo autorização. No editor, confira serviço avançado **Google Sheets API v4**.
 4. Execute `diagnosticarBackendV1619`; valide o diagnóstico. Depois execute `prepararEstruturaGerentesV1619` **com a conta administradora principal**. Ela cria as abas, se ausentes; se `Gerentes_Autorizados` já tiver o esquema antigo de cinco colunas, adiciona somente a coluna `telefone` ao final, sem regravar os registros.
-5. Acesse **Admin → Vendedores → Cadastro de gerentes** e cadastre matrícula, nome, telefone e filial. O admin salva diretamente na planilha TESTE. Só matrículas cadastradas como ATIVO poderão acessar a página de gerentes.
+5. Acesse **Admin → Vendedores → Cadastro de gerentes** e cadastre matrícula, nome, filial e, opcionalmente, telefone. O admin salva diretamente na planilha TESTE. Só matrículas cadastradas como ATIVO poderão acessar a página de gerentes.
 6. Em Apps Script → **Implantar → Gerenciar implantações → Editar → Nova versão**, publique a atualização da implantação administrativa de TESTE existente. Preserve o `/exec`.
 7. No Worker administrativo de TESTE, substitua o código inteiro por `worker.mjs` e publique. Preserve a variável `APPS_SCRIPT_URL` com o `/exec` da API **administrativa de TESTE**.
 8. Teste acesso à página pelos links abaixo, com matrículas válidas, desativadas e inexistentes. Confira que outras ações administrativas continuam recusando solicitações sem token.
@@ -45,7 +45,7 @@
 | E | `atualizado_em` | Data/hora gerada automaticamente |
 | F | `telefone` | 65998124567 |
 
-**Não precisa editar manualmente a planilha.** O painel administrativo permite cadastrar, localizar, editar e ativar/desativar gerentes. Os telefones são validados como celular brasileiro de 11 dígitos e gravados como texto, sem máscaras.
+**Não precisa editar manualmente a planilha.** O painel administrativo permite cadastrar, localizar, editar e ativar/desativar gerentes. O telefone do gerente é opcional. Quando informado, é validado como celular brasileiro de 11 dígitos e gravado como texto, sem máscaras. Quando vazio, o admin mostra "Telefone pendente" em amarelo.
 
 A filial é obtida dessa tabela e validada contra a lista de filiais do Sheets. Não é inferida do nome ou telefone do grupo. Gerentes que não aparecem em `Vendedores` podem acessar, desde que estejam ativos nesta base.
 
@@ -69,7 +69,7 @@ Os links são relativos, sem `utm_source`, `utm_medium`, `utm_campaign` nem outr
 ## Checklist de homologação
 
 - [ ] Abrir portal a partir do admin, junto a VOLTAR AO PORTAL; não há UTM na URL.
-- [ ] No admin → Vendedores → Cadastro de gerentes, inserir matrícula, nome, telefone e filial; salvar, editar e desativar.
+- [ ] No admin → Vendedores → Cadastro de gerentes, inserir matrícula, nome e filial, com ou sem telefone; salvar, editar e desativar.
 - [ ] A matrícula salva consulta somente a filial definida na base e a desativação impede novas consultas.
 - [ ] Com base anterior de cinco colunas, executar preparação sem perder dados e confirmar a nova coluna F; se o cabeçalho não corresponder, parar sem regravar registros.
 - [ ] Inserir matrícula ativa cadastrada: carregar **somente** vendedores, ranking e status da sua filial, sem Google.
@@ -77,7 +77,7 @@ Os links são relativos, sem `utm_source`, `utm_medium`, `utm_campaign` nem outr
 - [ ] Alterar payload para matrícula de outra filial: somente os dados vinculados àquela matrícula aparecem; **isso não autentica quem informa a matrícula**.
 - [ ] Chamar `listarVendedores`, `salvarCadastroCompleto` ou `listarSolicitacoesGerentes` sem token: acesso negado. Admin Google continua funcionando.
 - [ ] Tentar enviar pedido para vendedor de outra filial: acesso recusado.
-- [ ] Enviar pedido válido pessoal/profissional, com e sem CT Temporário; pedido aparece no admin e não muda telefone/cadastro automaticamente.
+- [ ] Enviar pedido comum com telefone/tipo; enviar CT Temporário sem telefone, tipo ou observação; ambos aparecem no admin, sem alterar cadastros automaticamente.
 - [ ] No admin, revisar e concluir pedido de teste; conferência periódica sem recarregar a página.
 - [ ] Conferir que todas as chamadas apontam exclusivamente para planilha, Worker e Apps Script **TESTE**.
 - [ ] Testar telas em desktop e celular.
@@ -102,3 +102,13 @@ Não copie arquivos de `infrastructure/registro-atual/`: são snapshots históri
 - Instalação: copiar os quatro arquivos Apps Script Admin atualizados e conferir o manifesto, executar `prepararEstruturaGerentesV1619`, editar a implantação existente escolhendo **Nova versão**, atualizar o Worker TESTE e testar com uma matrícula de gerente cadastrada.
 - Após a publicação do GitHub Pages, use Ctrl+F5 no navegador para substituir os scripts antigos. Confira na aba Network que `gerentes-presenter.js?v=1.6.19-mat3` foi carregado.
 - Nenhuma regra nova do Firebase é necessária para corrigir estes três erros. O ambiente OFICIAL permanece sem alterações.
+
+## Refinamento de layout e cadastro (18/11/2026)
+
+- Portal de Gerentes usa a mesma paleta claro/escuro do admin, compartilhando a preferência local `tema`.
+- No celular, o ranking de vendedores vira cartões verticais. Não há tabela com largura mínima e rolagem horizontal.
+- Filtros de mês, campanha e busca ficam **apenas na aba Resultados**. Cadastros exibe sua lista completa.
+- No pedido de cadastro, **Contrato temporário** fica no topo. Ativado, oculta e desabilita telefone, tipo e observação. O Apps Script aceita o CT sem esses campos e marca `CT_TEMPORARIO`; isso não cria cadastro nem telefone.
+- No painel administrativo, pedidos CT não oferecem abertura de revisão de telefone, mas continuam permitindo concluir ou rejeitar.
+- Na visualização dos vendedores, `NAO_ENCONTRADO_NO_RELATORIO` aparece como **Sem telefone**; o estado visual `INCONCLUSIVO` do e-commerce aparece como **Sem cadastro e-commerce**, em vermelho. Essa legenda é **operacional** e não prova que o vendedor não possua cadastro: confirmações dependem da fonte de verificação dos links.
+- Para efetivar o contrato temporário sem telefone e o telefone opcional do gerente, atualize o `Gerentes.gs` no Apps Script de homologação e faça uma **Nova versão** na implantação existente. Mudança no GitHub sozinha não atualiza o Apps Script.
