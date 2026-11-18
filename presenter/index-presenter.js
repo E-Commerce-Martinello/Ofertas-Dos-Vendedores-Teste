@@ -262,7 +262,7 @@ const IndexPresenter = {
             const atualizar=()=>{if(contador)contador.textContent=String(restante);};
             atualizar();
             this._avisoTimer=setInterval(()=>{
-                if(document.hidden||card.matches(':hover')||card.contains(document.activeElement))return;
+                if(document.hidden)return;
                 restante--;
                 atualizar();
                 if(restante<=0)this.fecharAvisoNaoVendedor();
