@@ -93,3 +93,12 @@ Os links são relativos, sem `utm_source`, `utm_medium`, `utm_campaign` nem outr
 Depois de publicar, execute `prepararEstruturaGerentesV1619` **uma vez**, com a conta administradora de TESTE. Essa função cria as abas necessárias ou adiciona a coluna de telefone à tabela legada, sem apagar matrículas existentes. Em seguida, salve o cadastro pelo admin e teste a matrícula na página de gerentes.
 
 Não copie arquivos de `infrastructure/registro-atual/`: são snapshots históricos anteriores às alterações.
+
+## Complemento: correções de 18/11/2026
+
+- Filiais: `model/filiais.js` remove códigos repetidos vindos da planilha; `presenter/vendors-presenter.js` usa uma única versão do nome da filial. As referências em `admin.html` foram atualizadas para `fix4`.
+- Portal de Gerentes: `gerentes.html` usa referências `mat3` de `GerentesAPI` e do presenter, para substituir o JavaScript antigo que ainda chamava `GoogleSheetsService`.
+- A mensagem `Ação não reconhecida` significa que o endpoint atualmente utilizado ainda não possui a ação `salvarCadastroGerente`; ela já existe no `Code.gs` do repositório. É necessário atualizar a implantação administrativa do Apps Script e confirmar `APPS_SCRIPT_URL` no Worker TESTE.
+- Instalação: copiar os quatro arquivos Apps Script Admin atualizados e conferir o manifesto, executar `prepararEstruturaGerentesV1619`, editar a implantação existente escolhendo **Nova versão**, atualizar o Worker TESTE e testar com uma matrícula de gerente cadastrada.
+- Após a publicação do GitHub Pages, use Ctrl+F5 no navegador para substituir os scripts antigos. Confira na aba Network que `gerentes-presenter.js?v=1.6.19-mat3` foi carregado.
+- Nenhuma regra nova do Firebase é necessária para corrigir estes três erros. O ambiente OFICIAL permanece sem alterações.
