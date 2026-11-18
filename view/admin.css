@@ -116,3 +116,26 @@ body .catalogo-item img,body .catalogo-destaques img{object-fit:cover}
  body label.admin-switch-label .admin-switch-description{grid-column:1 / -1;grid-row:2;padding-left:0}
  body #btnNovaOfertaTopo{right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom))}
 }
+
+/* Cadastro de gerentes: bloco único, legível em desktop e celulares. */
+body .admin-atalhos{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+body .admin-atalhos .tema-admin{margin-left:auto}
+body #painelCadastroGerentes .cadastro-gerentes-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+body #painelCadastroGerentes .cadastro-gerentes-form-grid .form-group{min-width:0;margin:0}
+body #painelCadastroGerentes .cadastro-gerentes-acoes{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+body #painelCadastroGerentes .cadastro-gerentes-acoes>button{flex:1 1 170px}
+body #painelCadastroGerentes #cadastroGerentesStatus{margin:12px 0}
+body #painelCadastroGerentes .cadastro-gerentes-lista{display:grid;gap:9px}
+body #painelCadastroGerentes .cadastro-gerentes-item{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--a-subtle);border:1px solid var(--a-line);border-radius:10px;padding:14px}
+body #painelCadastroGerentes .cadastro-gerentes-identidade{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
+body #painelCadastroGerentes .cadastro-gerentes-identidade small{color:var(--a-muted)}
+body #painelCadastroGerentes .cadastro-gerentes-status{font-size:11px;font-weight:800}
+body #painelCadastroGerentes .cadastro-gerentes-status[data-ativo=true]{color:var(--a-good)}
+body #painelCadastroGerentes .cadastro-gerentes-status[data-ativo=false]{color:var(--a-warn)}
+body #painelCadastroGerentes .cadastro-gerentes-item>button{flex:0 0 auto}
+@media(max-width:650px){
+  body .admin-atalhos>a{flex:1 1 135px;justify-content:center;white-space:normal;text-align:center}
+  body .admin-atalhos .tema-admin{margin-left:0}
+  body #painelCadastroGerentes .cadastro-gerentes-form-grid{grid-template-columns:minmax(0,1fr)}
+  body #painelCadastroGerentes .cadastro-gerentes-item>button{flex:1 1 100%}
+}
