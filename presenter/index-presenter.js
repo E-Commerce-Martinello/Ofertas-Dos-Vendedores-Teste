@@ -254,7 +254,7 @@ const IndexPresenter = {
         continuar?.focus({preventScroll:true});
         // O aviso é mostrado ANTES de tentar abrir a tela de compartilhamento.
         // Continua após confirmação/fechamento ou, automaticamente, após 20 segundos.
-        await new Promise(resolve=>{
+        return await new Promise(resolve=>{
             this._avisoResolucao=resolve;
             clearInterval(this._avisoTimer);
             let restante=20;
@@ -265,18 +265,18 @@ const IndexPresenter = {
                 if(document.hidden)return;
                 restante--;
                 atualizar();
-                if(restante<=0)this.fecharAvisoNaoVendedor();
+                if(restante<=0)this.fecharAvisoNaoVendedor('tempo');
             },1000);
         });
     },
-    fecharAvisoNaoVendedor(){
+    fecharAvisoNaoVendedor(motivo='continuar'){
         clearInterval(this._avisoTimer);
         this._avisoTimer=null;
         const card=document.getElementById('avisoNaoVendedor');
         if(card)card.hidden=true;
         const resolver=this._avisoResolucao;
         this._avisoResolucao=null;
-        if(resolver)resolver();
+        if(resolver)resolver(motivo);
     },
 
     async enviar() {
@@ -299,7 +299,7 @@ const IndexPresenter = {
             // Em caso de falha de rede, NUNCA presumimos que uma matrícula esteja ativa.
             const vendedorAtivo = await TelefonePortal.consultarMatricula(cod);
             // O aviso será exibido depois de preparar a mensagem, imediatamente antes do compartilhamento.
-            else if(vendedorAtivo!==true)UI.erro('Não foi possível verificar a matrícula. Por segurança, será usado o link padrão da Martinello.');
+            if(vendedorAtivo!==true&&vendedorAtivo!==false)UI.erro('Não foi possível verificar a matrícula. Por segurança, será usado o link padrão da Martinello.');
             if (vendedorAtivo === true) {
                 const continuar = await TelefonePortal.garantir(cod);
                 if (!continuar) return;
@@ -315,7 +315,15 @@ const IndexPresenter = {
                 await API.rastrear(cod, getBrowserName());
                 await Promise.race([registro, new Promise(resolve => setTimeout(resolve, 1200))]);
             }
-            if(vendedorAtivo===false)await this._avisarNaoVendedor(cod);
+            if(vendedorAtivo===false) {
+                const resultadoAviso=await this._avisarNaoVendedor(cod);
+                if(resultadoAviso==='tempo') {
+                    // O Web Share precisa de um gesto real do usuário. Não tente abrir
+                    // automaticamente uma janela após 20 s de espera.
+                    UI.ok('Aviso fechado. Toque novamente em GERAR E COMPARTILHAR para enviar a oferta.');
+                    return;
+                }
+            }
             await API.compartilhar(msg, oferta.urlImagem || 'img/produto.png');
         } catch (e) {
             console.error('Falha na preparação do compartilhamento:', e);
