@@ -51,6 +51,7 @@ function montar(){
     obterAbaVendedoresV153_:()=>folha('Vendedores'),
     MART_V153_HEADERS:dados.Vendedores[0],
     Telefones,LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},
+    CacheService:{getScriptCache:()=>({get:()=>null,put:()=>{}})},
     Utilities:{formatDate,getUuid:()=> 'abc12345-aaaa-aaaa-aaaa-abcdef123456'},
     mart19_contexto_:()=>({grupo:{participantes:[],identificacoes:[],disponivel:true},
       registros:dados.Vendedores.slice(1).map(r=>({matricula:r[0],numero:r[4],statusTelefone:r[12],telefonesExtras:{}}))}),
