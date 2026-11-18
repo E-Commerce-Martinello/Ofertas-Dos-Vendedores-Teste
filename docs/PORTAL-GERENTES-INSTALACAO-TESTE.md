@@ -4,7 +4,8 @@
 
 ## O que mudou
 
-- Admin: atalho **PORTAL DE GERENTES** no cabeçalho, abrindo `gerentes.html` em nova aba, **sem UTM ou parâmetros de rastreio**.
+- Admin: atalho **PORTAL DE GERENTES** ao lado de **VOLTAR AO PORTAL**, abrindo `gerentes.html` em nova aba, **sem UTM ou parâmetros de rastreio**.
+- Admin → **Vendedores → Cadastro de gerentes**: cadastrar/editar matrícula, nome, celular, filial e situação ATIVO/INATIVO, sem abrir o Google Sheets. A lista apresenta todos os gerentes e oferece busca e edição.
 - Gerente: digita somente a matrícula cadastrada. Não é necessário login Google.
 - A filial é **sempre definida no servidor**, pela aba `Gerentes_Autorizados`, nunca por uma filial informada no navegador.
 - Página recebe apenas ranking, status e dados limitados a essa filial. Nenhum telefone completo de vendedor é retornado no painel. Solicitações exigem um telefone digitado e tipo pessoal/profissional; vão à fila administrativa sem editar cadastros.
@@ -14,7 +15,7 @@
 
 | Serviço | Arquivos |
 |---|---|
-| Site GitHub (já alterado) | [admin.html](../admin.html), [gerentes.html](../gerentes.html), [model/gerentes-api.js](../model/gerentes-api.js), [presenter/gerentes-presenter.js](../presenter/gerentes-presenter.js) |
+| Site GitHub (já alterado) | [admin.html](../admin.html), [gerentes.html](../gerentes.html), [model/gerentes-api.js](../model/gerentes-api.js), [presenter/gerentes-presenter.js](../presenter/gerentes-presenter.js), [presenter/gerentes-cadastro-presenter.js](../presenter/gerentes-cadastro-presenter.js) |
 | Apps Script **ADMIN** de TESTE | [Code.gs](../infrastructure/apps-script/admin/Code.gs), [Refinamento.gs](../infrastructure/apps-script/admin/Refinamento.gs), [Telefones.gs](../infrastructure/apps-script/admin/Telefones.gs), [Gerentes.gs](../infrastructure/apps-script/admin/Gerentes.gs), [appsscript.json](../infrastructure/apps-script/admin/appsscript.json) |
 | Cloudflare Worker **ADMIN** de TESTE | [worker.mjs](../infrastructure/cloudflare/worker.mjs) |
 | Apps Script **COLETOR** de TESTE | Sem mudanças específicas desta opção de matrícula. Se ainda não implantou a v1.6.19 anterior, veja o [guia geral](../infrastructure/GUIA-COPIAR-BACKEND-TESTE-v1.6.19.md). |
@@ -27,13 +28,13 @@
 1. Salve o backup dos arquivos atuais no Apps Script administrativo e Worker de TESTE, bem como uma cópia da planilha de homologação.
 2. No Apps Script administrativo de TESTE, substitua `Code.gs`, `Refinamento.gs`, `Telefones.gs` e o `appsscript.json` pelos correspondentes atuais. Crie/atualize `Gerentes.gs` no **mesmo projeto administrativo** (não no coletor público).
 3. Confira as Script Properties de TESTE: `MART_AMBIENTE=TESTE`, `MART_V153_SHEET_ID`, `MART_FIREBASE_WEB_API_KEY`, `MART_V153_ADMIN_EMAIL`. O login do ADMIN continua usando o Firebase e exigindo autorização. No editor, confira serviço avançado **Google Sheets API v4**.
-4. Execute `diagnosticarBackendV1619`; valide o diagnóstico. Depois execute `prepararEstruturaGerentesV1619` **com a conta administradora principal**. Ela apenas cria/confere as duas abas abaixo.
-5. Preencha manualmente a aba `Gerentes_Autorizados` com matrícula, nome, filial e status. **Apenas matrícula cadastrada como ATIVO** funciona na página de gerentes.
+4. Execute `diagnosticarBackendV1619`; valide o diagnóstico. Depois execute `prepararEstruturaGerentesV1619` **com a conta administradora principal**. Ela cria as abas, se ausentes; se `Gerentes_Autorizados` já tiver o esquema antigo de cinco colunas, adiciona somente a coluna `telefone` ao final, sem regravar os registros.
+5. Acesse **Admin → Vendedores → Cadastro de gerentes** e cadastre matrícula, nome, telefone e filial. O admin salva diretamente na planilha TESTE. Só matrículas cadastradas como ATIVO poderão acessar a página de gerentes.
 6. Em Apps Script → **Implantar → Gerenciar implantações → Editar → Nova versão**, publique a atualização da implantação administrativa de TESTE existente. Preserve o `/exec`.
 7. No Worker administrativo de TESTE, substitua o código inteiro por `worker.mjs` e publique. Preserve a variável `APPS_SCRIPT_URL` com o `/exec` da API **administrativa de TESTE**.
 8. Teste acesso à página pelos links abaixo, com matrículas válidas, desativadas e inexistentes. Confira que outras ações administrativas continuam recusando solicitações sem token.
 
-### Gerentes_Autorizados — cinco colunas exatas
+### Gerentes_Autorizados — seis colunas exatas
 
 | Coluna | Cabeçalho | Exemplo fictício |
 |---|---|---|
@@ -41,13 +42,16 @@
 | B | `nome` | Gerente Exemplo |
 | C | `filial_autorizada` | 1 |
 | D | `ativo` | ATIVO |
-| E | `atualizado_em` | 2026-11-18 |
+| E | `atualizado_em` | Data/hora gerada automaticamente |
+| F | `telefone` | 65998124567 |
 
-A filial é obtida dessa tabela; **não** é inferida de nome ou telefone do grupo WhatsApp. Gerentes que não aparecem na tabela `Vendedores` continuam podendo acessar, desde que constem aqui.
+**Não precisa editar manualmente a planilha.** O painel administrativo permite cadastrar, localizar, editar e ativar/desativar gerentes. Os telefones são validados como celular brasileiro de 11 dígitos e gravados como texto, sem máscaras.
 
-O status de gerente deve ser `ATIVO`. Outros valores desativam o acesso. Matrícula duplicada bloqueia a consulta.
+A filial é obtida dessa tabela e validada contra a lista de filiais do Sheets. Não é inferida do nome ou telefone do grupo. Gerentes que não aparecem em `Vendedores` podem acessar, desde que estejam ativos nesta base.
 
-**Se você já criou `Gerentes_Autorizados` com as antigas seis colunas (incluindo `email_autorizado`):** não substitua dados por cima. Após backup, ajuste manualmente os cabeçalhos/colunas para as cinco colunas novas; o código detecta divergência e interrompe em vez de reinterpretar a coluna como filial.
+**Migração:** se você já criou a tabela de cinco colunas (`matricula_gerente, nome, filial_autorizada, ativo, atualizado_em`), `prepararEstruturaGerentesV1619` apenas acrescenta F=`telefone`. Os números antigos ficam vazios até você editá-los pelo admin; o cadastro não perde matrícula e filial. **Se criou uma tabela antiga de seis colunas contendo `email_autorizado`**, não substitua dados por cima: faça backup e adapte o cabeçalho/posições manualmente antes da preparação, pois a função recusa esquemas desconhecidos por segurança.
+
+A situação `INATIVO` bloqueia imediatamente as consultas seguintes com aquela matrícula. A matrícula de um gerente já cadastrado não pode ser alterada; para trocar, faça uma nova matrícula e desative a anterior.
 
 ### Solicitações
 
@@ -64,7 +68,10 @@ Os links são relativos, sem `utm_source`, `utm_medium`, `utm_campaign` nem outr
 
 ## Checklist de homologação
 
-- [ ] Abrir portal a partir do admin; não há UTM na URL.
+- [ ] Abrir portal a partir do admin, junto a VOLTAR AO PORTAL; não há UTM na URL.
+- [ ] No admin → Vendedores → Cadastro de gerentes, inserir matrícula, nome, telefone e filial; salvar, editar e desativar.
+- [ ] A matrícula salva consulta somente a filial definida na base e a desativação impede novas consultas.
+- [ ] Com base anterior de cinco colunas, executar preparação sem perder dados e confirmar a nova coluna F; se o cabeçalho não corresponder, parar sem regravar registros.
 - [ ] Inserir matrícula ativa cadastrada: carregar **somente** vendedores, ranking e status da sua filial, sem Google.
 - [ ] Matrícula inexistente/inativa/duplicada: acesso recusado.
 - [ ] Alterar payload para matrícula de outra filial: somente os dados vinculados àquela matrícula aparecem; **isso não autentica quem informa a matrícula**.
