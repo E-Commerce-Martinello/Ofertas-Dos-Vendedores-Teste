@@ -670,7 +670,7 @@
         }
 
     </style>
-<link rel="stylesheet" href="view/admin.css?v=1.6.19-ger2">
+<link rel="stylesheet" href="view/admin.css?v=1.6.19-ger5">
 </head>
 <body>
 <div class="admin-container">
@@ -1107,8 +1107,8 @@
                         <input id="cadastroGerenteNome" type="text" maxlength="160" minlength="2" required placeholder="Nome do gerente" autocomplete="off">
                       </div>
                       <div class="form-group">
-                        <label for="cadastroGerenteTelefone">Telefone com DDD *</label>
-                        <input id="cadastroGerenteTelefone" type="tel" inputmode="numeric" maxlength="16" required placeholder="(65) 9 1234-5678" oninput="CadastroGerentesPresenter.telefoneInput()" autocomplete="off">
+                        <label for="cadastroGerenteTelefone">Telefone com DDD (opcional)</label>
+                        <input id="cadastroGerenteTelefone" type="tel" inputmode="numeric" maxlength="16" placeholder="(65) 9 1234-5678" oninput="CadastroGerentesPresenter.telefoneInput()" autocomplete="off">
                       </div>
                       <div class="form-group">
                         <label for="cadastroGerenteFilial">Filial *</label>
@@ -1469,7 +1469,7 @@
     <script>FiliaisUI.ativarBuscas();</script>
 <script src="view/admin-components.js?v=1.6.19"></script>
     <script src="presenter/gerentes-solicitacoes-presenter.js?v=1.6.19-ger1"></script>
-    <script src="presenter/gerentes-cadastro-presenter.js?v=1.6.19-ger3"></script>
+    <script src="presenter/gerentes-cadastro-presenter.js?v=1.6.19-ger5"></script>
     <script src="model/admin-sync.js?v=1.6.19-ger2"></script>
 </body>
 </html>
