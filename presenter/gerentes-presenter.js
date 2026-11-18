@@ -72,7 +72,7 @@ const GerentesPresenter = {
     for(const id of ['gerenteTotal','gerenteAtivos','gerenteUsando','gerenteInicios','gerenteOfertas'])
       this.el(id).textContent='—';
     this.status('gerenteStatus','');
-    GoogleSheetsService._snapshots?.clear();
+    // O Portal de Gerentes usa GerentesAPI; não compartilha cache da administração.
   },
   async sair(){
     this.limparDados();
