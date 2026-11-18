@@ -10,6 +10,7 @@ const IndexPresenter = {
     _rankingSolicitado: '',
     _aparenciaOuvindo: false,
     _selecaoManual: false,
+    _destaqueAnterior: undefined,
     _avisosHoje: new Set(),
 
     async init() {
@@ -96,6 +97,13 @@ const IndexPresenter = {
         const ativas = this._ativas();
         const atual = ativas.find(o => String(o.id) === String(this.ofertaAtual?.id));
         if(!atual)this._selecaoManual=false;
+        // A escolha manual só é interrompida pela entrada de um NOVO destaque.
+        // Atualizações normais do Firebase/ranking não mudam a escolha do vendedor.
+        const destaqueVigente=PortalPreferencias.destaque(ativas,getHorarioBrasilia());
+        const destaqueId=destaqueVigente?String(destaqueVigente.id):'';
+        if(this._destaqueAnterior!==undefined && destaqueId && destaqueId!==this._destaqueAnterior)
+            this._selecaoManual=false;
+        this._destaqueAnterior=destaqueId;
         this.ofertaAtual = PortalPreferencias.inicial(ativas,RankingOfertas.liderAtivas(ativas),atual,this._selecaoManual,getHorarioBrasilia());
         this._renderCatalogo(ativas);
         this._renderOferta(this.ofertaAtual);
@@ -194,7 +202,11 @@ const IndexPresenter = {
         document.getElementById('infoHoraBrasilia').textContent = formatarBrasilia(agora);
         const atual = this._ativas(agora);
         const ids = atual.map(o => String(o.id)).join(',');
-        if (ids !== this._assinatura || (this.ofertaAtual && !isOfertaAtiva(this.ofertaAtual, agora))) {
+        // Detectar também destaques que iniciam por agendamento sem gravar no Firebase.
+        const destaqueAgora=PortalPreferencias.destaque(atual,agora);
+        const novoDestaque=Boolean(destaqueAgora && this._destaqueAnterior!==undefined
+            && String(destaqueAgora.id)!==this._destaqueAnterior);
+        if (ids !== this._assinatura || novoDestaque || (this.ofertaAtual && !isOfertaAtiva(this.ofertaAtual, agora))) {
             this._assinatura = ids;
             this._aplicarOfertas(this.ofertas);
             return;
@@ -227,24 +239,45 @@ const IndexPresenter = {
         input.style.borderColor = !input.value ? '' : valido ? 'var(--whatsapp-color)' : '#dc3545';
     },
 
-    _avisarNaoVendedor(cod) {
+    async _avisarNaoVendedor(cod) {
         const hoje=PortalPreferencias.dia();
         const chave='mart:nao-vendedor:'+location.pathname+':'+cod;
         const memoria=chave+':'+hoje;
         if(this._avisosHoje.has(memoria))return;
         let armazenamento;try{armazenamento=window.localStorage;}catch(_){armazenamento=null;}
         if(!PortalPreferencias.deveAvisar(armazenamento,chave,hoje))return;
-        this._avisosHoje.add(memoria);
         const card=document.getElementById('avisoNaoVendedor');
         if(!card)return;
+        this._avisosHoje.add(memoria);
         card.hidden=false;
-        clearInterval(this._avisoTimer);
-        let restante=20;
-        this._avisoTimer=setInterval(()=>{
-            if(!document.hidden&&!card.matches(':hover')&&!card.contains(document.activeElement)&&--restante<=0)this.fecharAvisoNaoVendedor();
-        },1000);
+        const continuar=document.getElementById('avisoNaoVendedorContinuar');
+        continuar?.focus({preventScroll:true});
+        // O aviso é mostrado ANTES de tentar abrir a tela de compartilhamento.
+        // Continua após confirmação/fechamento ou, automaticamente, após 20 segundos.
+        await new Promise(resolve=>{
+            this._avisoResolucao=resolve;
+            clearInterval(this._avisoTimer);
+            let restante=20;
+            const contador=document.getElementById('avisoNaoVendedorContador');
+            const atualizar=()=>{if(contador)contador.textContent=String(restante);};
+            atualizar();
+            this._avisoTimer=setInterval(()=>{
+                if(document.hidden||card.matches(':hover')||card.contains(document.activeElement))return;
+                restante--;
+                atualizar();
+                if(restante<=0)this.fecharAvisoNaoVendedor();
+            },1000);
+        });
     },
-    fecharAvisoNaoVendedor(){clearInterval(this._avisoTimer);const c=document.getElementById('avisoNaoVendedor');if(c)c.hidden=true;},
+    fecharAvisoNaoVendedor(){
+        clearInterval(this._avisoTimer);
+        this._avisoTimer=null;
+        const card=document.getElementById('avisoNaoVendedor');
+        if(card)card.hidden=true;
+        const resolver=this._avisoResolucao;
+        this._avisoResolucao=null;
+        if(resolver)resolver();
+    },
 
     async enviar() {
         if (this.enviando) return;
@@ -265,7 +298,7 @@ const IndexPresenter = {
             // A classificação vem da planilha do ambiente, por consulta pública sem dados pessoais.
             // Em caso de falha de rede, NUNCA presumimos que uma matrícula esteja ativa.
             const vendedorAtivo = await TelefonePortal.consultarMatricula(cod);
-            if(vendedorAtivo===false)this._avisarNaoVendedor(cod);
+            if(vendedorAtivo===false)await this._avisarNaoVendedor(cod);
             else if(vendedorAtivo!==true)UI.erro('Não foi possível verificar a matrícula. Por segurança, será usado o link padrão da Martinello.');
             if (vendedorAtivo === true) {
                 const continuar = await TelefonePortal.garantir(cod);
