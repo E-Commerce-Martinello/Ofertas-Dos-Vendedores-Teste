@@ -25,3 +25,12 @@ Conferir fontes realmente implantadas, autorizar API avançada/escopos e validar
 - Índice de telefones e cache por snapshot evitam revarrer todos os vendedores para cada indicador. Invalidação ao atualizar cadastros, participantes e identificações.
 - Nomes de filiais pré-calculados, preservando ordenação e sufixos por município.
 - Testes de regressão com 6.000 vendedores e equivalência das decisões de titularidade/conflito. Detalhes em docs/CORRECAO-DESEMPENHO-v1.6.19.md.
+
+### Refinamento de interface e seleção — 18/11/2026
+- Alternadores com estados Ativo/Inativo e cores distintas; correção de herança de tamanho/preenchimento dos inputs.
+- Espaçamento de preferências e segurança, botões que quebram em linhas no celular, tabela de auditoria com rolagem restrita ao quadro.
+- Botão flutuante de nova oferta na aba Ofertas do administrador.
+- Portal escolhe destaque vigente, depois líder do ranking disponível e depois oferta ativa aleatória. Preserva escolha manual diante de respostas tardias e sincronização.
+- Seleção manual rola até o botão de gerar. Miniaturas quadradas, recorte central para preencher.
+- Aviso de não vendedor em card dispensável por 20 segundos de página visível, pausado durante foco/hover; uma vez por dia de Brasília por matrícula e ambiente neste navegador. Não cobre outros dispositivos nem armazenamento apagado.
+- Falhas de conexão/autenticação deixam de ser rotuladas como backend antigo. Nenhuma implantação de backend executada.

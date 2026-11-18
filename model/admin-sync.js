@@ -40,7 +40,7 @@ const AdminSync = {
     const el=document.getElementById('adminSyncStatus');if(!el)return;
     const textos={atualizando:'Conferindo atualizações…',atualizado:'Dados administrativos atualizados',
       pausado:navigator.onLine?'Atualização pausada nesta aba':'Sem conexão — dados podem estar desatualizados',
-      erro:'Conexão indisponível — nova tentativa automática',incompativel:'Atualização do backend pendente — edição de cadastros bloqueada'};
+      erro:'Conexão indisponível — nova tentativa automática',indisponivel:'Não foi possível verificar o backend — edição bloqueada; confira a conexão e entre novamente',incompativel:'Atualização do backend pendente — edição de cadastros bloqueada'};
     el.dataset.estado=estado;el.textContent=textos[estado]||estado;
     el.title=estado==='atualizado'?'Última conferência: '+new Date(detalhe).toLocaleString('pt-BR'):detalhe;
   },
@@ -50,7 +50,7 @@ const AdminSync = {
     try{
       this.capacidades=(await GoogleSheetsService._post('consultarCapacidades')).resultado;
       if(!this.capacidades?.sincronizacao)throw new Error('Backend sem suporte v1.6.19.');
-    }catch(e){this.status('incompativel',e.message);return false;}
+    }catch(e){this.capacidades=null;const incompatibilidade=/Backend sem suporte|[Aa]ção não reconhecida|[Oo]peração desconhecida/.test(e.message);this.status(incompatibilidade?'incompativel':'indisponivel',e.message);return false;}
     this.coordenador=new CoordenadorSync({
       ler:async revisions=>(await GoogleSheetsService._post('sincronizarAdmin',{revisions})).resultado,
       aplicar:r=>this.aplicar(r),status:(...a)=>this.status(...a),

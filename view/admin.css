@@ -69,3 +69,29 @@ body .ofertas-massa-acoes{background:var(--a-subtle);border-color:var(--a-line)}
 body .logout-button{flex-shrink:0;white-space:nowrap;min-width:64px}
 body #subtituloAdmin{color:var(--a-muted)!important}
 @media(max-width:700px){body #tituloAdmin{font-size:22px;overflow-wrap:normal}body .environment-badge{font-size:10px}body .logout-button{margin-left:8px;padding:8px}}
+
+/* Correção: controles e painéis mantêm espaço interno e não herdam campos de texto. */
+body .central-preferencias{padding:clamp(16px,2.4vw,24px);min-width:0;margin-top:18px}
+body .central-preferencias>p:last-child{margin-bottom:0}
+body .central-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+body .aba-conteudo,body .row>*,body .vendor-actions>*{min-width:0;max-width:100%}
+body .vendor-actions{display:flex;flex-wrap:wrap;align-items:center}
+body .vendor-actions>button{flex:1 1 220px;white-space:normal;overflow-wrap:anywhere}
+body .vendor-actions>h3{flex:1 1 220px!important}
+body .form-group>label.admin-switch-label,body label.admin-switch-label{display:grid;grid-template-columns:44px 58px minmax(0,1fr);align-items:center;gap:10px;min-height:44px;white-space:normal;line-height:1.5;margin:8px 0;cursor:pointer}
+body input.admin-switch[type=checkbox]{padding:0!important;margin:0!important;flex:none;width:44px!important;min-width:44px!important;max-width:44px!important;height:26px!important;min-height:26px!important;border-radius:20px!important;border:1px solid var(--a-muted)!important;background:#626b79!important}
+body input.admin-switch[type=checkbox]:checked{background:#16824b!important;border-color:#16824b!important}
+body input.admin-switch[type=checkbox]::after{width:20px;height:20px;top:2px;left:2px}
+body input.admin-switch[type=checkbox]:checked::after{left:20px}
+body .admin-switch-state{font-size:12px;font-weight:700;color:var(--a-muted)}
+body .admin-switch-state .switch-on{display:none}
+body .admin-switch:checked+.admin-switch-state .switch-on{display:inline;color:var(--a-good)}
+body .admin-switch:checked+.admin-switch-state .switch-off{display:none}
+body .admin-switch-description{overflow-wrap:anywhere}
+body .admin-sync-bar{overflow-wrap:anywhere}
+body #adminSyncStatus[data-estado=incompativel]::before,body #adminSyncStatus[data-estado=erro]::before,body #adminSyncStatus[data-estado=indisponivel]::before{background:var(--a-warn)}
+body #adminSyncStatus[data-estado=indisponivel]{color:var(--a-warn)}
+body #btnNovaOfertaTopo{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));z-index:100;padding:14px 20px;border-radius:30px!important;background:#187347!important;color:#fff!important;box-shadow:0 6px 22px #0004;border:2px solid #fff;min-height:56px}
+body .admin-container{padding-bottom:88px}
+body.admin-modal-aberto #btnNovaOfertaTopo{visibility:hidden}
+@media(max-width:600px){body .nova-oferta-texto{display:none}body #btnNovaOfertaTopo{width:56px;height:56px;padding:12px;font-size:22px}body #segurancaSecao .vendor-actions>button{flex-basis:100%}body .central-preferencias select{min-width:0}body .admin-switch-label{column-gap:8px!important}body #segurancaSecao .vendor-table{min-width:640px!important}body #segurancaSecao .vendor-table-wrap{overscroll-behavior-x:contain}}
