@@ -93,6 +93,8 @@ const AdminSync = {
       await VendedoresPresenter._carregar(GoogleSheetsService.obterUrl(),null,true);
       await WhatsAppPresenter.carregar(true);
       VendedoresPresenter.verificarConflitoEdicao();
+      if(document.getElementById('painelCadastroGerentes')?.open && typeof CadastroGerentesPresenter!=='undefined')
+        await CadastroGerentesPresenter.carregar();
       if(AdminPresenter.abaAtual==='vendedores')await VendedoresPresenter.carregarSolicitacoesTelefone();
     }
     if(d.contatos){
