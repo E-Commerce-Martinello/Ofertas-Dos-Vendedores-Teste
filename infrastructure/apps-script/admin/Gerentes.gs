@@ -4,7 +4,8 @@
  * A matrícula cadastrada identifica a filial; NÃO prova a identidade do visitante.
  * A consulta divulga somente dados limitados à filial e o pedido não altera cadastros.
  */
-const MART20_GERENTES_CAB=['matricula_gerente','nome','filial_autorizada','ativo','atualizado_em'];
+const MART20_GERENTES_CAB=['matricula_gerente','nome','filial_autorizada','ativo','atualizado_em','telefone'];
+const MART20_GERENTES_CAB_LEGADO=MART20_GERENTES_CAB.slice(0,5);
 const MART20_SOLICITACOES_CAB=['solicitacao_id','criado_em','gerente_matricula','origem_acesso',
   'filial','vendedor_matricula','vendedor_nome','telefone','tipo','contrato_temporario',
   'status','observacao','atualizado_em','processado_por'];
@@ -24,19 +25,87 @@ function mart20_aba_(nome,cab,criar) {
   return sh;
 }
 
-// Executar manualmente como proprietário após backup. Cria apenas abas vazias.
+// Executar manualmente como proprietário após backup. A migração de cinco para seis
+// colunas adiciona somente o campo telefone, sem reescrever os registros existentes.
 function prepararEstruturaGerentesV1619() {
   const principal=String(PropertiesService.getScriptProperties().getProperty('MART_V153_ADMIN_EMAIL')||'').trim().toLowerCase();
   const operador=String(Session.getEffectiveUser().getEmail()||'').trim().toLowerCase();
   if(!principal||operador!==principal)throw new Error('Execute com a conta principal autorizada.');
-  const criar=(nome,cab)=>{const existente=!!mart20_aba_(nome,cab,false);
-    mart20_aba_(nome,cab,true);return {aba:nome,existia:existente};};
-  return [criar('Gerentes_Autorizados',MART20_GERENTES_CAB),
-    criar('Solicitacoes_Gerentes',MART20_SOLICITACOES_CAB)];
+  const ss=obterPlanilhaVendedoresV153_();
+  let gerentes=ss.getSheetByName('Gerentes_Autorizados');
+  const existe=!!gerentes;
+  let migrado=false;
+  if(!gerentes)gerentes=mart20_aba_('Gerentes_Autorizados',MART20_GERENTES_CAB,true);
+  else {
+    const atual=gerentes.getRange(1,1,1,5).getDisplayValues()[0].map(x=>String(x||'').trim());
+    if(atual.join('|')!==MART20_GERENTES_CAB_LEGADO.join('|'))
+      throw new Error('Cabeçalhos inesperados em Gerentes_Autorizados. Nenhum dado alterado.');
+    if(gerentes.getMaxColumns()<6)gerentes.insertColumnsAfter(gerentes.getMaxColumns(),6-gerentes.getMaxColumns());
+    const coluna6=String(gerentes.getRange(1,6).getDisplayValue()||'').trim();
+    if(!coluna6){gerentes.getRange(1,6).setValue('telefone');migrado=true;}
+    else if(coluna6!=='telefone')throw new Error('Coluna F ocupada por outro campo. Migração interrompida.');
+    gerentes.getRange(1,6,gerentes.getMaxRows(),1).setNumberFormat('@');
+    mart20_aba_('Gerentes_Autorizados',MART20_GERENTES_CAB,false);
+  }
+  const pedidosExistiam=!!mart20_aba_('Solicitacoes_Gerentes',MART20_SOLICITACOES_CAB,false);
+  mart20_aba_('Solicitacoes_Gerentes',MART20_SOLICITACOES_CAB,true);
+  return [{aba:'Gerentes_Autorizados',existia:existe,migrado},
+    {aba:'Solicitacoes_Gerentes',existia:pedidosExistiam}];
 }
 
 // Identificação simples: manter registro ativo e filial explícita, sem Google.
 // A matrícula não é senha; qualquer pessoa que a conheça pode consultar esta filial.
+function mart20_listarCadastroGerentes_(){
+  const sh=mart20_aba_('Gerentes_Autorizados',MART20_GERENTES_CAB,false);
+  if(!sh)return {gerentes:[]};
+  const n=sh.getLastRow()-1;
+  if(n>5000)throw new Error('Limite de gerentes excedido.');
+  const dados=n?sh.getRange(2,1,n,MART20_GERENTES_CAB.length).getDisplayValues():[];
+  return {gerentes:dados.filter(r=>String(r[0]||'').trim()).map(r=>({
+    matricula:String(r[0]||'').trim(),nome:String(r[1]||'').trim(),
+    filial:mart20_filial_(r[2]),ativo:String(r[3]||'').trim()==='ATIVO',
+    revision:String(r[4]||''),telefone:String(r[5]||'').trim()
+  })).sort((a,b)=>Number(a.filial)-Number(b.filial)||a.nome.localeCompare(b.nome,'pt-BR'))};
+}
+
+function mart20_salvarCadastroGerente_(p){
+  const matricula=String(p.matricula||'').trim(),nome=String(p.nome||'').replace(/[\x00-\x1f\x7f]/g,' ').trim();
+  const filial=mart20_filial_(p.filial),telefone=Telefones.numero(String(p.telefone||''));
+  const revision=String(p.revision||''),ativo=p.ativo===true;
+  if(!/^\d{3,8}$/.test(matricula))throw new Error('Matrícula deve conter de 3 a 8 dígitos.');
+  if(nome.length<2||nome.length>160||/^[=+@-]/.test(nome))throw new Error('Informe um nome válido (até 160 caracteres).');
+  if(!filial)throw new Error('Selecione uma filial válida.');
+  if(!telefone)throw new Error('Informe um celular com DDD brasileiro válido.');
+  if(revision&&(!/^\d{4}-/.test(revision)||revision.length>45))
+    throw new Error('Revisão do gerente inválida.');
+  const lock=LockService.getScriptLock();lock.waitLock(15000);
+  try{
+    const ss=obterPlanilhaVendedoresV153_();
+    // Não permitir códigos inventados: a filial deve existir na tabela oficial.
+    const filiais=listarFiliaisV153_(ss);
+    if(!filiais.some(r=>mart20_filial_(r[0])===filial))
+      throw new Error('Filial não encontrada no cadastro de filiais.');
+    const sh=mart20_aba_('Gerentes_Autorizados',MART20_GERENTES_CAB,false);
+    if(!sh)throw new Error('Execute prepararEstruturaGerentesV1619 antes de cadastrar.');
+    if(sh.getLastRow()>5001)throw new Error('Limite de gerentes excedido.');
+    const n=sh.getLastRow()-1;
+    const dados=n?sh.getRange(2,1,n,MART20_GERENTES_CAB.length).getDisplayValues():[];
+    const encontrados=dados.map((r,i)=>String(r[0]||'').trim()===matricula?i:-1).filter(i=>i>=0);
+    if(encontrados.length>1)throw new Error('Matrícula duplicada na base. Corrija antes de continuar.');
+    const indice=encontrados[0],atual=indice===undefined?null:dados[indice];
+    if(atual&&revision!==String(atual[4]||''))
+      throw new Error('CONFLITO: este gerente foi alterado. Reabra o cadastro atualizado.');
+    if(!atual&&revision)throw new Error('CONFLITO: este gerente foi excluído ou não existe.');
+    if(atual&&(!String(p.matriculaOriginal||'')||String(p.matriculaOriginal)===matricula)===false)
+      throw new Error('A matrícula existente não pode ser alterada.');
+    const agora=new Date().toISOString();
+    const linha=[matricula,nome,filial,ativo?'ATIVO':'INATIVO',agora,telefone];
+    const destino=atual?indice+2:sh.getLastRow()+1;
+    sh.getRange(destino,1,1,MART20_GERENTES_CAB.length).setNumberFormat('@').setValues([linha]);
+    return {matricula,nome,filial,ativo,revision:agora,telefone};
+  }finally{lock.releaseLock();}
+}
+
 function mart20_autorizarGerente_(matriculaInformada){
   const matricula=String(matriculaInformada??'').trim();
   if(!/^\d{3,8}$/.test(matricula))
