@@ -144,7 +144,7 @@ function mart20_consultarPainelGerente_(payload,acesso){
     throw new Error('Filtro de campanha inválido.');
   // Cache curto por filial/mês/campanha; autorização é validada antes de chegar aqui.
   // O perfil do gerente NÃO entra no cache compartilhado entre gerentes da filial.
-  const chave='mart20_painel_'+acesso.filial+'_'+mes+'_'+(campanha||'todas');
+  const chave='mart20_painel_'+acesso.filial+'_'+mes+'_'+(campanha||'@all');
   const cache=CacheService.getScriptCache();
   const perfil=localidade=>({nome:acesso.nome,matricula:acesso.matricula,
     filial:acesso.filial,localidade});
