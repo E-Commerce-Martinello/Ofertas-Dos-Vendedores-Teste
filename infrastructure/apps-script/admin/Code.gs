@@ -96,6 +96,10 @@ function doPost(e) {
       resultado = mart20_consultarPainelGerente_(payload,acesso);
     } else if (p.action === 'criarSolicitacaoGerente') {
       resultado = mart20_criarSolicitacaoGerente_(payload,acesso);
+    } else if (p.action === 'listarCadastroGerentes') {
+      resultado = mart20_listarCadastroGerentes_();
+    } else if (p.action === 'salvarCadastroGerente') {
+      resultado = mart20_salvarCadastroGerente_(payload);
     } else if (p.action === 'listarSolicitacoesGerentes') {
       resultado = mart20_listarSolicitacoesGerentes_();
     } else if (p.action === 'atualizarSolicitacaoGerente') {
@@ -1183,6 +1187,7 @@ function mart1615_eventoAuditavel_(acao,payload,resultado) {
   payload=payload || {};
   const matriz={
     salvarCadastroCompleto:'cadastro_e_telefones_editados',
+    salvarCadastroGerente:'cadastro_gerente_atualizado',
     criarSolicitacaoGerente:'solicitacao_gerente_criada',
     atualizarSolicitacaoGerente:'solicitacao_gerente_processada',
     salvarVendedor:'vendedor_editado', criarVendedor:'vendedor_criado',
@@ -1194,7 +1199,10 @@ function mart1615_eventoAuditavel_(acao,payload,resultado) {
   };
   if (!Object.prototype.hasOwnProperty.call(matriz,acao)) return null;
   let alvo='',resumo='Alteração administrativa';
-  if(acao==='criarSolicitacaoGerente') {
+  if(acao==='salvarCadastroGerente') {
+    alvo=String(payload.matricula||'').replace(/\D/g,'').slice(0,10);
+    resumo='Cadastro de gerente atualizado';
+  } else if(acao==='criarSolicitacaoGerente') {
     alvo=String(payload.matriculaVendedor||'').replace(/\D/g,'').slice(0,10);
     resumo=payload.contratoTemporario===true?'Solicitação CT Temporário':'Solicitação de cadastro/telefone';
   } else if(acao==='atualizarSolicitacaoGerente') {
