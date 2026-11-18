@@ -45,7 +45,7 @@ const GerentesPresenter = {
     this.refresh=setInterval(()=>{
       if(!document.hidden&&this.matricula&&this.dados&&!this.ocupado&&!this.enviando&&!this.el('gerenteDialogo').open)
         this.carregar(true);
-    },90000);
+    },300000);
   },
   async entrar(){
     const matricula=this.el('gerenteMatricula').value.replace(/\D/g,'');
