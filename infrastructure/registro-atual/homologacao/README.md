@@ -1,5 +1,7 @@
 # Registro de códigos informados — Homologação
 
+> **ATENÇÃO — ARQUIVO HISTÓRICO:** estes códigos são as cópias recebidas antes da atualização v1.6.19. Para copiar o backend atualizado da homologação, consulte [o guia de instalação](../../GUIA-COPIAR-BACKEND-TESTE-v1.6.19.md). Não utilize os snapshots desta pasta para substituir as implantações novas.
+
 **Registro inicial:** 18/11/2026.  
 **Fonte:** códigos fornecidos pelo responsável pelo Portal de Ofertas na conversa, como referências do ambiente de homologação.  
 **Status da implantação:** **não verificado diretamente nos consoles** Firebase, Apps Script e Cloudflare; esta pasta documenta fielmente o material recebido.  
