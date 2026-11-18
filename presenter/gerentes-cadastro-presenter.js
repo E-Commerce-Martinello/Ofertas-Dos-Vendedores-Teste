@@ -115,7 +115,9 @@ const CadastroGerentesPresenter={
         revision:this.el('cadastroGerenteRevision').value
       });
       if(!resp.resultado?.matricula)throw new Error('API não confirmou o cadastro.');
-      this.novo();await this.carregar();
+      this.novo();
+      this.salvando=false;
+      await this.carregar();
       this.status('Gerente salvo. A matrícula informada já pode ser usada na página de gerentes.');
     }catch(e){this.status(e.message||'Não foi possível salvar o gerente.',true);}
     finally{this.salvando=false;botao.disabled=false;}
