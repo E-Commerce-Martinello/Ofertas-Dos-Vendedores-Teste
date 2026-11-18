@@ -233,7 +233,7 @@ const VendedoresPresenter = {
         const filialEdicao=sugestoes?.value;
         if (sugestoes) sugestoes.innerHTML = Object.entries(this.filiais)
             .sort((a,b) => Number(a[0]) - Number(b[0]))
-            .map(([numero, local]) => `<option value="${this._escapar(numero)}" >${this._escapar(numero+' • '+local)}</option>`).join('');
+            .map(([numero]) => `<option value="${this._escapar(numero)}">${this._escapar(FiliaisUI.nome(numero))}</option>`).join('');
         if(sugestoes){sugestoes.insertAdjacentHTML('afterbegin','<option value="">Selecione a filial</option>');sugestoes.value=filialEdicao||'';}
         if (filiais.includes(selecionada)) select.value = selecionada;
     },
