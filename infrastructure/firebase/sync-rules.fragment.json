@@ -1,0 +1,6 @@
+{
+  "adminSync_TESTE": {
+    ".read": "auth != null && auth.token.email_verified === true && root.child('adminUids_TESTE').child(auth.uid).val() === true",
+    ".write": false
+  }
+}

@@ -670,6 +670,7 @@
         }
 
     </style>
+<link rel="stylesheet" href="view/admin.css?v=1.6.19">
 </head>
 <body>
 <div class="admin-container">
@@ -693,7 +694,7 @@
     </div>
 
     <!-- PAINEL -->
-    <div id="painelAdmin" style="display:none;">
+    <div id="painelAdmin" style="display:none;"><p id="adminSyncStatus" class="admin-sync-bar" role="status" aria-live="polite">Conectando…</p>
 
         <!-- CABEÇALHO -->
         <div class="admin-card">
@@ -1066,7 +1067,7 @@
                     <button type="button" class="btn-outline" id="btnAtualizarVendedores" onclick="VendedoresPresenter.atualizar()" disabled><i class="fas fa-sync-alt"></i> ATUALIZAR DADOS</button>
                 </div>
                 <div id="statusConexaoSheets" class="vendor-status"><i class="fas fa-info-circle"></i><span>Os vendedores serão carregados automaticamente após o acesso.</span></div>
-                <p class="vendor-last-update">A API trabalha exclusivamente com a aba <strong>Vendedores (A:M)</strong>. Telefone alterado volta para <strong>PENDENTE</strong> até ser validado explicitamente.</p>
+                <p class="vendor-last-update">Cadastros e telefones permanecem na planilha. A validação considera titularidade, conflitos e a última lista importada do grupo.</p>
             </div>
 
             <div class="admin-card" id="painelDadosVendedores" style="display:none;">
@@ -1115,7 +1116,7 @@
                     </select>
                     <select id="filtroGrupoVendedor" aria-label="Filtrar participação no grupo" onchange="VendedoresPresenter.filtrar()">
                         <option value="">Todas as situações do grupo</option>
-                        <option value="grupo">No grupo</option>
+                        <option value="titularidade_pendente">No grupo — titularidade pendente</option><option value="grupo">No grupo</option>
                         <option value="fora">Fora do grupo</option>
                         <option value="conflito">Número duplicado</option>
                         <option value="revisar">Possível DDD diferente</option>
@@ -1339,23 +1340,12 @@
         <h2 id="tituloModalEditarVendedor"><i class="fas fa-user-edit"></i> EDITAR CADASTRO</h2>
         <div class="form-group"><label for="editarMatricula">Matrícula / Rubi</label><input type="text" id="editarMatricula" inputmode="numeric"></div>
         <div class="form-group"><label for="editarNomeVendedor">Nome</label><input type="text" id="editarNomeVendedor" maxlength="160"></div>
-        <div class="form-group"><label for="editarFilialVendedor">Número da filial</label><input type="text" id="editarFilialVendedor" maxlength="6" inputmode="numeric" pattern="[0-9]*" list="listaNumerosFiliais" oninput="VendedoresPresenter.atualizarLocalidadeFilial()"><datalist id="listaNumerosFiliais"></datalist><small id="localidadeFilialVendedor" style="display:block;color:#777;margin-top:6px;">Informe apenas o número da filial.</small></div>
-        <div class="form-group"><label for="editarTelefoneVendedor">Telefone / WhatsApp</label><input type="tel" id="editarTelefoneVendedor" inputmode="tel" placeholder="(DDD) 9 1234-5678" oninput="VendedoresPresenter.aoAlterarTelefone()" onblur="VendedoresPresenter.formatarTelefoneDigitado()"></div>
-        <p class="vendor-subtext">O telefone acima é o contato legado preservado da base. Os novos campos permitem cadastrar dois números sem sobrescrever o legado.</p>
-        <div class="form-group"><label for="editarTelefoneProfissional">WhatsApp profissional</label>
-            <input type="tel" id="editarTelefoneProfissional" inputmode="tel" placeholder="(DDD) 9 1234-5678">
-            <select id="editarStatusProfissional"><option value="PENDENTE">Pendente</option><option value="VALIDADO">Validado pelo administrador</option></select>
-            <label><input type="checkbox" id="editarGrupoProfissional"> Vendedor declara participar do grupo</label></div>
-        <div class="form-group"><label for="editarTelefonePessoal">WhatsApp pessoal</label>
-            <input type="tel" id="editarTelefonePessoal" inputmode="tel" placeholder="(DDD) 9 1234-5678">
-            <select id="editarStatusPessoal"><option value="PENDENTE">Pendente</option><option value="VALIDADO">Validado pelo administrador</option></select>
-            <label><input type="checkbox" id="editarGrupoPessoal"> Vendedor declara participar do grupo</label></div>
-        <small class="vendor-subtext">A declaração do grupo NÃO comprova participação. Ela é verificada com a lista de participantes importada.</small>
-        <div class="form-group"><label for="editarStatusTelefone">Validação do telefone</label><select id="editarStatusTelefone"><option value="PENDENTE">Pendente de validação</option><option value="VALIDADO">Validado manualmente</option></select></div>
+        <div class="form-group"><label for="editarFilialVendedor">Número da filial</label><select id="editarFilialVendedor" onchange="VendedoresPresenter.atualizarLocalidadeFilial()"><option value="">Selecione a filial</option></select><small id="localidadeFilialVendedor" style="display:block;color:#777;margin-top:6px;">Informe apenas o número da filial.</small></div>
+        <div class="admin-history"><strong>Telefone histórico preservado</strong><p id="telefoneHistorico"></p><small>Tipo não confirmado. Copie somente após identificar a finalidade.</small><div><button type="button" class="btn-outline" onclick="VendedoresPresenter.copiarHistorico('Profissional')">Usar como profissional</button><button type="button" class="btn-outline" onclick="VendedoresPresenter.copiarHistorico('Pessoal')">Usar como pessoal</button></div></div><div class="admin-phone-grid"><div class="form-group"><label for="editarTelefoneProfissional">Telefone profissional <small>(opcional)</small></label><input type="tel" id="editarTelefoneProfissional"><small id="estadoTelefoneProfissional" role="status"></small><button type="button" class="btn-outline" onclick="VendedoresPresenter.confirmarTitularidade('Profissional')">Confirmar titularidade manualmente</button></div><div class="form-group"><label for="editarTelefonePessoal">Telefone pessoal <small>(opcional)</small></label><input type="tel" id="editarTelefonePessoal"><small id="estadoTelefonePessoal" role="status"></small><button type="button" class="btn-outline" onclick="VendedoresPresenter.confirmarTitularidade('Pessoal')">Confirmar titularidade manualmente</button></div></div><p class="vendor-subtext">Participação conferida pela última lista importada. Não é uma consulta em tempo real ao WhatsApp.</p>
         <div class="form-group"><label>Situação funcional atual</label><div id="editarSituacaoFuncional" class="vendor-help" style="margin:0;">Não informada</div></div>
         <label class="vendor-checkbox"><input type="checkbox" id="editarAtivoVendedor" checked> Cadastro ativo no painel</label>
         <div class="form-group" style="margin-top:12px;"><label for="editarObservacoesVendedor">Observações</label><textarea id="editarObservacoesVendedor" rows="2" maxlength="500"></textarea></div>
-        <p class="vendor-subtext">As alterações serão gravadas diretamente na aba Vendedores. A matrícula não pode ser alterada em um cadastro existente. Ao trocar o telefone, a validação volta automaticamente para PENDENTE.</p>
+        <p class="vendor-subtext">Cadastro e telefones são salvos juntos. A matrícula permanece fixa e o telefone histórico é preservado.</p>
         <div class="vendor-modal-actions">
             <button type="button" class="btn-primary" id="btnSalvarVendedor" onclick="VendedoresPresenter.salvarEdicao()">SALVAR ALTERAÇÕES</button>
             <button type="button" class="btn-outline" onclick="VendedoresPresenter.fecharEdicao()">CANCELAR</button>
@@ -1391,36 +1381,39 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
-    <script src="shared/config.js?v=1.6.18"></script>
+    <script src="shared/config.js?v=1.6.19"></script>
+    <script src="shared/telefones.js?v=1.6.19"></script>
     <script src="shared/utils.js"></script>
-    <script src="model/firebase-config.js?v=1.6.18"></script>
-    <script src="model/appearance.js?v=1.6.18"></script>
-    <script src="model/campanhas.js?v=1.6.18"></script>
-    <script src="model/link-track.js?v=1.6.18"></script>
-    <script src="model/analytics.js?v=1.6.18"></script>
+    <script src="model/firebase-config.js?v=1.6.19"></script>
+    <script src="model/appearance.js?v=1.6.19"></script>
+    <script src="model/campanhas.js?v=1.6.19"></script>
+    <script src="model/link-track.js?v=1.6.19"></script>
+    <script src="model/analytics.js?v=1.6.19"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js?v=1.6.18.3"></script>
-    <script src="model/validators.js?v=1.6.18"></script>
-    <script src="model/auth.js?v=1.6.18"></script>
-    <script src="view/ui.js?v=1.6.18"></script>
-    <script src="presenter/campanhas-presenter.js?v=1.6.18"></script>
-    <script src="presenter/admin-presenter.js?v=1.6.18.3"></script>
-    <script src="presenter/ofertas-import-presenter.js?v=1.6.18.3"></script>
-    <script src="presenter/seguranca-presenter.js?v=1.6.18"></script>
-    <script src="model/filiais.js?v=1.6.18.1"></script>
-    <script src="presenter/dashboard-presenter.js?v=1.6.18.1"></script>
-    <script src="model/google-sheets.js?v=1.6.18"></script>
+    <script src="model/storage.js?v=1.6.19"></script>
+    <script src="model/validators.js?v=1.6.19"></script>
+    <script src="model/auth.js?v=1.6.19"></script>
+    <script src="view/ui.js?v=1.6.19"></script>
+    <script src="presenter/campanhas-presenter.js?v=1.6.19"></script>
+    <script src="presenter/admin-presenter.js?v=1.6.19"></script>
+    <script src="presenter/ofertas-import-presenter.js?v=1.6.19"></script>
+    <script src="presenter/seguranca-presenter.js?v=1.6.19"></script>
+    <script src="model/filiais.js?v=1.6.19"></script>
+    <script src="presenter/dashboard-presenter.js?v=1.6.19"></script>
+    <script src="model/google-sheets.js?v=1.6.19"></script>
     <!-- SheetJS é carregado sob demanda, apenas quando alguém importa uma planilha. -->
-    <script src="model/planilha-loader.js?v=1.6.18"></script>
-    <script src="model/vendor-import.js?v=1.6.18"></script>
-    <script src="model/vendor-management.js?v=1.6.18"></script>
-    <script src="model/link-checker.js?v=1.6.18"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.18"></script>
-    <script src="model/whatsapp.js?v=1.6.18"></script>
-    <script src="presenter/pendencias-presenter.js?v=1.6.18"></script>
-    <script src="presenter/whatsapp-presenter.js?v=1.6.18"></script>
-    <script src="presenter/acessos-presenter.js?v=1.6.18"></script>
-    <script src="presenter/contatos-presenter.js?v=1.6.18"></script>
+    <script src="model/planilha-loader.js?v=1.6.19"></script>
+    <script src="model/vendor-import.js?v=1.6.19"></script>
+    <script src="model/vendor-management.js?v=1.6.19"></script>
+    <script src="model/link-checker.js?v=1.6.19"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.19"></script>
+    <script src="model/whatsapp.js?v=1.6.19"></script>
+    <script src="presenter/pendencias-presenter.js?v=1.6.19"></script>
+    <script src="presenter/whatsapp-presenter.js?v=1.6.19"></script>
+    <script src="presenter/acessos-presenter.js?v=1.6.19"></script>
+    <script src="presenter/contatos-presenter.js?v=1.6.19"></script>
     <script>FiliaisUI.ativarBuscas();</script>
+<script src="view/admin-components.js?v=1.6.19"></script>
+<script src="model/admin-sync.js?v=1.6.19"></script>
 </body>
 </html>

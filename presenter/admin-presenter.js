@@ -26,7 +26,7 @@ const AdminPresenter = {
         document.querySelectorAll('[data-mart-env-badge]').forEach(el => {
             el.textContent = MART_PORTAL_PRINCIPAL ? '✓ PORTAL PRINCIPAL' : '⚙ AMBIENTE DE HOMOLOGAÇÃO';
         });
-        document.title = `Admin Martinello | 1.6.18 ${MART_PORTAL_PRINCIPAL ? 'OFICIAL' : 'HOMOLOGAÇÃO'}`;
+        document.title = `Admin Martinello | 1.6.19 ${MART_PORTAL_PRINCIPAL ? 'OFICIAL' : 'HOMOLOGAÇÃO'}`;
         Storage.verificarQuota();
         UI.tema.aplicar(Storage.carregarTema());
         const url = GoogleSheetsService.obterUrl();
@@ -107,6 +107,8 @@ const AdminPresenter = {
     },
 
     async logout() {
+        if(EdicaoSegura.alterados.size&&!confirm('Há alterações não salvas. Deseja sair e descartá-las?'))return;
+        for(const grupo of Object.keys(EdicaoSegura.grupos))EdicaoSegura.limpar(grupo);
         this._pararSincronizacao();
         if(this.pararSyncRascunhos){this.pararSyncRascunhos();this.pararSyncRascunhos=null;}
         clearInterval(this.intervaloStatus);
@@ -156,20 +158,21 @@ const AdminPresenter = {
             }
         }
         const restaurada = this._abaSalva();
-        this.mostrarAba(['ofertas','dashboard','vendedores','contatos','aparencia','configuracoes','acessos','links'].includes(restaurada) ? restaurada : 'ofertas');
+
         if (typeof VendedoresPresenter !== 'undefined') {
             VendedoresPresenter.init();
             // Uma consulta automaticamente, sem expor a URL ou exigir conexão manual.
-            VendedoresPresenter.atualizar().catch(erro => console.warn('Falha na atualização automática:', erro));
+
         }
         // A assinatura em tempo real inclui o primeiro snapshot. Evita duas leituras
         // pesadas dos mesmos banners e mantém a proteção de conflitos da v1.6.11.
         this.ofertas = [];
         this._sincronizarOfertas();
         this._sincronizarRascunhos();
-        this._carregarConfigEmBreve();
+
         this._setupDragDrop();
-        if (typeof CampanhasPresenter !== 'undefined') CampanhasPresenter.carregar();
+        if(!await AdminSync.iniciar()){await VendedoresPresenter.atualizar();CampanhasPresenter.carregar();}
+        this.mostrarAba(['ofertas','dashboard','vendedores','contatos','aparencia','configuracoes','acessos','links'].includes(restaurada) ? restaurada : 'ofertas');
 
         // Datas agendadas continuam mudando mesmo sem nova gravação no Firebase.
         // Intervalo mais leve para a página administrativa.
@@ -180,6 +183,8 @@ const AdminPresenter = {
     },
 
     _pararSincronizacao() {
+        AdminSync.parar();
+        if(this.pararSyncRascunhos){this.pararSyncRascunhos();this.pararSyncRascunhos=null;}
         if (this.pararSyncOfertas) { this.pararSyncOfertas(); this.pararSyncOfertas=null; }
         this._versaoOfertas=null;
         this.editandoBase=null;
@@ -551,6 +556,7 @@ const AdminPresenter = {
     },
 
     cancelarEdicao() {
+        EdicaoSegura.limpar('oferta');
         this.editandoRascunhoId=null;this.editandoRascunhoBase=null;
         this.editandoId=null;
         this.editandoBase=null;
@@ -706,12 +712,14 @@ const AdminPresenter = {
         r.readAsDataURL(f);
     },
     restaurarLogoPortal() {
+        EdicaoSegura.marcar('aparencia');
         this._logoOriginalPendente = true;
         const file=document.getElementById('fileLogoPortal'); if(file) file.value='';
         const p=document.getElementById('previewLogoPortal'); if(p) p.src='img/logo.png';
         this._statusAparencia('Logo original selecionada. Clique em Salvar aparência para publicar.');
     },
     restaurarImagemPadrao() {
+        EdicaoSegura.marcar('aparencia');
         this._imagemOriginalPendente = true;
         const file=document.getElementById('filePadrao'); if(file) file.value='';
         const p=document.getElementById('previewPadrao'); if(p) p.src='img/produto.png';
@@ -739,7 +747,10 @@ const AdminPresenter = {
                 mensagem: document.getElementById('mensagemPadrao').value.trim()
             };
             if(cfg.titulo.length>100 || cfg.mensagem.length>500) throw new Error('Título: até 100 caracteres; mensagem: até 500.');
-            await AparenciaPortal.salvar(cfg);
+            if(EdicaoSegura.conflitos.has('aparencia'))throw new Error('A aparência mudou em outra sessão. Recarregue após guardar suas alterações.');
+            await AparenciaPortal.salvar(cfg,AdminSync.aparenciaBase);
+            EdicaoSegura.limpar('aparencia');
+            AdminSync.aparenciaBase=JSON.stringify(cfg);
             Storage.salvarConfigEmBreve({imagem:cfg.imagem,titulo:cfg.titulo,mensagem:cfg.mensagem});
             document.getElementById('previewLogoPortal').src = cfg.logo;
             document.getElementById('previewPadrao').src = cfg.imagem;
@@ -759,6 +770,7 @@ const AdminPresenter = {
         const local = Storage.carregarConfigEmBreve();
         try {
             const cfg = await AparenciaPortal.carregar();
+            if(EdicaoSegura.sujo('aparencia'))return;
             if (AparenciaPortal.dados || !local) {
                 document.getElementById('previewPadrao').src=cfg.imagem;
                 document.getElementById('tituloPadrao').value=cfg.titulo;

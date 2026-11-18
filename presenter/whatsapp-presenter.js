@@ -4,21 +4,21 @@ const WhatsAppPresenter = {
   pagina:1, porPagina:15, editando:'', carregando:false, grupoCarregado:false,
   _esc(v) { return VendedoresPresenter._escapar(v); },
   _status(txt,tipo='') { const e=document.getElementById('whatsappStatus'); if(e){e.className='vendor-status '+tipo; e.textContent=txt;} },
-  async carregar() {
+  async carregar(preservar=false) {
     if (this.carregando) return;
     this.carregando=true; this._status('Consultando participantes no Google Sheets...');
     try {
       if (!VendedoresPresenter.registros.length && !VendedoresPresenter.carregando) await VendedoresPresenter.atualizar();
-      if (!VendedoresPresenter.registros.length) throw new Error('Aguarde o carregamento da base de vendedores e tente novamente.');
+
       const dados=await GoogleSheetsService.listarWhatsApp();
       this.participantes=dados.participantes||[];
-      this.grupoCarregado = true;
+      this.grupoCarregado = dados.disponivel!==false;
       this.identificacoes=dados.identificacoes||[];
-      this.pagina=1;
+      if(!preservar)this.pagina=1;
       this.renderizar();
       VendedoresPresenter.atualizarGrupo();
-      this._status(`${this.participantes.length} participantes na lista atual. Telefones exibidos em DDD + 9 + 8 dígitos.`, 'ok');
-    } catch(e) { this._status(e.message,'error'); }
+      this._status(`${this.participantes.length} participantes na última lista importada. Não é uma consulta em tempo real ao WhatsApp.`, 'ok');
+    } catch(e) { this._status(e.message,'error');if(preservar)throw e; }
     finally {this.carregando=false;}
   },
   agendarBusca() {
@@ -174,7 +174,7 @@ const WhatsAppPresenter = {
     const participante=this.participantes.find(v=>GrupoWhatsAppModel.telefone(v.telefone)===GrupoWhatsAppModel.telefone(telefone));
     if (!participante) return;
     const manual=this.identificacoes.find(v=>GrupoWhatsAppModel.telefone(v.telefone)===GrupoWhatsAppModel.telefone(telefone));
-    this.editando=telefone;
+    this.editando=telefone;this.editandoRevision=this.revisoes?.[telefone];EdicaoSegura.limpar('whatsapp');
     document.getElementById('whatsappEditando').textContent=`${participante.nome} · ${participante.telefone}`;
     const classificado=GrupoWhatsAppModel.classificar(participante, VendedoresPresenter.registros||[], this.identificacoes);
     document.getElementById('whatsappTipoPessoa').value=manual?.tipo||(classificado.situacao==='vendedor'?'VENDEDOR':'GERENTE');
@@ -187,7 +187,7 @@ const WhatsAppPresenter = {
   mostrarMatricula() {
     const vendedor = document.getElementById('whatsappTipoPessoa').value === 'VENDEDOR';
     document.getElementById('whatsappMatriculaBloco').hidden = !vendedor;
-    document.getElementById('whatsappAtualizarTelefone').hidden = !vendedor;
+    document.getElementById('whatsappAtualizarTelefone').hidden = true;
     this.mostrarComparacao();
   },
   mostrarComparacao() {
@@ -204,32 +204,27 @@ const WhatsAppPresenter = {
     const antigo=GrupoWhatsAppModel.telefone(vendedor.numero);
     const status=vendedor.statusTelefone||'PENDENTE';
     painel.textContent=`${vendedor.nome} (Rubi ${matricula}) • telefone atual: ${antigo||'não informado'} (${status}) • telefone do grupo: ${telefone||'inválido'}. ` +
-      (antigo===telefone?'Os números coincidem.':'A atualização substituirá o telefone oficial somente se você escolher essa ação e confirmar.');
+      (antigo===telefone?'Os números coincidem.':'A identificação preserva os telefones. Para associar um tipo, revise o cadastro do vendedor.');
   },
-  fechar() {document.getElementById('whatsappModal').style.display='none';},
+  fechar() {if(EdicaoSegura.sujo('whatsapp')&&!confirm('Descartar alterações desta identificação?'))return;EdicaoSegura.limpar('whatsapp');document.getElementById('whatsappModal').style.display='none';},
   async salvar(remover=false, atualizarTelefone=false) {
     const tipo=remover?'REMOVER':document.getElementById('whatsappTipoPessoa').value;
     const matricula=document.getElementById('whatsappMatricula').value;
     const observacao=document.getElementById('whatsappObservacao').value;
     const oficial=VendedoresPresenter.registros.find(v=>String(v.matricula).replace(/\D/g,'')===String(matricula).replace(/\D/g,''));
     const novo=GrupoWhatsAppModel.telefone(this.editando);
-    if (atualizarTelefone) {
-      if (tipo!=='VENDEDOR' || !oficial) { UI.erro('Escolha um vendedor cadastrado antes de alterar o telefone.'); return; }
-      const anterior=GrupoWhatsAppModel.telefone(oficial.numero);
-      const aviso=`Confirmar atualização da base OFICIAL?\n\n${oficial.nome} (Rubi ${matricula})\n` +
-        `Telefone anterior: ${anterior || 'não informado'}\nNovo telefone: ${novo}\n\n` +
-        'O número será marcado como VALIDADO e a alteração será registrada na auditoria.';
-      if (!confirm(aviso)) return;
-    }
+    if(atualizarTelefone){UI.erro('Revise os dois telefones no cadastro. O histórico é preservado.');return;}
     const btn=document.getElementById('whatsappSalvar');
     const btnAtualizar=document.getElementById('whatsappAtualizarTelefone');
     btn.disabled=true; btnAtualizar.disabled=true;
     try {
+      AdminSync.exigirEdicao();
       const r=await GoogleSheetsService.salvarIdentificacaoWhatsApp({
+        revision:this.editandoRevision,
         telefone:this.editando,tipo,matricula,observacao,
         atualizarTelefone,confirmarSubstituicao:atualizarTelefone
       });
-      this.fechar();
+      EdicaoSegura.limpar('whatsapp');this.fechar();
       if (r.telefoneAtualizado) await VendedoresPresenter.atualizar();
       await this.carregar();
       UI.ok(remover?'Identificação manual removida.':r.telefoneAtualizado?'Associação e telefone oficial atualizados com sucesso.':'Identificação salva. Telefone oficial preservado.');
