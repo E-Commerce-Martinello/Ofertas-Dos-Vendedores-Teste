@@ -25,9 +25,9 @@
           <label for="gerenteMatricula">Sua matrícula</label>
           <input id="gerenteMatricula" type="text" inputmode="numeric" autocomplete="off" maxlength="8" pattern="[0-9]{3,8}" required placeholder="Informe sua matrícula">
         </div>
-        <button id="gerenteEntrar" class="btn btn-primary btn-full" type="submit">ENTRAR COM GOOGLE</button>
+        <button id="gerenteEntrar" class="btn btn-primary btn-full" type="submit">ACESSAR MINHA FILIAL</button>
       </form>
-      <p class="small" style="margin:15px 0 0">O acesso exige uma conta Google previamente autorizada. Informar apenas a matrícula não libera dados.</p>
+      <p class="small" style="margin:15px 0 0">Informe sua matrícula cadastrada para consultar a filial correspondente. Não é necessário entrar com Google.</p>
       <div class="status" id="gerenteLoginStatus" role="status" hidden></div>
     </div>
     <aside class="panel">
@@ -43,7 +43,7 @@
     <div class="panel">
       <div class="info-head">
         <div><h1 id="gerenteNome">Painel da filial</h1><div class="meta"><span id="gerenteFilial" class="chip">Filial</span><span id="gerenteAtualizadoEm" class="small"></span></div></div>
-        <button type="button" class="btn btn-quiet" id="gerenteSair">Sair</button>
+        <button type="button" class="btn btn-quiet" id="gerenteSair">Trocar matrícula</button>
       </div>
       <div class="tabs" role="tablist" aria-label="Áreas do painel">
         <button type="button" class="tab" role="tab" aria-controls="gerenteResultados" id="gerenteAbaResultados" aria-selected="true" data-aba="resultados">Resultados</button>
@@ -66,7 +66,7 @@
         <div class="section-title"><h2>Atividade por vendedor</h2><span class="small" id="gerenteRankingResumo"></span></div>
         <div class="table-wrap"><table>
           <thead><tr><th>Vendedor</th><th>Matrícula</th><th>Inícios de compartilhamento</th><th>Última atividade</th></tr></thead>
-          <tbody id="gerenteRanking"><tr><td colspan="4">Aguardando consulta autorizada...</td></tr></tbody>
+          <tbody id="gerenteRanking"><tr><td colspan="4">Informe a matrícula para consultar...</td></tr></tbody>
         </table></div>
         <p class="small" style="margin-top:16px">Os números medem inícios de compartilhamento, não comprovam envio no WhatsApp, cliques, compras ou vendas.</p>
       </section>
@@ -92,14 +92,9 @@
   </form>
 </dialog>
 <footer class="footer-note">Portal de Ofertas Martinello • Acesso individual e restrito por filial. Ambiente TESTE quando acessado pelo repositório de homologação.</footer>
-<script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
 <script src="shared/config.js?v=1.6.19"></script>
 <script src="shared/telefones.js?v=1.6.19-fix1"></script>
-<script src="model/firebase-config.js?v=1.6.19"></script>
-<script src="model/auth.js?v=1.6.19"></script>
-<script src="model/google-sheets.js?v=1.6.19"></script>
-<script src="presenter/gerentes-presenter.js?v=1.6.19-ger1"></script>
+<script src="model/gerentes-api.js?v=1.6.19-mat1"></script>
+<script src="presenter/gerentes-presenter.js?v=1.6.19-mat1"></script>
 </body>
 </html>
