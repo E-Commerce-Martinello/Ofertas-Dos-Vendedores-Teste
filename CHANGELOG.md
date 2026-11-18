@@ -1,6 +1,6 @@
 # Histórico de alterações
 
-## 1.6.19 — em desenvolvimento, não publicada
+## 1.6.19 — refinamento em homologação; backend pendente
 - Diagnóstico técnico e plano em docs/PLANO-v1.6.19.md.
 - Fontes de infraestrutura recuperados de pacotes anteriores para revisão; não confirmados como os atualmente implantados.
 
@@ -20,3 +20,8 @@
 
 ### Dependências para liberação
 Conferir fontes realmente implantadas, autorizar API avançada/escopos e validar duas sessões reais em homologação. Push exige autorização adicional de IAM/regras/acionadores. Consultar `docs/VALIDACAO-v1.6.19.md`. A versão permanece `1.6.19-dev`; não é release publicada.
+
+### Correção de desempenho — preparada em 18/11/2026
+- Índice de telefones e cache por snapshot evitam revarrer todos os vendedores para cada indicador. Invalidação ao atualizar cadastros, participantes e identificações.
+- Nomes de filiais pré-calculados, preservando ordenação e sufixos por município.
+- Testes de regressão com 6.000 vendedores e equivalência das decisões de titularidade/conflito. Detalhes em docs/CORRECAO-DESEMPENHO-v1.6.19.md.

@@ -62,6 +62,7 @@ const VendedoresPresenter = {
     _normalizarCabecalho(valor) { return this._texto(valor).toLocaleLowerCase('pt-BR').replace(/\s+/g, '_'); },
 
     limparDados() {
+        this._invalidarTelefones();
         this.registros = [];
         this.filiais = {};
         this.filtrados = [];
@@ -250,12 +251,23 @@ const VendedoresPresenter = {
             : 'Informe apenas o número da filial; a localidade é vinculada pelo relatório.';
     },
 
-    _avaliarTelefones(v) { return Telefones.avaliar(v,this.registros,WhatsAppPresenter.participantes,WhatsAppPresenter.identificacoes,this.grupoCarregado); },
+    _invalidarTelefones() { this._snapshotTelefones=null; },
+    _avaliarTelefones(v) {
+        const participantes=WhatsAppPresenter.participantes,identificacoes=WhatsAppPresenter.identificacoes;
+        let c=this._snapshotTelefones;
+        if(!c||c.base!==this.registros||c.participantes!==participantes||c.identificacoes!==identificacoes||c.disponivel!==this.grupoCarregado){
+            c=this._snapshotTelefones={base:this.registros,participantes,identificacoes,disponivel:this.grupoCarregado,
+                indice:Telefones.criarIndice(this.registros,participantes,identificacoes),avaliacoes:new WeakMap()};
+        }
+        if(!c.avaliacoes.has(v))c.avaliacoes.set(v,Telefones.avaliar(v,c.base,participantes,identificacoes,c.disponivel,c.indice));
+        return c.avaliacoes.get(v);
+    },
     _fonesValidados(v) { return this._avaliarTelefones(v).filter(f=>f.validado&&!f.conflito); },
     _telefoneExibido(v) {return this._numeroPreferido(v)||Telefones.campos(v)[0]?.original||'';},
     _numeroPreferido(v) { return Telefones.preferido(this._avaliarTelefones(v))?.numero||''; },
 
     atualizarGrupo() {
+        this._invalidarTelefones();
         const grupo = typeof WhatsAppPresenter !== 'undefined' ? WhatsAppPresenter : null;
         this.grupoCarregado = !!grupo?.grupoCarregado;
         this.grupoTelefones = new Set((grupo?.participantes || [])

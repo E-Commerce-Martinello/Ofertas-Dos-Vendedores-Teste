@@ -39,16 +39,31 @@ var Telefones = (() => {
       { tipo:'legado', original:String(v.numero || ''), status:v.statusTelefone }
     ].filter(f => f.original).map(f => ({...f, numero:numero(f.original)}));
   }
-  function avaliar(v, base, participantes = [], identificacoes = [], listaDisponivel = true) {
+  // Índice de um snapshot: construir uma vez, reutilizar em todos os vendedores.
+  function criarIndice(base, participantes = [], identificacoes = []) {
+    const titulares=new Map(),grupo=new Map(),manuais=new Map();
+    const adicionar=(map,n,valor)=>{if(!n)return;if(!map.has(n))map.set(n,[]);map.get(n).push(valor);};
+    for(const v of base)for(const f of campos(v)){
+      if(!f.numero)continue;
+      if(!titulares.has(f.numero))titulares.set(f.numero,new Set());
+      titulares.get(f.numero).add(String(v.matricula));
+    }
+    for(const p of participantes)adicionar(grupo,numero(String(p.telefone||'')),p);
+    for(const i of identificacoes)adicionar(manuais,numero(String(i.telefone||'')),i);
+    return {titulares,grupo,manuais};
+  }
+  function avaliar(v, base, participantes = [], identificacoes = [], listaDisponivel = true, indice = null) {
     const matricula = String(v.matricula);
     return campos(v).map(f => {
       const n = f.numero;
-      const grupo = listaDisponivel && !!n && participantes.some(p => numero(String(p.telefone || '')) === n);
-      const outros = n ? base.filter(o => String(o.matricula) !== matricula && campos(o).some(x => x.numero === n)) : [];
-      const manuais = identificacoes.filter(i => n && numero(String(i.telefone || '')) === n);
-      const rubis = participantes.filter(p => n && numero(String(p.telefone || '')) === n)
-        .map(p => (String(p.nome || '').match(/\((\d{3,5})\)/) || [])[1]).filter(Boolean);
-      const divergencia = outros.length > 0 || manuais.some(i => i.tipo !== 'VENDEDOR' || String(i.matricula) !== matricula)
+      const presentes = indice ? (indice.grupo.get(n)||[]) : participantes.filter(p=>n&&numero(String(p.telefone||''))===n);
+      const grupo = listaDisponivel && !!n && presentes.length>0;
+      const titulares = indice?.titulares.get(n);
+      const outros = indice ? !!titulares&&(titulares.size>1||!titulares.has(matricula)) :
+        !!n&&base.some(o=>String(o.matricula)!==matricula&&campos(o).some(x=>x.numero===n));
+      const manuais = indice ? (indice.manuais.get(n)||[]) : identificacoes.filter(i => n && numero(String(i.telefone || '')) === n);
+      const rubis = presentes.map(p => (String(p.nome || '').match(/\((\d{3,5})\)/) || [])[1]).filter(Boolean);
+      const divergencia = outros || manuais.some(i => i.tipo !== 'VENDEDOR' || String(i.matricula) !== matricula)
         || rubis.some(r => r !== matricula);
       const evidencia = f.status === 'VALIDADO' || manuais.some(i => i.tipo === 'VENDEDOR' && String(i.matricula) === matricula)
         || (grupo && rubis.includes(matricula));
@@ -81,6 +96,6 @@ var Telefones = (() => {
     }
     return copia;
   }
-  return {ddds, digitos, normalizar, erro, valido, numero, formato, campos, avaliar, preferido, associarSolicitacoes};
+  return {ddds, digitos, normalizar, erro, valido, numero, formato, campos, criarIndice, avaliar, preferido, associarSolicitacoes};
 })();
 if (typeof module !== 'undefined') module.exports = Telefones;
