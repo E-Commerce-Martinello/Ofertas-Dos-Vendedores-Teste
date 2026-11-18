@@ -304,7 +304,7 @@
         @media (prefers-reduced-motion:reduce){.catalogo-item.mais-compartilhada{transition:none;}}
 
         .catalogo-item img {
-            display:block; width:100%; height:auto; aspect-ratio:1/1;
+            display:block; width:100%; aspect-ratio:1/1; height:auto;
             object-fit:cover; object-position:center center;
             border-radius:9px; background:#f3f3f3;
         }
@@ -377,7 +377,12 @@
 #avisoNaoVendedor[hidden]{display:none!important}
 #avisoNaoVendedor{position:fixed;bottom:max(16px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:10000;width:min(440px,calc(100% - 32px));padding:20px 52px 20px 20px;border-radius:14px;border:2px solid #b77912;background:#fff8e8;color:#3b2c12;box-shadow:0 8px 32px #0004;text-align:left;max-height:50dvh;overflow:auto}
 #avisoNaoVendedor p{font-size:14px;line-height:1.6;margin:8px 0 0}
-#avisoNaoVendedor button{position:absolute;right:6px;top:6px;width:44px;height:44px;border:0;background:transparent;color:inherit;font-size:26px;cursor:pointer}
+#avisoNaoVendedor .aviso-fechar{position:absolute;right:6px;top:6px;width:44px;height:44px;border:0;background:transparent;color:inherit;font-size:26px;cursor:pointer}
+#avisoNaoVendedor .aviso-continuar{display:block;width:100%;border:0;border-radius:9px;background:#a4262d;color:#fff;font:700 13px 'Montserrat',sans-serif;padding:13px 16px;min-height:44px;margin-top:14px;cursor:pointer}
+#avisoNaoVendedor .aviso-continuar:hover{background:#7e171e}
+#avisoNaoVendedor strong{display:block;font-size:15px;padding-right:8px}
+#avisoNaoVendedor .aviso-contador{font-size:12px;opacity:.88}
+#avisoNaoVendedor button{touch-action:manipulation}
 #avisoNaoVendedor button:focus-visible{outline:3px solid #236cd0;border-radius:6px}
 body.dark-mode #avisoNaoVendedor{background:#382e1d;color:#ffedc9;border-color:#e9b65d}
 </style></head>
@@ -499,10 +504,15 @@ body.dark-mode #avisoNaoVendedor{background:#382e1d;color:#ffedc9;border-color:#
     <script src="view/ui.js?v=1.6.18"></script>
     <script src="presenter/api.js"></script>
     <script src="shared/portal-preferencias.js?v=1.6.19-fix2"></script>
-<script src="presenter/index-presenter.js?v=1.6.19-fix2"></script>
+<script src="presenter/index-presenter.js?v=1.6.19-fix3"></script>
 <aside id="avisoNaoVendedor" hidden aria-labelledby="avisoNaoVendedorTitulo">
-<button type="button" aria-label="Fechar aviso de matrícula" onclick="IndexPresenter.fecharAvisoNaoVendedor()">×</button>
-<div role="status" aria-live="polite"><strong id="avisoNaoVendedorTitulo">Matrícula de não vendedor</strong><p>A oferta será gerada com o link padrão da Martinello, sem atribuição de venda a esta matrícula.</p><p>Este aviso fecha automaticamente após 20 segundos.</p></div>
+<button type="button" class="aviso-fechar" aria-label="Fechar aviso e continuar" onclick="IndexPresenter.fecharAvisoNaoVendedor()">×</button>
+<div role="status" aria-live="polite">
+  <strong id="avisoNaoVendedorTitulo">Matrícula de não vendedor</strong>
+  <p>A oferta será gerada com o link padrão da Martinello, sem atribuição de venda a esta matrícula.</p>
+  <p class="aviso-contador">Continuação automática em <span id="avisoNaoVendedorContador">20</span> segundos.</p>
+</div>
+<button id="avisoNaoVendedorContinuar" type="button" class="aviso-continuar" onclick="IndexPresenter.fecharAvisoNaoVendedor()">ENTENDI, CONTINUAR</button>
 </aside>
 </body>
 </html>

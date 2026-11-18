@@ -95,3 +95,24 @@ body #btnNovaOfertaTopo{position:fixed;right:max(20px,env(safe-area-inset-right)
 body .admin-container{padding-bottom:88px}
 body.admin-modal-aberto #btnNovaOfertaTopo{visibility:hidden}
 @media(max-width:600px){body .nova-oferta-texto{display:none}body #btnNovaOfertaTopo{width:56px;height:56px;padding:12px;font-size:22px}body #segurancaSecao .vendor-actions>button{flex-basis:100%}body .central-preferencias select{min-width:0}body .admin-switch-label{column-gap:8px!important}body #segurancaSecao .vendor-table{min-width:640px!important}body #segurancaSecao .vendor-table-wrap{overscroll-behavior-x:contain}}
+
+/* Refinamento revisado: estados sem ambiguidade e painéis adaptáveis. */
+body #segurancaSecao{margin-top:18px;padding:clamp(16px,2.4vw,28px);overflow:hidden}
+body #segurancaSecao .vendor-table-wrap{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+body #segurancaSecao .vendor-actions{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap}
+body #segurancaSecao .vendor-actions>button{flex:1 1 min(100%,220px);white-space:normal;min-width:0}
+body label.admin-switch-label{grid-template-columns:44px minmax(50px,max-content) minmax(0,1fr);gap:10px;align-items:center}
+body .admin-switch-state{font-weight:800;min-width:50px}
+body .admin-switch-description{min-width:0;white-space:normal}
+body .admin-switch:not(:checked)+.admin-switch-state{color:var(--a-muted)}
+body .admin-switch:checked+.admin-switch-state{color:var(--a-good)}
+body .admin-switch:focus-visible{outline:3px solid var(--a-focus)!important;outline-offset:3px}
+body .catalogo-item img,body .catalogo-destaques img{object-fit:cover}
+@media(max-width:500px){
+ body #segurancaSecao .vendor-actions>button{flex-basis:100%;width:100%}
+ body #segurancaSecao .vendor-actions>h3{flex-basis:100%!important}
+ body label.admin-switch-label{grid-template-columns:44px minmax(0,1fr);column-gap:12px;row-gap:1px}
+ body label.admin-switch-label .admin-switch-state{grid-column:2;grid-row:1}
+ body label.admin-switch-label .admin-switch-description{grid-column:1 / -1;grid-row:2;padding-left:0}
+ body #btnNovaOfertaTopo{right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom))}
+}

@@ -670,7 +670,7 @@
         }
 
     </style>
-<link rel="stylesheet" href="view/admin.css?v=1.6.19-fix2">
+<link rel="stylesheet" href="view/admin.css?v=1.6.19-fix3">
 </head>
 <body>
 <div class="admin-container">
@@ -870,9 +870,9 @@
             <div class="form-group"><label for="skuOferta">Código/SKU do produto (opcional)</label>
                 <input id="skuOferta" type="text" maxlength="40" placeholder="Ex.: 81367"></div>
             <div class="form-group">
-                <label class="admin-switch-label"><input id="rascunhoOferta" type="checkbox"><span class="admin-switch-state" aria-hidden="true"><span class="switch-on">Ativo</span><span class="switch-off">Inativo</span></span><span class="admin-switch-description">Manter como rascunho (não aparece no portal)</span></label>
+                <label class="admin-switch-label"><input id="rascunhoOferta" type="checkbox"><span class="admin-switch-state" aria-hidden="true"><span class="switch-on">SIM</span><span class="switch-off">NÃO</span></span><span class="admin-switch-description">Manter como rascunho (não aparece no portal)</span></label>
             </div>
-            <div class="form-group"><label class="admin-switch-label"><input id="destaqueDiaOferta" type="checkbox"><span class="admin-switch-state" aria-hidden="true"><span class="switch-on">Ativo</span><span class="switch-off">Inativo</span></span><span class="admin-switch-description">Destacar na vitrine</span></label>
+            <div class="form-group"><label class="admin-switch-label"><input id="destaqueDiaOferta" type="checkbox"><span class="admin-switch-state" aria-hidden="true"><span class="switch-on">SIM</span><span class="switch-off">NÃO</span></span><span class="admin-switch-description">Destacar na vitrine</span></label>
                 <small class="vendor-subtext">Uma oferta destacada aparece em tamanho maior acima das demais, somente durante o período programado.</small></div>
             <div class="row"><div class="form-group"><label for="destaqueInicioOferta">Início do destaque (opcional)</label>
                 <input type="datetime-local" id="destaqueInicioOferta"></div>
@@ -1284,7 +1284,7 @@
                     <p class="vendor-subtext">Essa preferência é local. Os dados e os cadastros continuam compartilhados no Google Sheets.</p>
                 </div>
             </div>
-                <div class="central-preferencias" id="segurancaSecao">
+                <div class="admin-card central-preferencias" id="segurancaSecao">
                     <h3 style="font-size:17px;margin:0 0 10px"><i class="fas fa-shield-alt"></i> Segurança, backups e auditoria</h3>
                     <p class="vendor-subtext">Backups manuais e histórico de operações. Exclusivo da conta principal. Os dados não são enviados ao GitHub nem armazenados no Cloudflare.</p>
                     <p id="segurancaAviso" class="vendor-subtext">Somente a conta principal pode consultar o histórico e gerar backups.</p>
@@ -1343,7 +1343,7 @@
         <div class="form-group"><label for="editarFilialVendedor">Número da filial</label><select id="editarFilialVendedor" onchange="VendedoresPresenter.atualizarLocalidadeFilial()"><option value="">Selecione a filial</option></select><small id="localidadeFilialVendedor" style="display:block;color:#777;margin-top:6px;">Informe apenas o número da filial.</small></div>
         <div class="admin-history"><strong>Telefone histórico preservado</strong><p id="telefoneHistorico"></p><small>Tipo não confirmado. Copie somente após identificar a finalidade.</small><div><button type="button" class="btn-outline" onclick="VendedoresPresenter.copiarHistorico('Profissional')">Usar como profissional</button><button type="button" class="btn-outline" onclick="VendedoresPresenter.copiarHistorico('Pessoal')">Usar como pessoal</button></div></div><div class="admin-phone-grid"><div class="form-group"><label for="editarTelefoneProfissional">Telefone profissional <small>(opcional)</small></label><input type="tel" id="editarTelefoneProfissional"><small id="estadoTelefoneProfissional" role="status"></small><button type="button" class="btn-outline" onclick="VendedoresPresenter.confirmarTitularidade('Profissional')">Confirmar titularidade manualmente</button></div><div class="form-group"><label for="editarTelefonePessoal">Telefone pessoal <small>(opcional)</small></label><input type="tel" id="editarTelefonePessoal"><small id="estadoTelefonePessoal" role="status"></small><button type="button" class="btn-outline" onclick="VendedoresPresenter.confirmarTitularidade('Pessoal')">Confirmar titularidade manualmente</button></div></div><p class="vendor-subtext">Participação conferida pela última lista importada. Não é uma consulta em tempo real ao WhatsApp.</p>
         <div class="form-group"><label>Situação funcional atual</label><div id="editarSituacaoFuncional" class="vendor-help" style="margin:0;">Não informada</div></div>
-        <label class="admin-switch-label"><input type="checkbox" id="editarAtivoVendedor" checked><span class="admin-switch-state" aria-hidden="true"><span class="switch-on">Ativo</span><span class="switch-off">Inativo</span></span><span class="admin-switch-description">Cadastro ativo no painel</span></label>
+        <label class="admin-switch-label"><input type="checkbox" id="editarAtivoVendedor" checked><span class="admin-switch-state" aria-hidden="true"><span class="switch-on">ATIVO</span><span class="switch-off">INATIVO</span></span><span class="admin-switch-description">Cadastro ativo no painel</span></label>
         <div class="form-group" style="margin-top:12px;"><label for="editarObservacoesVendedor">Observações</label><textarea id="editarObservacoesVendedor" rows="2" maxlength="500"></textarea></div>
         <p class="vendor-subtext">Cadastro e telefones são salvos juntos. A matrícula permanece fixa e o telefone histórico é preservado.</p>
         <div class="vendor-modal-actions">
