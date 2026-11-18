@@ -1,6 +1,6 @@
 /** v1.6.19: preparado para implantação, sem instalação automática. */
 const MART19_TABELAS = {
-  core:['Vendedores','Filiais','Telefones_Vendedores','WhatsApp_Atual','Identificacoes_Manuais','Solicitacoes_Telefone','Verificacao_Links'],
+  core:['Vendedores','Filiais','Telefones_Vendedores','WhatsApp_Atual','Identificacoes_Manuais','Solicitacoes_Telefone','Verificacao_Links','Solicitacoes_Gerentes'],
   contatos:['Config_Contatos','Historico_Contatos'], campanhas:['Config_Campanhas'],
   dashboard:['Eventos_Portal','Eventos_Campanhas'], auditoria:['Auditoria_Admin']
 };
@@ -136,6 +136,8 @@ function mart19_snapshot_(p,acesso) {
         pedidos:mart1613_listarSolicitacoesTelefone_().pedidos||[],
         revisoesIdentificacoes:Object.fromEntries(ctx.grupo.participantes.map(p=>[p.telefone,mart19_hash_(ctx.grupo.identificacoes.filter(i=>i.telefone===p.telefone))])),
         revisoes:Object.fromEntries(ctx.registros.map(v=>[v.matricula,mart19_revisionVendedor_(ctx,v.matricula)]))};
+      if(typeof mart20_listarSolicitacoesGerentes_==='function')
+        dados.core.solicitacoesGerentes=mart20_listarSolicitacoesGerentes_();
     }else if(dominio==='contatos'){
       const config=mart169_listarConfigContatos_();config.revision=mart19_hash_([config.linkGrupo,config.mensagemConvite]);
       const sh=ss.getSheetByName('Historico_Contatos');
