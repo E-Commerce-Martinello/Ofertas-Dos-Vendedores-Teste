@@ -1,12 +1,8 @@
-/**
- * Martinello 1.6.3.2 — coletor PUBLICO de eventos, SEM funcoes administrativas.
- * IMPORTANTE: criar PROJETO APPS SCRIPT SEPARADO do projeto da API administrativa.
- * Implantar como app Web: Executar como EU, Acesso QUALQUER PESSOA.
- * Registra eventos apenas na planilha configurada neste projeto.
- * Não publica consultas, planilha, token, email ou dados de vendedores.
+/** Coletor público v1.6.19, projeto Apps Script separado da API administrativa.
+ * Script Properties obrigatória: MART_EVT_SHEET_ID.
+ * Opcional para Cloudflare Pages: MART_EVT_PAGES_ORIGIN (origem HTTPS exata).
+ * Registra apenas eventos e responde consultas limitadas sem dados pessoais.
  */
-// Este mesmo codigo e usado pelos coletores oficial e homologacao.
-// Definir MART_EVT_SHEET_ID em Propriedades do Script de CADA projeto coletor.
 const MART_EVT_SHEET_ID = String(PropertiesService.getScriptProperties().getProperty('MART_EVT_SHEET_ID') || '').trim();
 const MART_EVT_ABA = 'Eventos_Portal';
 const MART_EVT_CABECALHOS = [
@@ -54,7 +50,7 @@ function doPost(e) {
     if (p.action !== 'registrar') throw new Error('Acao nao permitida');
     // Este campo não autentica a origem, mas evita envios acidentais de outros sites.
     // Qualquer cliente pode falsificá-lo; jamais tratar os registros como prova de envio.
-    if (!/^https:\/\/[a-z0-9-]+\.github\.io$/i.test(String(p.origem || ''))) {
+    if (!martEvtOrigemPermitida_(p.origem)) {
       throw new Error('Origem informada invalida');
     }
     const oferta = String(p.ofertaId || '').trim();
@@ -118,31 +114,56 @@ function martEvtResposta_(dados) {
 // O portal não pode ler nomes, números ou cadastros.
 // Nenhum pedido altera automaticamente a aba Vendedores.
 // ================================================================
-const MART_EVT_DDDS = new Set(('11 12 13 14 15 16 17 18 19 21 22 24 27 28 31 32 33 34 35 37 38 '+
- '41 42 43 44 45 46 47 48 49 51 53 54 55 61 62 63 64 65 66 67 68 69 '+
- '71 73 74 75 77 79 81 82 83 84 85 86 87 88 89 91 92 93 94 95 96 97 98 99').split(' '));
 const MART_EVT_FONE_ABA = 'Solicitacoes_Telefone';
 const MART_EVT_FONE_HEADERS = ['solicitacao_id','criado_em','matricula','telefone_informado','status','origem','tipo_telefone','declarado_no_grupo'];
 
 function martEvtCelular_(n) { return Telefones.valido(n); }
 
 function martEvtTelefoneValidadoCadastro_(rubi) {
+  // A consulta pública retorna apenas um booleano. Cache curto evita leitura pesada
+  // a cada abertura do portal e permite atualização após mudanças nos cadastros.
+  const cache=CacheService.getScriptCache(),chave='mart19_fone_'+rubi;
+  const salvo=cache.get(chave);
+  if(salvo==='1'||salvo==='0')return salvo==='1';
   const ss=SpreadsheetApp.openById(MART_EVT_SHEET_ID);
-  const ler=nome=>{const sh=ss.getSheetByName(nome);if(sh&&sh.getLastRow()>20000)throw new Error('Base excede o limite seguro de consulta');return !sh||sh.getLastRow()<2?[]:sh.getRange(2,1,sh.getLastRow()-1,sh.getLastColumn()).getDisplayValues();};
-  const rows=ler('Vendedores'),extras=ler('Telefones_Vendedores');
-  if(rows.filter(r=>r[0]===rubi).length!==1)return false;
-  const grupo=ler('WhatsApp_Atual').map(r=>({telefone:r[0],nome:r[1]}));
-  const manuais=ler('Identificacoes_Manuais').map(r=>({telefone:r[0],tipo:r[2],matricula:r[3]}));
-  let base=rows.map(r=>{const f=extras.find(x=>x[0]===r[0])||[];return {matricula:r[0],numero:r[4],statusTelefone:r[12],
-    telefonesExtras:{pessoal:f[1]||'',statusPessoal:f[2],profissional:f[4]||'',statusProfissional:f[5]}};});
-  const pedidos=ler('Solicitacoes_Telefone').map(r=>({matricula:r[2],telefone:r[3],tipoTelefone:r[6]}));
-  base=Telefones.associarSolicitacoes(base,pedidos,grupo,manuais);
-  const v=base.find(v=>v.matricula===rubi);
-  return !!Telefones.preferido(Telefones.avaliar(v,base,grupo,manuais));
+  const ler=(nome,colunas)=>{
+    const sh=ss.getSheetByName(nome);
+    if(!sh||sh.getLastRow()<2)return [];
+    if(sh.getLastRow()>20000)throw new Error('Base excede o limite seguro de consulta');
+    return sh.getRange(2,1,sh.getLastRow()-1,Math.min(colunas,sh.getLastColumn())).getDisplayValues();
+  };
+  const rows=ler('Vendedores',13),extras=ler('Telefones_Vendedores',8);
+  const entrada=rows.filter(r=>r[0]===rubi);
+  if(entrada.length!==1)return false;
+  const grupo=ler('WhatsApp_Atual',2).map(r=>({telefone:r[0],nome:r[1]}));
+  const manuais=ler('Identificacoes_Manuais',4).map(r=>({telefone:r[0],tipo:r[2],matricula:r[3]}));
+  const porMatricula=new Map(extras.map(r=>[r[0],r]));
+  const base=rows.map(r=>{
+    const f=porMatricula.get(r[0])||[];
+    return {matricula:r[0],numero:r[4],statusTelefone:r[12],
+      telefonesExtras:{pessoal:f[1]||'',statusPessoal:f[2],profissional:f[4]||'',statusProfissional:f[5]}};
+  });
+  let v=base.find(v=>v.matricula===rubi);
+  let selecionado=Telefones.preferido(Telefones.avaliar(v,base,grupo,manuais));
+  if(!selecionado){
+    const pedidos=ler('Solicitacoes_Telefone',7).filter(r=>r[2]===rubi)
+      .map(r=>({matricula:r[2],telefone:r[3],tipoTelefone:r[6]}));
+    if(pedidos.length){
+      const associados=Telefones.associarSolicitacoes(base,pedidos,grupo,manuais);
+      v=associados.find(x=>x.matricula===rubi);
+      selecionado=Telefones.preferido(Telefones.avaliar(v,associados,grupo,manuais));
+    }
+  }
+  const aprovado=!!selecionado;
+  cache.put(chave,aprovado?'1':'0',60);
+  return aprovado;
 }
 
 function martEvtOrigemPermitida_(origem) {
-  return /^https:\/\/[a-z0-9-]+\.github\.io$/i.test(String(origem||''));
+  const valor=String(origem||'').trim();
+  if(valor==='https://e-commerce-martinello.github.io')return true;
+  const pages=String(PropertiesService.getScriptProperties().getProperty('MART_EVT_PAGES_ORIGIN')||'').trim().replace(/\/$/,'');
+  return /^https:\/\/[a-z0-9-]+\.pages\.dev$/i.test(pages)&&valor===pages;
 }
 
 function martEvtAbaFone_() {
