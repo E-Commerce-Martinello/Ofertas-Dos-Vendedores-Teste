@@ -9,9 +9,9 @@ const Telefones=require(path.join(raiz,'shared/telefones.js'));
 function montar(){
   const now=Date.now();
   const dados={
-    Gerentes_Autorizados:[['matricula_gerente','nome','filial_autorizada','ativo','atualizado_em'],
-      ['12345','Gerente A','1','ATIVO',''],
-      ['67890','Gerente B','2','INATIVO','']],
+    Gerentes_Autorizados:[['matricula_gerente','nome','filial_autorizada','ativo','atualizado_em','telefone'],
+      ['12345','Gerente A','1','ATIVO','','65998124567'],
+      ['67890','Gerente B','2','INATIVO','','65998124568']],
     Vendedores:[['matricula','nome','filial','codigo_filial','telefone_original','telefone_normalizado','situacao_funcional',
       'status_cadastro','origem_cadastro','criado_em','atualizado_em','observacoes','status_telefone'],
       ['11111','Vendedor A','1','','65998124567','','OK','ATIVO','','','','','VALIDADO'],
@@ -53,7 +53,7 @@ function montar(){
     listarFiliaisV153_:()=>[['1','Cidade A'],['2','Cidade B']]
   };
   const keys=Object.keys(mocks);
-  const api=new Function(...keys,fonte+'\nreturn {autorizar:mart20_autorizarGerente_,painel:mart20_consultarPainelGerente_,criar:mart20_criarSolicitacaoGerente_,listar:mart20_listarSolicitacoesGerentes_};')
+  const api=new Function(...keys,fonte+'\nreturn {autorizar:mart20_autorizarGerente_,painel:mart20_consultarPainelGerente_,criar:mart20_criarSolicitacaoGerente_,listar:mart20_listarSolicitacoesGerentes_,listarCadastro:mart20_listarCadastroGerentes_,salvarCadastro:mart20_salvarCadastroGerente_};')
     (...keys.map(k=>mocks[k]));
   const ator={email:'MATRICULA_12345',matricula:'12345',nome:'Gerente A',filial:'1'};
   return {dados,api,ator,formatDate};
@@ -65,7 +65,7 @@ test('matrícula ativa identifica a filial sem Google; inválida, inativa ou dup
   assert.throws(()=>s.api.autorizar('67890'));
   assert.throws(()=>s.api.autorizar('abc'));
   assert.throws(()=>s.api.autorizar('99999'));
-  s.dados.Gerentes_Autorizados.push(['12345','Duplicado','2','ATIVO','']);
+  s.dados.Gerentes_Autorizados.push(['12345','Duplicado','2','ATIVO','','65998124569']);
   assert.throws(()=>s.api.autorizar('12345'));
 });
 test('ranking e campanhas não revelam outra filial',()=>{
@@ -83,4 +83,20 @@ test('solicitação fora da filial é bloqueada, CT e duplicação são preserva
   assert.equal(s.api.criar(pedido,s.ator).duplicado,true);
   assert.equal(s.api.listar().pedidos.length,1);
   assert.equal(s.api.listar().pedidos[0].contratoTemporario,true);
+});
+
+test('admin cadastra e edita gerente, preservando vínculo e revisão',()=>{
+  const s=montar(),matricula='22334';
+  const p={matricula,nome:'Gerente Novo',telefone:'65998124569',filial:'1',ativo:true,revision:''};
+  const novo=s.api.salvarCadastro(p);
+  assert.equal(novo.matricula,matricula);
+  assert.equal(s.api.autorizar(matricula).filial,'1');
+  assert.equal(s.api.listarCadastro().gerentes.length,3);
+  assert.throws(()=>s.api.salvarCadastro(p)); // revisão vazia não sobrescreve registro recém-criado
+  const alterado=s.api.salvarCadastro({...p,matriculaOriginal:matricula,nome:'Gerente Editado',ativo:false,revision:novo.revision});
+  assert.equal(alterado.ativo,false);
+  assert.throws(()=>s.api.autorizar(matricula));
+  assert.equal(s.api.listarCadastro().gerentes.find(g=>g.matricula===matricula).nome,'Gerente Editado');
+  assert.throws(()=>s.api.salvarCadastro({...p,matricula:'22445',filial:'999'}));
+  assert.throws(()=>s.api.salvarCadastro({...p,matricula:'22445',telefone:'65911111111'}));
 });
