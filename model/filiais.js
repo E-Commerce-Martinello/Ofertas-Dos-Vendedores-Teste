@@ -22,10 +22,15 @@ const FiliaisUI = {
     let bruto=String(this.fonte[String(codigo)]||'').trim();
     if(!bruto)return '';
     bruto=bruto.replace(/\s+/g,' ').trim();
-    // Limpa prefixos de unidade, códigos e campos de localização.
-    bruto=bruto.replace(/^(?:filial|loja|unidade)\s*#?\d+\s*(?:[-–—:•]\s*)?/i,'')
-               .replace(/^\d{1,6}\s*[-–—:•]\s*/,'')
-               .trim();
+    // Um campo pode já conter o código ou tê-lo sido prefixado mais de uma vez
+    // por importações antigas. Remova TODOS os prefixos repetidos, não só o primeiro.
+    // Ex.: "118 • 118 • Alto Araguaia" -> "Alto Araguaia".
+    for (let i=0;i<5;i++){
+      const anterior=bruto;
+      bruto=bruto.replace(/^(?:(?:filial|loja|unidade)\s*#?\s*)?\d{1,6}\s*(?:[-–—:•·.]\s*)/i,'')
+                 .trim();
+      if (bruto===anterior)break;
+    }
     // Mantém apenas o município antes de divisores de bairro/loja/setor.
     bruto=bruto.split(/\s*(?:[-–—|•;\/])\s*/)[0].trim();
     bruto=bruto.replace(/\s*\([^)]*\)\s*$/,'').trim();
