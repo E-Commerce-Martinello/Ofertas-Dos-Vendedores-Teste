@@ -118,9 +118,10 @@ const GerentesPresenter = {
   },
   filtrados(){
     const busca=this.el('gerenteBusca').value.trim().toLocaleLowerCase('pt-BR');
+    const digitos=busca.replace(/\D/g,'');
     return (this.dados?.vendedores||[]).filter(v=>!busca||
       String(v.nome||'').toLocaleLowerCase('pt-BR').includes(busca)||
-      String(v.matricula||'').includes(busca.replace(/\D/g,'')));
+      (digitos&&String(v.matricula||'').includes(digitos)));
   },
   renderizar(){
     if(!this.dados)return;
@@ -164,6 +165,7 @@ const GerentesPresenter = {
     if(!v)return;
     this.selecionado=v;
     this.el('gerenteFormSolicitacao').reset();
+    this.el('gerenteEnviar').disabled=false;
     this.el('gerenteSolicitacaoVendedor').textContent=v.nome+' • matrícula '+v.matricula;
     this.el('gerenteErroTelefone').textContent='';
     this.status('gerenteSolicitacaoStatus','');
@@ -180,6 +182,7 @@ const GerentesPresenter = {
       this.status('gerenteSolicitacaoStatus','Selecione o tipo de telefone.','error');return;
     }
     this.enviando=true;this.el('gerenteEnviar').disabled=true;
+    let concluido=false;
     this.status('gerenteSolicitacaoStatus','Registrando solicitação para a equipe administrativa...');
     try{
       const resposta=await GoogleSheetsService._post('criarSolicitacaoGerente',{
@@ -191,9 +194,9 @@ const GerentesPresenter = {
       this.status('gerenteSolicitacaoStatus',r.duplicado
         ? 'Essa solicitação já está pendente na equipe administrativa.'
         : 'Solicitação registrada! A equipe administrativa fará a revisão.','success');
-      this.el('gerenteEnviar').disabled=true;
+      concluido=true;
     }catch(e){this.status('gerenteSolicitacaoStatus',e.message||'Não foi possível registrar.','error');}
-    finally{this.enviando=false;this.el('gerenteEnviar').disabled=false;}
+    finally{this.enviando=false;this.el('gerenteEnviar').disabled=concluido;}
   }
 };
 document.addEventListener('DOMContentLoaded',()=>GerentesPresenter.init());
