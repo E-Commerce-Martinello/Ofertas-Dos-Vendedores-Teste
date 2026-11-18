@@ -66,7 +66,7 @@ function doGet(e) {
 }
 
 /**
- * API POST: valida Firebase ID Token enviado no corpo (jamais na URL).
+ * API POST: admins exigem Firebase ID Token; gerentes usam matrícula cadastrada.
  */
 function doPost(e) {
   const p = (e && e.parameter) || {};
@@ -83,10 +83,10 @@ function doPost(e) {
     if (textoPayload.length > 500000) throw new Error('Solicitação muito grande. Reduza os dados e tente novamente.');
     const payload = JSON.parse(textoPayload);
     const acaoGerente = ['consultarPainelGerente','criarSolicitacaoGerente'].includes(String(p.action||''));
-    // Acesso de gerente é uma permissão diferente da administração. A matrícula
-    // é conferida com a conta Google AUTORIZADA no servidor, nunca é uma senha.
+    // Apenas estas duas ações aceitam matrícula sem login. Nenhuma operação
+    // administrativa é aberta: todas as demais exigem Firebase ID token válido.
     const acesso = acaoGerente
-      ? mart20_autorizarGerente_(p.firebaseIdToken,payload.matriculaGerente)
+      ? mart20_autorizarGerente_(payload.matriculaGerente)
       : exigirAdministradorV160_(p.firebaseIdToken);
     let resultado;
 
