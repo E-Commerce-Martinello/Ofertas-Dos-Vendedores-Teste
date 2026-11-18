@@ -83,3 +83,13 @@ Os links são relativos, sem `utm_source`, `utm_medium`, `utm_campaign` nem outr
 - [ ] Testar telas em desktop e celular.
 
 **Nenhuma implantação externa ou alteração de dados foi feita automaticamente.**
+
+## Diagnóstico dos três erros de 18/11/2026
+
+- **`GoogleSheetsService is not defined` na página de gerentes:** corrigido no GitHub. A página não utiliza mais o serviço do admin durante a limpeza da sessão. Atualizado o cache de `gerentes.html` para carregar os arquivos novos.
+- **Código duplicado no seletor de filiais:** corrigido no GitHub. O seletor e as listas usam o rótulo já formatado por `FiliaisUI.nome()` sem repetir o código. Exemplo: `118 • Alto Araguaia`.
+- **`Ação não reconhecida` ao salvar gerente:** a API administrativa atualmente implantada está sem o despacho da ação nova. **GitHub não implanta Apps Script automaticamente.** Copie **todos** os módulos administrativos atuais do repositório para o Apps Script de TESTE e use **Gerenciar implantações → Editar → Nova versão**; sem nova versão, a URL `/exec` continuará executando o código antigo. Depois confira se a variável `APPS_SCRIPT_URL` do Worker TESTE aponta para essa mesma implantação. Se o Worker antigo ainda bloquear requisições da página dos gerentes, copie e implante também o `worker.mjs` atual.
+
+Depois de publicar, execute `prepararEstruturaGerentesV1619` **uma vez**, com a conta administradora de TESTE. Essa função cria as abas necessárias ou adiciona a coluna de telefone à tabela legada, sem apagar matrículas existentes. Em seguida, salve o cadastro pelo admin e teste a matrícula na página de gerentes.
+
+Não copie arquivos de `infrastructure/registro-atual/`: são snapshots históricos anteriores às alterações.
