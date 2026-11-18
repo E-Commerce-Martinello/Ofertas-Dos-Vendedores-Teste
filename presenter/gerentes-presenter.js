@@ -14,6 +14,37 @@ const GerentesPresenter = {
     const m=Object.fromEntries(d.map(x=>[x.type,x.value]));
     return m.year+'-'+m.month;
   },
+  iniciarTema(){
+    let tema='light';
+    try{tema=localStorage.getItem('tema')==='dark'?'dark':'light';}catch(_){}
+    this.aplicarTema(tema);
+    this.el('gerenteTema')?.addEventListener('click',()=>{
+      const escuro=document.documentElement.classList.contains('dark-mode');
+      this.aplicarTema(escuro?'light':'dark');
+      try{localStorage.setItem('tema',escuro?'light':'dark');}catch(_){}
+    });
+  },
+  aplicarTema(tema){
+    const escuro=tema==='dark';
+    document.documentElement.classList.toggle('dark-mode',escuro);
+    const botao=this.el('gerenteTema');
+    if(botao){botao.textContent=escuro?'☀ Tema claro':'☾ Tema escuro';
+      botao.setAttribute('aria-label',escuro?'Ativar tema claro':'Ativar tema escuro');}
+  },
+  atualizarContratoTemporario(){
+    const ct=this.el('gerenteCT').checked;
+    const campos=this.el('gerenteCamposCadastro'),aviso=this.el('gerenteCTOrientacao');
+    campos.hidden=ct;aviso.hidden=!ct;
+    for(const id of ['gerenteTelefone','gerenteTipo']){
+      const campo=this.el(id);campo.required=!ct;campo.disabled=ct;
+      if(ct)campo.value='';
+    }
+    const observacao=this.el('gerenteObservacao');observacao.disabled=ct;
+    if(ct)observacao.value='';
+    this.el('gerenteErroTelefone').textContent='';
+    this.status('gerenteSolicitacaoStatus','');
+    this.el('gerenteEnviar').textContent=ct?'REGISTRAR CT TEMPORÁRIO':'ENVIAR SOLICITAÇÃO';
+  },
   iniciarMeses(){
     const mes=this.mesBrasilia(),y=Number(mes.slice(0,4)),m=Number(mes.slice(5,7));
     const sel=this.el('gerenteMes');
@@ -25,6 +56,7 @@ const GerentesPresenter = {
     }
   },
   async init(){
+    this.iniciarTema();
     this.iniciarMeses();
     this.el('formLoginGerente').addEventListener('submit',e=>{e.preventDefault();this.entrar();});
     this.el('gerenteSair').addEventListener('click',()=>this.sair());
@@ -36,6 +68,7 @@ const GerentesPresenter = {
     }
     this.el('gerenteCancelar').addEventListener('click',()=>this.el('gerenteDialogo').close());
     this.el('gerenteFormSolicitacao').addEventListener('submit',e=>{e.preventDefault();this.enviarSolicitacao();});
+    this.el('gerenteCT').addEventListener('change',()=>this.atualizarContratoTemporario());
     this.el('gerenteTelefone').addEventListener('input',e=>{
       e.target.value=Telefones.formato(e.target.value);
       this.el('gerenteErroTelefone').textContent='';
@@ -159,22 +192,24 @@ const GerentesPresenter = {
   },
   renderizarListas(){
     const lista=this.filtrados();
+    const cadastros=this.dados?.vendedores||[];
     this.el('gerenteRankingResumo').textContent=this.fmt(lista.length)+' vendedores';
     this.el('gerenteRanking').innerHTML=lista.length
-      ? lista.map((v,i)=>'<tr><td><strong>'+this.escapar(v.nome)+'</strong><small>'+(i+1)+'º na lista</small></td>'+
-        '<td>'+this.escapar(v.matricula)+'</td><td><strong>'+this.fmt(v.compartilhamentos)+'</strong></td>'+
-        '<td>'+this.data(v.ultimaAtividade)+'</td></tr>').join('')
-      : '<tr><td colspan="4">Nenhum vendedor encontrado.</td></tr>';
+      ? lista.map((v,i)=>'<tr class="ranking-vendedor"><td data-label="Vendedor"><strong>'+this.escapar(v.nome)+'</strong><small>'+(i+1)+'º na lista</small></td>'+
+        '<td data-label="Matrícula">'+this.escapar(v.matricula)+'</td><td data-label="Compartilhamentos"><strong>'+this.fmt(v.compartilhamentos)+'</strong></td>'+
+        '<td data-label="Última atividade">'+this.data(v.ultimaAtividade)+'</td></tr>').join('')
+      : '<tr class="ranking-vazio"><td colspan="4">Nenhum vendedor encontrado.</td></tr>';
     const ec={LINK_VERIFICADO:['Link verificado','good'],LINK_NAO_LOCALIZADO:['Link não localizado','bad'],
-      INCONCLUSIVO:['Verificação pendente','warn']};
+      INCONCLUSIVO:['Sem cadastro e-commerce','bad']};
     const tel={VALIDADO:['Telefone validado','good'],CONFLITO:['Telefone em conflito','bad'],
-      TITULARIDADE_PENDENTE:['Titularidade pendente','warn'],PENDENTE:['Telefone pendente','warn']};
+      TITULARIDADE_PENDENTE:['Titularidade pendente','warn'],PENDENTE:['Telefone pendente','warn'],
+      NAO_ENCONTRADO_NO_RELATORIO:['Sem telefone','warn']};
     const area=this.el('gerenteListaCadastros');
-    area.innerHTML=lista.length?lista.map(v=>{
+    area.innerHTML=cadastros.length?cadastros.map(v=>{
       const a=ec[v.eCommerce]||ec.INCONCLUSIVO,b=tel[v.statusTelefone]||tel.PENDENTE;
       return '<article class="seller-card"><h3>'+this.escapar(v.nome)+'</h3>'+
         '<p class="info">Matrícula '+this.escapar(v.matricula)+' • '+(v.ativo?'Ativo':'Inativo')+
-        ' • '+this.escapar(v.situacaoFuncional||'Situação não informada')+'</p>'+
+        ' • '+this.escapar(String(v.situacaoFuncional||'').toUpperCase()==='NAO_ENCONTRADO_NO_RELATORIO'?'Sem telefone':(v.situacaoFuncional||'Situação não informada'))+'</p>'+
         '<div class="indicators"><span class="badge '+a[1]+'">'+a[0]+'</span>'+
         '<span class="badge '+b[1]+'">'+b[0]+'</span></div>'+
         '<button type="button" class="btn btn-primary btn-full" data-solicitar="'+this.escapar(v.matricula)+'">Solicitar cadastro / revisão</button></article>';
@@ -192,16 +227,20 @@ const GerentesPresenter = {
     this.el('gerenteSolicitacaoVendedor').textContent=v.nome+' • matrícula '+v.matricula;
     this.el('gerenteErroTelefone').textContent='';
     this.status('gerenteSolicitacaoStatus','');
+    this.atualizarContratoTemporario();
     this.el('gerenteDialogo').showModal();
-    this.el('gerenteTelefone').focus();
+    this.el('gerenteCT').focus();
   },
   async enviarSolicitacao(){
     if(this.enviando||!this.selecionado||!this.matricula)return;
-    const raw=this.el('gerenteTelefone').value;
-    const erro=Telefones.erro(raw,false);
-    if(erro){this.el('gerenteErroTelefone').textContent=erro;return;}
-    const tipo=this.el('gerenteTipo').value;
-    if(!['pessoal','profissional'].includes(tipo)){
+    const ct=this.el('gerenteCT').checked;
+    const raw=ct?'':this.el('gerenteTelefone').value;
+    if(!ct){
+      const erro=Telefones.erro(raw,false);
+      if(erro){this.el('gerenteErroTelefone').textContent=erro;return;}
+    }
+    const tipo=ct?'':this.el('gerenteTipo').value;
+    if(!ct&&!['pessoal','profissional'].includes(tipo)){
       this.status('gerenteSolicitacaoStatus','Selecione o tipo de telefone.','error');return;
     }
     this.enviando=true;this.el('gerenteEnviar').disabled=true;
@@ -210,8 +249,8 @@ const GerentesPresenter = {
     try{
       const resposta=await GerentesAPI.executar('criarSolicitacaoGerente',{
         matriculaGerente:this.matricula,matriculaVendedor:this.selecionado.matricula,
-        telefone:Telefones.numero(raw),tipo,contratoTemporario:this.el('gerenteCT').checked,
-        observacao:this.el('gerenteObservacao').value.trim()
+        telefone:ct?'':Telefones.numero(raw),tipo,contratoTemporario:ct,
+        observacao:ct?'':this.el('gerenteObservacao').value.trim()
       });
       const r=resposta.resultado||{};
       this.status('gerenteSolicitacaoStatus',r.duplicado
