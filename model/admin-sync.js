@@ -86,6 +86,8 @@ const AdminSync = {
       guardar('listarVendedores',{linhas:c.linhas,filiais:c.filiais});guardar('listarVerificacoesLinks',{resultados:c.links});
       guardar('listarTelefonesExtras',{registros:c.extras});guardar('listarWhatsApp',c.grupo);
       guardar('listarSolicitacoesTelefone',{pedidos:c.pedidos});
+      if(c.solicitacoesGerentes && typeof GerentesSolicitacoesPresenter!=='undefined')
+        GerentesSolicitacoesPresenter.definir(c.solicitacoesGerentes);
       VendedoresPresenter.revisoes=c.revisoes;
       WhatsAppPresenter.revisoes=c.revisoesIdentificacoes||{};
       await VendedoresPresenter._carregar(GoogleSheetsService.obterUrl(),null,true);
