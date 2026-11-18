@@ -70,6 +70,27 @@ function instalarAcionadoresRefinamento() {
       ScriptApp.newTrigger('mart19_aposEdicao').forSpreadsheet(MART_V153_TEST_SHEET_ID)[tipo]().create();
   }
 }
+// Diagnóstico local no editor; não expõe dados ou credenciais ao navegador.
+function diagnosticarBackendV1619() {
+  const ss=obterPlanilhaVendedoresV153_();
+  const fones=mart1618_abaFones_(false);
+  return {
+    versao:'1.6.19',
+    ambiente:PropertiesService.getScriptProperties().getProperty('MART_AMBIENTE')||'NAO_CONFIGURADO',
+    planilhaEncontrada:!!ss,
+    abaTelefonesPronta:!!fones,
+    sheetsAvancado:typeof Sheets!=='undefined',
+    pushAtivo:PropertiesService.getScriptProperties().getProperty('MART19_PUSH_ATIVO')==='true'
+  };
+}
+// Preparação opcional explícita: cria SOMENTE a aba vazia, sem alterar registros.
+function prepararAbaTelefonesV1619() {
+  const existente=mart1618_abaFones_(false);
+  if(existente)return {situacao:'existente',registros:Math.max(0,existente.getLastRow()-1)};
+  const criada=mart1618_abaFones_(true);
+  return {situacao:'criada',registros:Math.max(0,criada.getLastRow()-1)};
+}
+
 function mart19_contexto_(ss) {
   const base=mart19_ler_(ss,'Vendedores');
   if(base.length&&base[0].slice(0,13).join('|')!==MART_V153_HEADERS.join('|'))throw new Error('Cabeçalho Vendedores divergente.');
