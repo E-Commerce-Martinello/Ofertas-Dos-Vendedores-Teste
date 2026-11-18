@@ -216,8 +216,11 @@ function mart20_criarSolicitacaoGerente_(p,acesso){
     const duplicado=abertas.find(r=>String(r[5])===matricula&&String(r[7])===numero&&r[8]===tipo);
     if(duplicado)return {registrado:false,duplicado:true,id:String(duplicado[0])};
     const hoje=Utilities.formatDate(new Date(),MART20_TZ,'yyyy-MM-dd');
-    const totalDia=atuais.filter(r=>r[2]===acesso.matricula&&r[3]===acesso.email&&
-      String(r[1]||'').startsWith(hoje)).length;
+    const totalDia=atuais.filter(r=>{
+      if(r[2]!==acesso.matricula||r[3]!==acesso.email)return false;
+      const ts=new Date(String(r[1]||''));
+      return !isNaN(ts.getTime())&&Utilities.formatDate(ts,MART20_TZ,'yyyy-MM-dd')===hoje;
+    }).length;
     if(totalDia>=40)throw new Error('Limite diário de solicitações atingido. Procure o administrador.');
     const agora=new Date().toISOString();
     const id=Utilities.getUuid();
