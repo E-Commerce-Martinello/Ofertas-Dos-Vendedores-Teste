@@ -1,6 +1,6 @@
 /* Portal de Gerentes: informações acessíveis apenas via API autenticada por filial. */
 const GerentesPresenter = {
-  matricula:'',dados:null,ocupado:false,enviando:false,refresh:null,selecionado:null,aba:'resultados',
+  matricula:'',dados:null,ocupado:false,pendente:false,enviando:false,refresh:null,selecionado:null,aba:'resultados',
   el(id){return document.getElementById(id);},
   texto(v){return String(v==null?'':v);},
   escapar(v){return this.texto(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));},
@@ -66,23 +66,40 @@ const GerentesPresenter = {
       this.el('gerentesPainel').hidden=true;this.el('gerentesLogin').hidden=false;
     }finally{btn.disabled=false;}
   },
-  async sair(){
-    this.matricula='';this.dados=null;this.selecionado=null;
+  limparDados(){
+    this.matricula='';this.dados=null;this.selecionado=null;this.pendente=false;
     this.el('gerentesPainel').hidden=true;this.el('gerentesLogin').hidden=false;
-    this.el('gerenteMatricula').value='';this.el('gerenteBusca').value='';
+    this.el('gerenteRanking').replaceChildren();
+    this.el('gerenteListaCadastros').replaceChildren();
+    this.el('gerenteNome').textContent='Painel da filial';
+    this.el('gerenteFilial').textContent='Filial';
+    for(const id of ['gerenteTotal','gerenteAtivos','gerenteUsando','gerenteInicios','gerenteOfertas'])
+      this.el(id).textContent='—';
     this.status('gerenteStatus','');
+    GoogleSheetsService._snapshots?.clear();
+  },
+  async sair(){
+    this.limparDados();
+    this.el('gerenteMatricula').value='';this.el('gerenteBusca').value='';
     try{await Auth.sair();}catch(_){}
   },
   async carregar(silencioso=false){
-    if(this.ocupado||!this.matricula)return;
+    if(!this.matricula)return;
+    if(this.ocupado){this.pendente=true;return;}
     this.ocupado=true;
     if(!silencioso)this.status('gerenteStatus','Conferindo dados atualizados da sua filial...');
+    const identidade=this.matricula,mes=this.el('gerenteMes').value,
+      campanha=this.el('gerenteCampanha').value;
     try{
-      const mes=this.el('gerenteMes').value,campanha=this.el('gerenteCampanha').value;
       const resposta=await GoogleSheetsService._post('consultarPainelGerente',
-        {matriculaGerente:this.matricula,mes,campanha});
+        {matriculaGerente:identidade,mes,campanha});
+      if(identidade!==this.matricula)return;
+      // Requisições antigas não podem substituir novos filtros selecionados.
+      if(mes!==this.el('gerenteMes').value||campanha!==this.el('gerenteCampanha').value){
+        this.pendente=true;return;
+      }
       const dados=resposta.resultado;
-      if(!dados||dados.gerente?.matricula!==this.matricula||!Array.isArray(dados.vendedores))
+      if(!dados||dados.gerente?.matricula!==identidade||!Array.isArray(dados.vendedores))
         throw new Error('A API não confirmou a filial autorizada.');
       this.dados=dados;
       this.atualizarCampanhas();
@@ -91,9 +108,20 @@ const GerentesPresenter = {
         ? 'Alguns eventos antigos estão fora do limite de consulta. Os indicadores podem estar incompletos.':'',
         dados.truncado?'error':'');
     }catch(e){
-      this.status('gerenteStatus',e.message||'Não foi possível atualizar os dados.','error');
+      if(identidade!==this.matricula)return;
+      const mensagem=e.message||'Não foi possível atualizar os dados.';
+      if(/autorizad|autorização|conta Google sem|acesso restrito|sessão Google inválida/i.test(mensagem)){
+        this.limparDados();
+        this.status('gerenteLoginStatus','Sua autorização não pôde ser confirmada. Entre novamente ou procure o administrador.','error');
+      }else this.status('gerenteStatus',mensagem,'error');
       if(!silencioso)throw e;
-    }finally{this.ocupado=false;}
+    }finally{
+      this.ocupado=false;
+      if(this.pendente&&this.matricula){
+        this.pendente=false;
+        await this.carregar(true);
+      }
+    }
   },
   atualizarCampanhas(){
     const sel=this.el('gerenteCampanha'),antigo=sel.value;
