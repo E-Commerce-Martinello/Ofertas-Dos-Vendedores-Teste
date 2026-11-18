@@ -1,11 +1,11 @@
 /**
  * Portal de Gerentes — acesso somente por filial autorizada, v1.6.19 (TESTE).
  * Este arquivo deve ser instalado no MESMO Apps Script administrativo.
- * A matrícula identifica o gerente; a autorização exige também Google ID token verificado
- * e vínculo explícito com email/filial na aba privada Gerentes_Autorizados.
+ * A matrícula cadastrada identifica a filial; NÃO prova a identidade do visitante.
+ * A consulta divulga somente dados limitados à filial e o pedido não altera cadastros.
  */
-const MART20_GERENTES_CAB=['matricula_gerente','nome','email_autorizado','filial_autorizada','ativo','atualizado_em'];
-const MART20_SOLICITACOES_CAB=['solicitacao_id','criado_em','gerente_matricula','gerente_email',
+const MART20_GERENTES_CAB=['matricula_gerente','nome','filial_autorizada','ativo','atualizado_em'];
+const MART20_SOLICITACOES_CAB=['solicitacao_id','criado_em','gerente_matricula','origem_acesso',
   'filial','vendedor_matricula','vendedor_nome','telefone','tipo','contrato_temporario',
   'status','observacao','atualizado_em','processado_por'];
 const MART20_TZ='America/Sao_Paulo';
@@ -35,42 +35,23 @@ function prepararEstruturaGerentesV1619() {
     criar('Solicitacoes_Gerentes',MART20_SOLICITACOES_CAB)];
 }
 
-function mart20_identidadeGoogle_(idToken) {
-  const token=String(idToken||'');
-  if(token.length<200||token.length>6000||!/^AIza[A-Za-z0-9_-]{20,}$/.test(MART_V160_FIREBASE_API_KEY))
-    throw new Error('Sessão não autorizada. Entre novamente com a conta Google cadastrada.');
-  const url='https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='+
-    encodeURIComponent(MART_V160_FIREBASE_API_KEY);
-  const resposta=UrlFetchApp.fetch(url,{method:'post',contentType:'application/json',
-    payload:JSON.stringify({idToken:token}),muteHttpExceptions:true});
-  if(resposta.getResponseCode()!==200)throw new Error('Sessão Google inválida ou expirada.');
-  let usuario=null;
-  try {const dados=JSON.parse(resposta.getContentText());
-    usuario=Array.isArray(dados.users)&&dados.users.length===1?dados.users[0]:null;
-  } catch(_) {throw new Error('Resposta de autenticação inválida.');}
-  const google=Array.isArray(usuario?.providerUserInfo)&&
-    usuario.providerUserInfo.some(x=>x.providerId==='google.com');
-  if(!usuario?.localId||usuario.emailVerified!==true||usuario.disabled===true||!google)
-    throw new Error('Acesso restrito a uma conta Google verificada e autorizada.');
-  return {email:String(usuario.email||'').trim().toLowerCase(),uid:String(usuario.localId)};
-}
-
-function mart20_autorizarGerente_(token,matriculaInformada){
-  const usuario=mart20_identidadeGoogle_(token);
-  const matricula=String(matriculaInformada||'').replace(/\D/g,'');
-  if(!/^\d{3,8}$/.test(matricula))throw new Error('Informe uma matrícula de gerente válida.');
+// Identificação simples: manter registro ativo e filial explícita, sem Google.
+// A matrícula não é senha; qualquer pessoa que a conheça pode consultar esta filial.
+function mart20_autorizarGerente_(matriculaInformada){
+  const matricula=String(matriculaInformada??'').trim();
+  if(!/^\d{3,8}$/.test(matricula))
+    throw new Error('Informe a matrícula do gerente com 3 a 8 dígitos.');
   const sh=mart20_aba_('Gerentes_Autorizados',MART20_GERENTES_CAB,false);
-  if(!sh||sh.getLastRow()<2)throw new Error('Esta conta ainda não possui autorização de gerente.');
+  if(!sh||sh.getLastRow()<2)throw new Error('Matrícula não cadastrada para o Portal de Gerentes.');
+  if(sh.getLastRow()>5000)throw new Error('Cadastro de gerentes excedeu o limite de consulta.');
   const dados=sh.getRange(2,1,sh.getLastRow()-1,MART20_GERENTES_CAB.length).getDisplayValues();
-  const correspondentes=dados.filter(r=>
-    String(r[0]||'').replace(/\D/g,'')===matricula &&
-    String(r[2]||'').trim().toLowerCase()===usuario.email &&
-    String(r[4]||'').toUpperCase()==='ATIVO');
-  if(correspondentes.length!==1)throw new Error('Matrícula e conta Google sem autorização correspondente.');
-  const r=correspondentes[0],filial=String(r[3]||'').trim();
-  if(!/^\d{1,6}$/.test(filial)||Number(filial)===0)throw new Error('Filial do gerente não configurada.');
-  return {email:usuario.email,matricula,nome:String(r[1]||'').trim().slice(0,160),
-    filial:String(Number(filial)),uid:usuario.uid,gerente:true};
+  const registros=dados.filter(r=>String(r[0]||'').trim()===matricula);
+  if(registros.length!==1||String(registros[0][3]||'').trim().toUpperCase()!=='ATIVO')
+    throw new Error('Matrícula não cadastrada ou desativada para acesso.');
+  const r=registros[0],filial=mart20_filial_(r[2]);
+  if(!filial)throw new Error('Filial do gerente não configurada.');
+  return {email:'MATRICULA_'+matricula,matricula,nome:String(r[1]||'').trim().slice(0,160),
+    filial,gerente:true,autenticado:false};
 }
 
 function mart20_filial_(valor){
