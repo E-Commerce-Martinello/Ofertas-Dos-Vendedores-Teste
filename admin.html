@@ -1063,11 +1063,7 @@
             <div class="admin-card">
                 <h2><i class="fas fa-users" style="color:#d0252a;"></i> BASE DE VENDEDORES</h2>
                 <p class="vendor-subtext">Consulte e edite os vendedores, telefones e situação no grupo em um só lugar.</p>
-                <div class="vendor-actions">
-                    <button type="button" class="btn-outline" id="btnAtualizarVendedores" onclick="VendedoresPresenter.atualizar()" disabled><i class="fas fa-sync-alt"></i> ATUALIZAR DADOS</button>
-                </div>
-                <div id="statusConexaoSheets" class="vendor-status"><i class="fas fa-info-circle"></i><span>Os vendedores serão carregados automaticamente após o acesso.</span></div>
-                <p class="vendor-last-update">Cadastros e telefones permanecem na planilha. A validação considera titularidade, conflitos e a última lista importada do grupo.</p>
+                <div id="statusConexaoSheets" class="vendor-status error" role="alert" hidden style="display:none"></div>
             </div>
 
             <div class="admin-card" id="painelDadosVendedores" style="display:none;">
@@ -1132,7 +1128,7 @@
                         <button type="button" id="paginaProximaVendedores" onclick="VendedoresPresenter.mudarPagina(1)" disabled>MOSTRAR MAIS 15</button>
                     </div>
                 </div>
-                <p class="vendor-last-update" id="ultimaAtualizacaoVendedores"></p>
+
             </div>
 
         <details class="vendor-tools" id="gestaoParticipantesGrupo">
@@ -1162,7 +1158,7 @@
                     <p id="whatsappPreviaAvisos" class="vendor-subtext" style="color:#a35505"></p>
                     <button class="btn-primary" id="whatsappConfirmarImportacao" type="button" onclick="WhatsAppPresenter.importar()" style="width:auto"><i class="fas fa-check"></i> CONFIRMAR SUBSTITUIÇÃO DA LISTA</button>
                 </div>
-                <div class="vendor-actions"><button class="btn-outline" type="button" onclick="WhatsAppPresenter.carregar()"><i class="fas fa-sync-alt"></i> ATUALIZAR LISTA</button><button class="btn-outline" type="button" onclick="WhatsAppPresenter.normalizarExistentes()"><i class="fas fa-phone"></i> PADRONIZAR NÚMEROS JÁ IMPORTADOS</button></div>
+                <div class="vendor-actions"><button class="btn-outline" type="button" onclick="WhatsAppPresenter.normalizarExistentes()"><i class="fas fa-phone"></i> PADRONIZAR NÚMEROS JÁ IMPORTADOS</button></div>
                 <div id="whatsappStatus" class="vendor-status" role="status">Acesse esta aba para carregar a lista.</div>
             </div>
             <div class="admin-card">
@@ -1341,7 +1337,7 @@
         <div class="form-group"><label for="editarMatricula">Matrícula / Rubi</label><input type="text" id="editarMatricula" inputmode="numeric"></div>
         <div class="form-group"><label for="editarNomeVendedor">Nome</label><input type="text" id="editarNomeVendedor" maxlength="160"></div>
         <div class="form-group"><label for="editarFilialVendedor">Número da filial</label><select id="editarFilialVendedor" onchange="VendedoresPresenter.atualizarLocalidadeFilial()"><option value="">Selecione a filial</option></select><small id="localidadeFilialVendedor" style="display:block;color:#777;margin-top:6px;">Informe apenas o número da filial.</small></div>
-        <div class="admin-history"><strong>Telefone histórico preservado</strong><p id="telefoneHistorico"></p><small>Tipo não confirmado. Copie somente após identificar a finalidade.</small><div><button type="button" class="btn-outline" onclick="VendedoresPresenter.copiarHistorico('Profissional')">Usar como profissional</button><button type="button" class="btn-outline" onclick="VendedoresPresenter.copiarHistorico('Pessoal')">Usar como pessoal</button></div></div><div class="admin-phone-grid"><div class="form-group"><label for="editarTelefoneProfissional">Telefone profissional <small>(opcional)</small></label><input type="tel" id="editarTelefoneProfissional"><small id="estadoTelefoneProfissional" role="status"></small><button type="button" class="btn-outline" onclick="VendedoresPresenter.confirmarTitularidade('Profissional')">Confirmar titularidade manualmente</button></div><div class="form-group"><label for="editarTelefonePessoal">Telefone pessoal <small>(opcional)</small></label><input type="tel" id="editarTelefonePessoal"><small id="estadoTelefonePessoal" role="status"></small><button type="button" class="btn-outline" onclick="VendedoresPresenter.confirmarTitularidade('Pessoal')">Confirmar titularidade manualmente</button></div></div><p class="vendor-subtext">Participação conferida pela última lista importada. Não é uma consulta em tempo real ao WhatsApp.</p>
+        <div class="admin-history" id="telefoneHistoricoBloco" hidden style="display:none"><strong>Telefone histórico preservado</strong><p id="telefoneHistorico"></p><small>Tipo não confirmado. Copie somente após identificar a finalidade.</small><div><button type="button" class="btn-outline" onclick="VendedoresPresenter.copiarHistorico('Profissional')">Usar como profissional</button><button type="button" class="btn-outline" onclick="VendedoresPresenter.copiarHistorico('Pessoal')">Usar como pessoal</button></div></div><div class="admin-phone-grid"><div class="form-group"><label for="editarTelefoneProfissional">Telefone profissional <small>(opcional)</small></label><input type="tel" id="editarTelefoneProfissional"><small id="estadoTelefoneProfissional" role="status"></small><button type="button" class="btn-outline" onclick="VendedoresPresenter.confirmarTitularidade('Profissional')">Confirmar titularidade manualmente</button></div><div class="form-group"><label for="editarTelefonePessoal">Telefone pessoal <small>(opcional)</small></label><input type="tel" id="editarTelefonePessoal"><small id="estadoTelefonePessoal" role="status"></small><button type="button" class="btn-outline" onclick="VendedoresPresenter.confirmarTitularidade('Pessoal')">Confirmar titularidade manualmente</button></div></div><p class="vendor-subtext">Participação conferida pela última lista importada. Não é uma consulta em tempo real ao WhatsApp.</p>
         <div class="form-group"><label>Situação funcional atual</label><div id="editarSituacaoFuncional" class="vendor-help" style="margin:0;">Não informada</div></div>
         <label class="admin-switch-label"><input type="checkbox" id="editarAtivoVendedor" checked><span class="admin-switch-state" aria-hidden="true"><span class="switch-on">ATIVO</span><span class="switch-off">INATIVO</span></span><span class="admin-switch-description">Cadastro ativo no painel</span></label>
         <div class="form-group" style="margin-top:12px;"><label for="editarObservacoesVendedor">Observações</label><textarea id="editarObservacoesVendedor" rows="2" maxlength="500"></textarea></div>
@@ -1406,7 +1402,7 @@
     <script src="model/vendor-import.js?v=1.6.19"></script>
     <script src="model/vendor-management.js?v=1.6.19"></script>
     <script src="model/link-checker.js?v=1.6.19"></script>
-    <script src="presenter/vendors-presenter.js?v=1.6.19-fix1"></script>
+    <script src="presenter/vendors-presenter.js?v=1.6.19-fix3"></script>
     <script src="model/whatsapp.js?v=1.6.19"></script>
     <script src="presenter/pendencias-presenter.js?v=1.6.19"></script>
     <script src="presenter/whatsapp-presenter.js?v=1.6.19"></script>
