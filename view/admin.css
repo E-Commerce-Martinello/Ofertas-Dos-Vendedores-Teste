@@ -139,3 +139,11 @@ body #painelCadastroGerentes .cadastro-gerentes-item>button{flex:0 0 auto}
   body #painelCadastroGerentes .cadastro-gerentes-form-grid{grid-template-columns:minmax(0,1fr)}
   body #painelCadastroGerentes .cadastro-gerentes-item>button{flex:1 1 100%}
 }
+
+/* Telefone não informado: aviso amarelo no cadastro de gerentes. */
+body #painelCadastroGerentes .cadastro-gerente-contato{font-size:12px;color:var(--a-muted);font-weight:650}
+body #painelCadastroGerentes .cadastro-gerente-contato.pendente{
+  color:var(--a-warn);display:inline-flex;align-items:center;gap:5px;max-width:max-content;
+  padding:4px 8px;border:1px solid var(--a-warn);border-radius:7px;
+  background:color-mix(in srgb,var(--a-warn) 9%,var(--a-surface))
+}
