@@ -1,0 +1,50 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "ofertasMartinello_TESTE": {
+      ".read": true,
+      ".write": "auth != null && auth.provider === 'google' && auth.token.email_verified === true && (auth.token.email === 'loan.martinello@gmail.com' || root.child('adminUids_TESTE').child(auth.uid).val() === true)"
+    },
+    "gestaoVendedores_TESTE": {
+      ".read": "auth != null && auth.provider === 'google' && auth.token.email_verified === true && (auth.token.email === 'loan.martinello@gmail.com' || root.child('adminUids_TESTE').child(auth.uid).val() === true)",
+      ".write": "auth != null && auth.provider === 'google' && auth.token.email_verified === true && (auth.token.email === 'loan.martinello@gmail.com' || root.child('adminUids_TESTE').child(auth.uid).val() === true)"
+    },
+    "adminUids_TESTE": {
+      ".read": "auth != null && auth.provider === 'google' && auth.token.email === 'loan.martinello@gmail.com' && auth.token.email_verified === true",
+      "$uid": {
+        ".read": "auth != null && auth.provider === 'google' && (auth.uid === $uid || (auth.token.email === 'loan.martinello@gmail.com' && auth.token.email_verified === true))",
+        ".write": "auth != null && auth.provider === 'google' && auth.token.email === 'loan.martinello@gmail.com' && auth.token.email_verified === true",
+        ".validate": "newData.val() === true"
+      }
+    },
+    "aparenciaPortal_TESTE": {
+      ".read": true,
+      ".write": "auth != null && auth.provider === 'google' && auth.token.email_verified === true && (auth.token.email === 'loan.martinello@gmail.com' || root.child('adminUids_TESTE').child(auth.uid).val() === true)",
+      ".validate": "newData.hasChildren(['logo','imagem','titulo','mensagem'])",
+      "logo": {
+        ".validate": "newData.isString() && newData.val().length <= 180000"
+      },
+      "imagem": {
+        ".validate": "newData.isString() && newData.val().length <= 280000"
+      },
+      "titulo": {
+        ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+      },
+      "mensagem": {
+        ".validate": "newData.isString() && newData.val().length <= 500"
+      },
+      "$outros": {
+        ".validate": false
+      }
+    },
+    "rascunhosOfertas_TESTE": {
+      ".read": "auth != null && auth.provider === 'google' && auth.token.email_verified === true && (auth.token.email === 'loan.martinello@gmail.com' || root.child('adminUids_TESTE').child(auth.uid).val() === true)",
+      ".write": "auth != null && auth.provider === 'google' && auth.token.email_verified === true && (auth.token.email === 'loan.martinello@gmail.com' || root.child('adminUids_TESTE').child(auth.uid).val() === true)"
+    },
+    "adminSync_TESTE": {
+      ".read": "auth != null && auth.provider === 'google' && auth.token.email_verified === true && (auth.token.email === 'loan.martinello@gmail.com' || root.child('adminUids_TESTE').child(auth.uid).val() === true)",
+      ".write": false
+    }
+  }
+}
