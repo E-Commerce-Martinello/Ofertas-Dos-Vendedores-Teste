@@ -9,7 +9,15 @@
 - Removidos os botões redundantes de recarga dos vendedores e dos participantes importados; os dados seguem pela sincronização automática.
 - Suprimida a mensagem verde de quantidade carregada; falhas de carregamento continuam visíveis. Indicadores e filtros permanecem.
 - Preparado o escopo de uma nova área de gerentes em `docs/PORTAL-GERENTES-ESCOPO-E-SEGURANCA.md`: resultados e solicitações por filial, com autenticação obrigatória além da matrícula.
-- A área de gerentes ainda **não está implementada** e não deve ser exposta sem validação de papéis no servidor.
+- A área de gerentes está **implementada no código de homologação, mas não implantada/validada nos serviços reais**. O login só libera dados mediante vínculo explícito entre matrícula, filial e conta Google autorizada.
+
+### Portal de gerentes — código preparado, implantação pendente
+- Nova rota `gerentes.html`, com duas abas: Resultados por mês/campanha e Cadastros/Solicitações de vendedores da filial.
+- API administrativa agora possui módulo `Gerentes.gs`, com autenticação Google verificada, vínculo na aba privada `Gerentes_Autorizados`, filtro de filial imposto no servidor e consulta limitada a dados pertinentes.
+- Formulário exige telefone válido e tipo pessoal/profissional. Contrato temporário marca a solicitação como `CT_TEMPORARIO` na fila do administrador, sem editar dados automaticamente.
+- Inclusa fila de solicitações na Base de Vendedores e sincronização de revisões. Backend e abas precisam ser instalados na homologação seguindo `docs/PORTAL-GERENTES-INSTALACAO-TESTE.md`.
+- Métricas de atividade medem inícios de compartilhamento, não vendas ou envios confirmados; registro de e-commerce permanece indicativo.
+- Não houve implantação externa nem alteração de dados.
 
 ## 1.6.18.3 — base confirmada em 17/11/2026
 - Homologação sincronizada e testada pelo usuário.
