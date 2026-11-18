@@ -43,9 +43,14 @@ const VendedoresPresenter = {
     _status(mensagem, tipo = 'info') {
         const el = document.getElementById('statusConexaoSheets');
         if (!el) return;
-        el.className = `vendor-status ${tipo === 'ok' ? 'ok' : tipo === 'error' ? 'error' : ''}`;
-        const icone = tipo === 'ok' ? 'fa-check-circle' : tipo === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
-        el.innerHTML = `<i class="fas ${icone}"></i><span>${this._escapar(mensagem)}</span>`;
+        // A sincronização já possui um status próprio. Aqui só exibimos erros de
+        // carregamento, sem banners repetitivos a cada atualização automática.
+        const erro = tipo === 'error' && !!mensagem;
+        el.hidden = !erro;
+        el.style.display = erro ? '' : 'none';
+        if (!erro) return;
+        el.className = 'vendor-status error';
+        el.innerHTML = `<i class="fas fa-exclamation-circle"></i><span>${this._escapar(mensagem)}</span>`;
     },
 
     _escapar(valor) {
@@ -80,8 +85,6 @@ const VendedoresPresenter = {
             const painel = document.getElementById(id);
             if (painel) painel.style.display = 'none';
         });
-        const botao = document.getElementById('btnAtualizarVendedores');
-        if (botao) botao.disabled = true;
     },
 
     _mapearVendedores(linhas) {
@@ -162,8 +165,6 @@ const VendedoresPresenter = {
 
     async _carregar(apiUrl, _naoUsado, silencioso=false) {
         this.carregando = true;
-        const botaoAtualizar = document.getElementById('btnAtualizarVendedores');
-        if (botaoAtualizar) botaoAtualizar.disabled = true;
         this._status('Consultando a aba Vendedores...');
         try {
             // Consultas independentes em paralelo: reduzem tempo de espera sem cachear dados pessoais.
@@ -197,7 +198,6 @@ const VendedoresPresenter = {
             document.getElementById('painelGestaoVendedores').style.display = 'block';
             const painelImportacao = document.getElementById('painelImportacaoFuncionarios');
             if (painelImportacao) painelImportacao.style.display = 'block';
-            if (botaoAtualizar) botaoAtualizar.disabled = false;
             this.filtrar(true);
             this._renderizarGestaoExtra();
             if (typeof PendenciasPresenter !== 'undefined') PendenciasPresenter.renderizar();
@@ -206,10 +206,7 @@ const VendedoresPresenter = {
                 if (WhatsAppPresenter.grupoCarregado) this.atualizarGrupo();
                 else if (!silencioso && !WhatsAppPresenter.carregando) WhatsAppPresenter.carregar();
             }
-            this.ultimaAtualizacaoTexto = `Base Vendedores carregada em ${new Date().toLocaleString('pt-BR')}. ${this.registros.length.toLocaleString('pt-BR')} registros lidos diretamente do Google Sheets.`;
-            const last = document.getElementById('ultimaAtualizacaoVendedores');
-            if (last) last.textContent = this.ultimaAtualizacaoTexto;
-            this._status(`${this.registros.length.toLocaleString('pt-BR')} vendedores carregados. Edições e novos cadastros serão gravados diretamente na aba Vendedores.`, 'ok');
+            this._status('', 'ok');
         } catch (erro) {
             console.error('Erro ao carregar a base Vendedores:', erro);
             this._status(erro.message || 'Não foi possível carregar os dados.', 'error');
@@ -497,9 +494,13 @@ const VendedoresPresenter = {
             document.getElementById('editarTelefone'+tipo).value=Telefones.formato(this.extrasEdicao[tipo.toLowerCase()]||'');
             AdminComponents.erroCampo('editarTelefone'+tipo,'');
         }
-        document.getElementById('telefoneHistorico').textContent=this.legadoEdicao||'Nenhum telefone histórico';
+        const historico=String(this.legadoEdicao||'').trim();
+        const bloco=document.getElementById('telefoneHistoricoBloco');
+        if(bloco){bloco.hidden=!historico;bloco.style.display=historico?'':'none';}
+        document.getElementById('telefoneHistorico').textContent=historico;
     },
     copiarHistorico(tipo) {
+        if(!this.legadoEdicao){UI.erro('Este vendedor não possui telefone histórico preservado.');return;}
         const campo=document.getElementById('editarTelefone'+tipo);
         if(campo.value){UI.erro('O campo já possui um telefone. Revise antes de substituir.');return;}
         campo.value=Telefones.formato(this.legadoEdicao);EdicaoSegura.marcar('vendedor');this.atualizarIndicadoresTelefone();
