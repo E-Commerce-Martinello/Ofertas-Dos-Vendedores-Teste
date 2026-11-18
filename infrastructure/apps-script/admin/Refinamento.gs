@@ -76,19 +76,31 @@ function mart19_contexto_(ss) {
   const extras=mart19_ler_(ss,'Telefones_Vendedores');
   if(extras.length&&extras[0].slice(0,8).join('|')!==MART1618_FONES_CAB.join('|'))throw new Error('Cabeçalho Telefones_Vendedores divergente.');
   const grupo=mart164_listar_();
+  // Mapas por matrícula evitam varrer as tabelas inteiras para cada vendedor.
+  const porMatricula=linhas=>{
+    const mapa=new Map();
+    for(const linha of linhas.slice(1)){
+      const id=String(linha[0]||'');if(!id)continue;
+      if(!mapa.has(id))mapa.set(id,[]);
+      mapa.get(id).push(linha);
+    }
+    return mapa;
+  };
+  const basePorMatricula=porMatricula(base),extrasPorMatricula=porMatricula(extras);
   let registros=base.slice(1).filter(r=>r[0]).map(r=>{
-    const f=extras.slice(1).find(x=>x[0]===r[0]);
-    return {matricula:r[0],numero:r[4],statusTelefone:r[12],ativo:r[7]!=='INATIVO'&&!/INATIV|DESLIG|DEMIT|REMOVID/.test(r[6]),
+    const f=(extrasPorMatricula.get(String(r[0]))||[])[0];
+    return {matricula:r[0],numero:r[4],statusTelefone:r[12],
+      ativo:r[7]!=='INATIVO'&&!/INATIV|DESLIG|DEMIT|REMOVID|PENDENTE_VALIDACAO/.test(String(r[6]||'')),
       telefonesExtras:f?{pessoal:f[1],statusPessoal:f[2],profissional:f[4],statusProfissional:f[5]}:null};
   });
   const pedidos=mart19_ler_(ss,'Solicitacoes_Telefone').slice(1).map(r=>({matricula:r[2],telefone:r[3],tipoTelefone:r[6]}));
   registros=Telefones.associarSolicitacoes(registros,pedidos,grupo.participantes,grupo.identificacoes);
-  return {base,extras,grupo,registros,pedidos,evidencia:mart19_hash_([registros.map(v=>[v.matricula,Telefones.campos(v)]),grupo])};
+  return {base,extras,basePorMatricula,extrasPorMatricula,grupo,registros,pedidos,
+    evidencia:mart19_hash_([registros.map(v=>[v.matricula,Telefones.campos(v)]),grupo])};
 }
 function mart19_revisionVendedor_(ctx,matricula) {
-  // Inclui todos os dados que fundamentam titularidade e colisões, além da linha em edição.
-  return mart19_hash_([ctx.base.filter(r=>r[0]===matricula),ctx.extras.filter(r=>r[0]===matricula),
-    ctx.evidencia]);
+  const id=String(matricula);
+  return mart19_hash_([ctx.basePorMatricula.get(id)||[],ctx.extrasPorMatricula.get(id)||[],ctx.evidencia]);
 }
 function mart19_snapshot_(p,acesso) {
   const revisions=mart19_revisoes_(false),known=p.revisions||{},dados={},ss=obterPlanilhaVendedoresV153_();
