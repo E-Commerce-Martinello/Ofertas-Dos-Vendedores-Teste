@@ -4,6 +4,13 @@
 - Diagnóstico técnico e plano em docs/PLANO-v1.6.19.md.
 - Fontes de infraestrutura recuperados de pacotes anteriores para revisão; não confirmados como os atualmente implantados.
 
+### Ajustes de vendedores — 18/11/2026
+- Histórico de telefone permanece no Sheets, mas o painel só o exibe quando o cadastro possui número legado.
+- Removidos os botões redundantes de recarga dos vendedores e dos participantes importados; os dados seguem pela sincronização automática.
+- Suprimida a mensagem verde de quantidade carregada; falhas de carregamento continuam visíveis. Indicadores e filtros permanecem.
+- Preparado o escopo de uma nova área de gerentes em `docs/PORTAL-GERENTES-ESCOPO-E-SEGURANCA.md`: resultados e solicitações por filial, com autenticação obrigatória além da matrícula.
+- A área de gerentes ainda **não está implementada** e não deve ser exposta sem validação de papéis no servidor.
+
 ## 1.6.18.3 — base confirmada em 17/11/2026
 - Homologação sincronizada e testada pelo usuário.
 - Importação de rascunhos com pendências, correção de duplicidades em buscas e exclusão em massa.
