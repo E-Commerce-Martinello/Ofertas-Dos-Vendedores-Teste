@@ -7,6 +7,20 @@ const CampanhasPresenter = {
         const e=document.getElementById('statusCampanhaGeral');
         if(e){e.textContent=m;e.style.color=erro?'#bb2832':'';}
     },
+    prever(){
+        const geral=String(document.getElementById('campanhaGeral')?.value||'').trim().toLowerCase();
+        const source=String(document.getElementById('campanhaUtmSource')?.value||'').trim().toLowerCase();
+        const id=String(document.getElementById('campanhaUtmId')?.value||'').trim().toLowerCase();
+        const valores={
+            campanhaPreviewSource:'utm_source='+(source||'grupo_zap'),
+            campanhaPreviewCampaign:'utm_campaign='+(geral||'NOME_DA_CAMPANHA'),
+            campanhaPreviewId:'utm_id='+(id||'vendedores_zap')
+        };
+        for(const [campo,valor] of Object.entries(valores)){
+            const el=document.getElementById(campo);
+            if(el)el.textContent=valor;
+        }
+    },
     _sincronizarPortal(){
         CampanhasPortal.geral=CampanhasPortal.slug(this.config.campanhaGeral);
         CampanhasPortal.utmSource=CampanhasPortal.slug(this.config.utmSource)||'grupo_zap';
@@ -34,6 +48,7 @@ const CampanhasPresenter = {
             if(geral)geral.value=this.config.campanhaGeral||'';
             if(source)source.value=this.config.utmSource;
             if(id)id.value=this.config.utmId;
+            this.prever();
             this._msg('Campanha geral atual: '+(this.config.campanhaGeral||'não definida')
                 +'. Todas as ofertas sem campanha individual seguem essa configuração.');
         }catch(e){this._msg('Não foi possível carregar a campanha: '+e.message,true);}
