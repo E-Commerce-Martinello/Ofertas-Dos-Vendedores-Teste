@@ -7,18 +7,21 @@
   <meta name="referrer" content="no-referrer">
   <title>Portal de Gerentes | Martinello</title>
   <script>try{if(localStorage.getItem('tema')==='dark')document.documentElement.classList.add('dark-mode');}catch(_){}</script>
-  <link rel="stylesheet" href="view/gerentes.css?v=1.6.19-ger5">
+  <link rel="stylesheet" href="view/gerentes.css?v=1.6.19-ger6">
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="brand-logo" src="img/logo.png" alt="Martinello"><span class="brand-title">Portal de Gerentes</span></div>
-  <div class="topbar-actions"><a class="link-simple" href="index.html">Voltar às ofertas</a><button class="link-simple tema-gerentes" id="gerenteTema" type="button" aria-label="Alternar entre tema claro e escuro">☾ Tema</button></div>
+  <div class="brand">
+    <img class="brand-logo" id="logoGerentes" src="img/logo.png" alt="Logo Martinello">
+    <div class="brand-label"><strong>PORTAL DE GERENTES</strong><span>Gestão de vendedores por filial</span></div>
+  </div>
+  <div class="topbar-actions"><span class="gerentes-badge">AMBIENTE DE HOMOLOGAÇÃO</span><a class="link-simple" href="index.html">← Voltar ao portal</a><button class="link-simple tema-gerentes" id="gerenteTema" type="button" aria-label="Alternar entre tema claro e escuro">☾ Tema</button></div>
 </header>
 <main>
-  <section id="gerentesLogin" class="grid-login">
+  <section id="gerentesLogin" class="grid-login" aria-label="Identificação e serviços da filial">
     <div class="panel">
       <div class="intro">
-        <h1>Acompanhe os resultados da sua filial</h1>
+        <p class="gerentes-eyebrow">ACESSO À FILIAL</p><h1>Acompanhe os resultados da sua filial</h1>
         <p>Consulte a utilização das ofertas pelos vendedores e solicite revisões de cadastro.</p>
       </div>
       <form id="formLoginGerente">
@@ -40,7 +43,7 @@
       </div>
     </aside>
   </section>
-  <section id="gerentesPainel" hidden>
+  <section id="gerentesPainel" hidden aria-label="Resultados e cadastros da filial">
     <div class="panel">
       <div class="info-head">
         <div><h1 id="gerenteNome">Painel da filial</h1><div class="meta"><span id="gerenteFilial" class="chip">Filial</span><span id="gerenteAtualizadoEm" class="small"></span></div></div>
@@ -58,7 +61,7 @@
           <div class="field"><label for="gerenteBusca">Buscar vendedor</label><input id="gerenteBusca" type="search" placeholder="Nome ou matrícula"></div>
         </div>
 
-        <div class="kpis">
+        <div class="kpis" aria-label="Indicadores da filial">
           <div class="kpi"><strong id="gerenteTotal">—</strong><span>Vendedores</span></div>
           <div class="kpi"><strong id="gerenteAtivos">—</strong><span>Cadastros ativos</span></div>
           <div class="kpi"><strong id="gerenteUsando">—</strong><span>Com atividade registrada</span></div>
@@ -103,6 +106,6 @@
 <script src="shared/config.js?v=1.6.19"></script>
 <script src="shared/telefones.js?v=1.6.19-fix1"></script>
 <script src="model/gerentes-api.js?v=1.6.19-mat3"></script>
-<script src="presenter/gerentes-presenter.js?v=1.6.19-ger4"></script>
+<script src="presenter/gerentes-presenter.js?v=1.6.19-ger6"></script>
 </body>
 </html>
