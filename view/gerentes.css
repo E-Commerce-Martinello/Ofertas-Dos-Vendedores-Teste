@@ -139,3 +139,75 @@ dialog{max-width:calc(100vw - 20px)}
 .brand-title{font-size:.84rem;font-weight:800;letter-spacing:0;color:var(--muted);line-height:1.25}
 @media(max-width:650px){.brand{gap:8px;min-width:0}.brand-logo{height:42px;max-width:140px}.brand-title{font-size:.75rem}}
 @media(max-width:380px){.brand-logo{height:36px;max-width:112px}.brand-title{font-size:.68rem}}
+
+/* Refinamento visual unificado com os tokens e cards do administrador. */
+:root{--red:#bd202b;--red-strong:#981b24;--shadow:0 8px 28px #19233c0b}
+html.dark-mode{--red:#c72a36;--red-strong:#e13745;--shadow:none}
+body{font-family:Arial,Helvetica,sans-serif}
+.topbar{min-height:94px;padding:16px max(20px,calc((100vw - 1180px)/2));gap:18px}
+.brand{gap:18px;min-width:0;letter-spacing:normal}
+.brand-logo{height:70px;max-width:215px}
+.brand-label{display:grid;gap:3px;min-width:0}
+.brand-label strong{font-size:1.03rem;letter-spacing:.025em;color:var(--text);line-height:1.18}
+.brand-label span{font-size:.76rem;font-weight:500;color:var(--muted);letter-spacing:normal}
+.gerentes-badge{display:inline-flex;align-items:center;justify-content:center;font-size:10px;line-height:1.35;font-weight:850;letter-spacing:.025em;border:1px solid color-mix(in srgb,var(--warning) 36%,var(--border));border-radius:999px;padding:7px 11px;background:color-mix(in srgb,var(--warning) 12%,var(--panel));color:var(--warning);white-space:nowrap}
+.topbar .link-simple{border-radius:999px;min-height:39px;padding:8px 15px;white-space:nowrap}
+main{margin-top:27px}
+.panel{border-radius:16px;padding:clamp(20px,2.6vw,29px);box-shadow:var(--shadow)}
+.grid-login{grid-template-columns:minmax(0,1.12fr) minmax(285px,.88fr);gap:18px}
+.grid-login>.panel:first-child{border-top:4px solid var(--red)}
+.gerentes-eyebrow{display:inline-flex;font-size:10px;letter-spacing:.1em;font-weight:850;color:var(--red);margin:0 0 12px}
+.intro h1{font-size:clamp(1.5rem,3.2vw,2.05rem);letter-spacing:-.02em;max-width:25ch}
+.intro p{max-width:52ch}
+#formLoginGerente{margin-top:25px;max-width:540px}
+#gerenteMatricula{min-height:49px}
+.btn-primary{box-shadow:0 5px 15px color-mix(in srgb,var(--red) 18%,transparent)}
+.btn:hover:not(:disabled){transform:translateY(-1px)}
+.btn:active:not(:disabled){transform:none}
+.btn-quiet,.link-simple{transition:background .15s ease,border-color .15s ease,transform .15s ease}
+.info-list{gap:10px;margin-top:8px}
+.info-list div{border:1px solid var(--border);background:var(--panel-soft);padding:15px;border-radius:11px}
+.info-list div strong{display:block;margin-bottom:5px;color:var(--text)}
+.info-head{padding-bottom:18px;border-bottom:1px solid var(--border)}
+.info-head h1{letter-spacing:-.02em;font-size:clamp(1.35rem,2.7vw,1.8rem)}
+.chip{color:var(--red);border-color:color-mix(in srgb,var(--red) 34%,var(--border));background:color-mix(in srgb,var(--red) 6%,var(--panel))}
+.tabs{gap:8px;margin-top:5px}
+.tab{border-radius:9px 9px 0 0;padding:13px 20px}
+.tab[aria-selected=true]{background:var(--panel-soft);color:var(--red);border-bottom-color:var(--red)}
+.controls{padding:15px;background:var(--panel-soft);border:1px solid var(--border);border-radius:12px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 15px;min-width:0;overflow-wrap:anywhere}
+.kpi strong{color:var(--red);font-weight:900;font-variant-numeric:tabular-nums}
+.kpi span{font-weight:650}
+.seller-card{background:var(--panel);border-radius:12px;transition:border-color .15s}
+.seller-card:hover{border-color:color-mix(in srgb,var(--red) 35%,var(--border))}
+.section-title{margin:20px 0 13px}
+.section-title h2{font-size:1.13rem}
+.table-wrap{border-radius:12px;border:1px solid var(--border);overflow:hidden}
+.table-wrap th{background:var(--panel-soft)}
+.table-wrap td,.table-wrap th{padding:13px 15px}
+.field label{font-weight:700}
+input,select,textarea{min-height:46px;border-radius:9px;background:var(--panel)}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--focus) 45%,transparent);outline-offset:1px}
+.status{border-radius:10px}
+dialog{box-shadow:0 24px 65px #08080b55}
+.dialog-actions .btn{min-width:140px}
+@media(max-width:950px){.grid-login{grid-template-columns:1fr}.brand-logo{height:55px;max-width:185px}.topbar{padding:15px 20px}}
+@media(max-width:700px){
+  .topbar{gap:11px;min-height:0;padding:13px 15px}
+  .brand{gap:10px}
+  .brand-logo{height:46px;max-width:min(33vw,145px)}
+  .brand-label strong{font-size:.83rem}
+  .brand-label span{font-size:.65rem}
+  .gerentes-badge{order:3;margin-left:auto;font-size:9px;padding:6px 9px}
+  .topbar-actions{justify-content:flex-end;gap:7px;flex:1 1 100%}
+  .topbar .link-simple{flex:1 1 auto}
+  .panel{padding:17px;border-radius:13px}
+  .controls{padding:12px}
+  .kpis{gap:9px}
+  .kpi{padding:13px 12px}
+  .table-wrap{border:none}
+  .table-wrap tr.ranking-vendedor{border-radius:12px}
+  .dialog-actions .btn{min-width:0}
+}
+@media(max-width:380px){.brand-label span{display:none}.topbar .link-simple{font-size:11px}.gerentes-badge{font-size:8px}.kpi strong{font-size:1.22rem}}
+@media(prefers-reduced-motion:reduce){.btn:hover:not(:disabled){transform:none}}
