@@ -762,10 +762,31 @@
             <h2><i class="fas fa-bullhorn"></i> CAMPANHA GERAL</h2>
             <p class="vendor-subtext">Usada nas ofertas sem campanha individual. O identificador também integra a UTM gerada automaticamente.</p>
             <div class="campanha-geral-grid">
-                <div class="form-group"><label for="campanhaGeral">Identificador da campanha</label>
-                    <input id="campanhaGeral" maxlength="60" placeholder="ex: novembro_2026" autocomplete="off"></div>
-
+                <div class="form-group">
+                    <label for="campanhaGeral">Nome da campanha geral</label>
+                    <input id="campanhaGeral" maxlength="60" placeholder="ex: novembro_2026" autocomplete="off"
+                        oninput="EdicaoSegura.marcar('campanha')">
+                    <small class="vendor-subtext">Ofertas antigas e novas sem campanha individual sempre usarão este nome na utm_campaign.</small>
+                </div>
+                <div class="campanha-padrao-utm">
+                    <strong>Rastreio padrão dos links</strong>
+                    <code>utm_source=grupo_zap</code>
+                    <code>utm_campaign=NOME_DA_CAMPANHA</code>
+                    <code>utm_id=vendedores_zap</code>
+                </div>
             </div>
+            <details id="campanhaOpcoesAvancadas" class="campanha-utm-avancada">
+                <summary><i class="fas fa-sliders-h" aria-hidden="true"></i> OPÇÕES AVANÇADAS DE RASTREIO</summary>
+                <p class="vendor-subtext">Altere apenas quando precisar mudar o identificador de origem ou de público no Analytics. Os valores são compartilhados com todas as ofertas.</p>
+                <div class="campanha-utm-campos">
+                    <div class="form-group"><label for="campanhaUtmSource">utm_source</label>
+                        <input id="campanhaUtmSource" value="grupo_zap" maxlength="60" autocomplete="off"
+                            oninput="EdicaoSegura.marcar('campanha')"></div>
+                    <div class="form-group"><label for="campanhaUtmId">utm_id</label>
+                        <input id="campanhaUtmId" value="vendedores_zap" maxlength="60" autocomplete="off"
+                            oninput="EdicaoSegura.marcar('campanha')"></div>
+                </div>
+            </details>
             <div class="vendor-actions" style="margin-top:10px">
                 <button type="button" id="btnSalvarCampanhas" class="btn-primary" onclick="CampanhasPresenter.salvar()" style="width:auto"><i class="fas fa-save"></i> SALVAR CAMPANHA</button>
                 <button type="button" class="btn-outline" onclick="CampanhasPresenter.carregar()" style="width:auto">ATUALIZAR</button>
@@ -1440,21 +1461,21 @@
     <script src="shared/utils.js"></script>
     <script src="model/firebase-config.js?v=1.6.19"></script>
     <script src="model/appearance.js?v=1.6.19"></script>
-    <script src="model/campanhas.js?v=1.6.19"></script>
-    <script src="model/link-track.js?v=1.6.19"></script>
+    <script src="model/campanhas.js?v=1.6.19-utm2"></script>
+    <script src="model/link-track.js?v=1.6.19-utm2"></script>
     <script src="model/analytics.js?v=1.6.19"></script>
     <script src="model/horario.js"></script>
     <script src="model/storage.js?v=1.6.19"></script>
     <script src="model/validators.js?v=1.6.19"></script>
     <script src="model/auth.js?v=1.6.19"></script>
     <script src="view/ui.js?v=1.6.19"></script>
-    <script src="presenter/campanhas-presenter.js?v=1.6.19"></script>
+    <script src="presenter/campanhas-presenter.js?v=1.6.19-utm2"></script>
     <script src="presenter/admin-presenter.js?v=1.6.19"></script>
     <script src="presenter/ofertas-import-presenter.js?v=1.6.19"></script>
     <script src="presenter/seguranca-presenter.js?v=1.6.19"></script>
     <script src="model/filiais.js?v=1.6.19-fix4"></script>
     <script src="presenter/dashboard-presenter.js?v=1.6.19"></script>
-    <script src="model/google-sheets.js?v=1.6.19"></script>
+    <script src="model/google-sheets.js?v=1.6.19-utm2"></script>
     <!-- SheetJS é carregado sob demanda, apenas quando alguém importa uma planilha. -->
     <script src="model/planilha-loader.js?v=1.6.19"></script>
     <script src="model/vendor-import.js?v=1.6.19"></script>
