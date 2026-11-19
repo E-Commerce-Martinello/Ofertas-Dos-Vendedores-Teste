@@ -81,7 +81,7 @@ const CampanhasPresenter = {
             )EdicaoSegura.limpar('campanha');
             this._sincronizarPortal();
             this._msg('Configuração salva. Campanha geral: '+(config.campanhaGeral||'não definida')+
-                '. O coletor pode levar até 30 segundos para atualizar.');
+                '. O portal pode levar até um minuto para refletir a mudança.');
             UI.ok('Configuração de campanha e UTM salva no Google Sheets.');
             DashboardPresenter?.atualizarFiltroCampanhas?.();
         }catch(e){this._msg('Não foi possível salvar: '+e.message,true);}
