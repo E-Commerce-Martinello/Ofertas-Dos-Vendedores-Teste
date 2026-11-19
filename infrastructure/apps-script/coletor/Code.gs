@@ -249,19 +249,37 @@ function mart1614_slug_(valor) {
   const v=String(valor||'').trim().toLowerCase();
   return /^[a-z0-9][a-z0-9_-]{0,59}$/.test(v) ? v : '';
 }
-function mart1614_campanhaAtual_() {
-  try {
+// A mesma planilha operacional da API administrativa deve estar configurada no coletor.
+function mart1614_configRastreio_() {
+  const defaults={campanha:'',utmSource:'grupo_zap',utmId:'vendedores_zap',disponivel:true};
+  const cache=CacheService.getScriptCache(),key='camp_config_v2';
+  const saved=cache.get(key);
+  if(saved){try{return JSON.parse(saved);}catch(_){}}
+  try{
     const ss=SpreadsheetApp.openById(MART_EVT_SHEET_ID),sh=ss.getSheetByName('Config_Campanhas');
-    if(!sh || sh.getLastRow()<2)return '';
-    const v=String(sh.getRange(2,2).getDisplayValue()||'');
-    return mart1614_slug_(v);
-  }catch(e){console.warn('Campanha geral indisponível:',String(e));return '';}
+    if(!sh||sh.getLastRow()<2)return defaults;
+    if(sh.getLastRow()>1000)throw new Error('Campanhas: limite de linhas excedido.');
+    const rows=sh.getRange(2,1,sh.getLastRow()-1,2).getDisplayValues();
+    const result={...defaults};
+    for(const r of rows){
+      const k=String(r[0]||'').trim(),v=mart1614_slug_(r[1]);
+      if(k==='campanha_geral')result.campanha=v;
+      if(k==='utm_source'&&v)result.utmSource=v;
+      if(k==='utm_id'&&v)result.utmId=v;
+    }
+    cache.put(key,JSON.stringify(result),30);
+    return result;
+  }catch(e){
+    console.warn('Configuração de campanhas indisponível:',String(e&&e.name||'Erro'));
+    return {...defaults,disponivel:false};
+  }
 }
+function mart1614_campanhaAtual_() {return mart1614_configRastreio_().campanha;}
 function mart1614_consultarCampanha_(p) {
   const id=String(p.requestId||'');
   if(!/^cp_[A-Za-z0-9_-]{8,48}$/.test(id))
     return ContentService.createTextOutput('/* consulta invalida */').setMimeType(ContentService.MimeType.JAVASCRIPT);
-  const dados=JSON.stringify({requestId:id,campanha:mart1614_campanhaAtual_()});
+  const dados=JSON.stringify({requestId:id,...mart1614_configRastreio_()});
   return ContentService.createTextOutput('window.MartinelloCampanhaReceber&&window.MartinelloCampanhaReceber('+dados+');')
     .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
