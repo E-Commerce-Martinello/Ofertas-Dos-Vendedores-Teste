@@ -765,14 +765,14 @@
                 <div class="form-group">
                     <label for="campanhaGeral">Nome da campanha geral</label>
                     <input id="campanhaGeral" maxlength="60" placeholder="ex: novembro_2026" autocomplete="off"
-                        oninput="EdicaoSegura.marcar('campanha')">
+                        oninput="EdicaoSegura.marcar('campanha'); CampanhasPresenter.prever()">
                     <small class="vendor-subtext">Ofertas antigas e novas sem campanha individual sempre usarão este nome na utm_campaign.</small>
                 </div>
                 <div class="campanha-padrao-utm">
                     <strong>Rastreio padrão dos links</strong>
-                    <code>utm_source=grupo_zap</code>
-                    <code>utm_campaign=NOME_DA_CAMPANHA</code>
-                    <code>utm_id=vendedores_zap</code>
+                    <code id="campanhaPreviewSource">utm_source=grupo_zap</code>
+                    <code id="campanhaPreviewCampaign">utm_campaign=NOME_DA_CAMPANHA</code>
+                    <code id="campanhaPreviewId">utm_id=vendedores_zap</code>
                 </div>
             </div>
             <details id="campanhaOpcoesAvancadas" class="campanha-utm-avancada">
@@ -781,10 +781,10 @@
                 <div class="campanha-utm-campos">
                     <div class="form-group"><label for="campanhaUtmSource">utm_source</label>
                         <input id="campanhaUtmSource" value="grupo_zap" maxlength="60" autocomplete="off"
-                            oninput="EdicaoSegura.marcar('campanha')"></div>
+                            oninput="EdicaoSegura.marcar('campanha'); CampanhasPresenter.prever()"></div>
                     <div class="form-group"><label for="campanhaUtmId">utm_id</label>
                         <input id="campanhaUtmId" value="vendedores_zap" maxlength="60" autocomplete="off"
-                            oninput="EdicaoSegura.marcar('campanha')"></div>
+                            oninput="EdicaoSegura.marcar('campanha'); CampanhasPresenter.prever()"></div>
                 </div>
             </details>
             <div class="vendor-actions" style="margin-top:10px">
