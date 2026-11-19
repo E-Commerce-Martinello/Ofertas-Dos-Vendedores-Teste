@@ -1,36 +1,71 @@
-// Campanhas gerais editadas no Sheets pela API autenticada.
+// Configuração administrativa compartilhada: campanha geral + UTMs avançadas.
 const CampanhasPresenter = {
-    config:{campanhaGeral:'',linkGrupo:'https://www.martinello.com.br/ofertasvendedor',revision:''},
+    config:{campanhaGeral:'',linkGrupo:'https://www.martinello.com.br/ofertasvendedor',
+        utmSource:'grupo_zap',utmId:'vendedores_zap',revision:''},
     carregando:false,
-    _msg(m,erro=false){const e=document.getElementById('statusCampanhaGeral');if(e){e.textContent=m;e.style.color=erro?'#bb2832':'';}},
-    async carregar() {
+    _msg(m,erro=false){
+        const e=document.getElementById('statusCampanhaGeral');
+        if(e){e.textContent=m;e.style.color=erro?'#bb2832':'';}
+    },
+    _sincronizarPortal(){
+        CampanhasPortal.geral=CampanhasPortal.slug(this.config.campanhaGeral);
+        CampanhasPortal.utmSource=CampanhasPortal.slug(this.config.utmSource)||'grupo_zap';
+        CampanhasPortal.utmId=CampanhasPortal.slug(this.config.utmId)||'vendedores_zap';
+        CampanhasPortal.carregada=true;
+        CampanhasPortal.disponivel=true;
+        CampanhasPortal.consultadaEm=Date.now();
+    },
+    async carregar(){
         if(this.carregando)return;
-        this.carregando=true;this._msg('Carregando configuração compartilhada…');
+        this.carregando=true;
+        this._msg('Carregando configuração compartilhada…');
         try{
             const recebido=await GoogleSheetsService.listarCampanhas();
             if(EdicaoSegura.sujo('campanha'))return;
-            this.config=recebido;
-            CampanhasPortal.geral=CampanhasPortal.slug(this.config.campanhaGeral);
+            this.config={
+                ...recebido,
+                utmSource:CampanhasPortal.slug(recebido.utmSource)||'grupo_zap',
+                utmId:CampanhasPortal.slug(recebido.utmId)||'vendedores_zap'
+            };
+            this._sincronizarPortal();
             const geral=document.getElementById('campanhaGeral');
+            const source=document.getElementById('campanhaUtmSource');
+            const id=document.getElementById('campanhaUtmId');
             if(geral)geral.value=this.config.campanhaGeral||'';
-            this._msg('Configuração compartilhada carregada. Campanha geral atual: '+(this.config.campanhaGeral||'sem campanha'));
+            if(source)source.value=this.config.utmSource;
+            if(id)id.value=this.config.utmId;
+            this._msg('Campanha geral atual: '+(this.config.campanhaGeral||'não definida')
+                +'. Todas as ofertas sem campanha individual seguem essa configuração.');
         }catch(e){this._msg('Não foi possível carregar a campanha: '+e.message,true);}
         finally{this.carregando=false;}
     },
-    async salvar() {
+    async salvar(){
         const geral=String(document.getElementById('campanhaGeral')?.value||'').trim().toLowerCase();
-        const link=this.config.linkGrupo||'https://www.martinello.com.br/ofertasvendedor'; // mantido apenas para compatibilidade com API existente
-        if(geral&&!/^[a-z0-9][a-z0-9_-]{0,59}$/.test(geral)){
-            this._msg('Use letras minúsculas, números, traços ou _. Até 60 caracteres.',true);return;
+        const source=String(document.getElementById('campanhaUtmSource')?.value||'').trim().toLowerCase();
+        const id=String(document.getElementById('campanhaUtmId')?.value||'').trim().toLowerCase();
+        const valido=s=>/^[a-z0-9][a-z0-9_-]{0,59}$/.test(s);
+        if(geral&&!valido(geral)){this._msg('Campanha: use até 60 letras minúsculas, números, _ ou -, sem espaços.',true);return;}
+        if(!valido(source)||!valido(id)){
+            this._msg('UTM source e UTM id: use até 60 letras minúsculas, números, _ ou -, sem espaços.',true);return;
         }
-        const btn=document.getElementById('btnSalvarCampanhas');if(btn)btn.disabled=true;
-        this._msg('Salvando a campanha geral…');
+        const link=this.config.linkGrupo||'https://www.martinello.com.br/ofertasvendedor';
+        const btn=document.getElementById('btnSalvarCampanhas');
+        if(btn)btn.disabled=true;
+        this._msg('Salvando configuração de rastreio…');
         try{
-            const config=await GoogleSheetsService.salvarCampanhas(geral,link,this.config.revision||'');
-            this.config=config;if(String(document.getElementById('campanhaGeral').value).trim().toLowerCase()===geral)EdicaoSegura.limpar('campanha');
-            CampanhasPortal.geral=CampanhasPortal.slug(config.campanhaGeral);
-            this._msg('Campanha geral salva: '+(config.campanhaGeral||'sem campanha')+'. Pode haver até um minuto de atraso no portal.');
-            UI.ok('Campanha geral atualizada no Google Sheets.');
+            const config=await GoogleSheetsService.salvarCampanhas(
+                geral,link,this.config.revision||'',source,id
+            );
+            this.config=config;
+            if(
+                document.getElementById('campanhaGeral')?.value.trim().toLowerCase()===geral &&
+                document.getElementById('campanhaUtmSource')?.value.trim().toLowerCase()===source &&
+                document.getElementById('campanhaUtmId')?.value.trim().toLowerCase()===id
+            )EdicaoSegura.limpar('campanha');
+            this._sincronizarPortal();
+            this._msg('Configuração salva. Campanha geral: '+(config.campanhaGeral||'não definida')+
+                '. O coletor pode levar até 30 segundos para atualizar.');
+            UI.ok('Configuração de campanha e UTM salva no Google Sheets.');
             DashboardPresenter?.atualizarFiltroCampanhas?.();
         }catch(e){this._msg('Não foi possível salvar: '+e.message,true);}
         finally{if(btn)btn.disabled=false;}
