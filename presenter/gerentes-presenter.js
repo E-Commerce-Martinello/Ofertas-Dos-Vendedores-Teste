@@ -14,6 +14,28 @@ const GerentesPresenter = {
     const m=Object.fromEntries(d.map(x=>[x.type,x.value]));
     return m.year+'-'+m.month;
   },
+  // Mesma logo pública da vitrine, com fallback para o arquivo usado no admin.
+  async carregarLogo(){
+    const img=this.el('logoGerentes');
+    if(!img)return;
+    const base=String(CONFIG.firebaseConfig?.databaseURL||'').replace(/\/$/,'');
+    if(!/^https:\/\/[a-z0-9-]+(?:-default-rtdb)?\.firebaseio\.com$/i.test(base))
+      return;
+    const sufixo=CONFIG.environment==='TESTE'?'_TESTE':'';
+    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),5000);
+    try{
+      const resposta=await fetch(base+'/aparenciaPortal'+sufixo+'/logo.json',{
+        method:'GET',cache:'no-store',credentials:'omit',signal:ctl.signal
+      });
+      if(!resposta.ok)return;
+      const logo=await resposta.json();
+      if(logo==='img/logo.png'||(
+        typeof logo==='string'&&logo.length<=180000&&
+        /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(logo)
+      ))img.src=logo;
+    }catch(_){/* A logo estática do admin permanece visível. */}
+    finally{clearTimeout(timer);}
+  },
   iniciarTema(){
     let tema='light';
     try{tema=localStorage.getItem('tema')==='dark'?'dark':'light';}catch(_){}
@@ -56,6 +78,7 @@ const GerentesPresenter = {
     }
   },
   async init(){
+    this.carregarLogo();
     this.iniciarTema();
     this.iniciarMeses();
     this.el('formLoginGerente').addEventListener('submit',e=>{e.preventDefault();this.entrar();});
