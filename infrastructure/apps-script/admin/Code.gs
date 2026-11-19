@@ -1176,9 +1176,10 @@ function mart1614_salvarCampanhas_(payload,email) {
     const agora=new Date().toISOString();
     const novos={campanha_geral:geral,link_grupo:link,utm_source:utmSource,utm_id:utmId};
     const changes=[];
+    const proximaLinhaInicial=Math.max(1,sh.getLastRow())+1;
     for(const key of keys){
       const pos=existing.findIndex(r=>r[0]===key);
-      changes.push({row:pos>=0?pos+2:sh.getLastRow()+1+changes.filter(x=>x.newRow).length,
+      changes.push({row:pos>=0?pos+2:proximaLinhaInicial+changes.filter(x=>x.newRow).length,
         newRow:pos<0,values:[key,novos[key],agora,email]});
     }
     // Grava somente as chaves conhecidas, sem apagar outras linhas.
