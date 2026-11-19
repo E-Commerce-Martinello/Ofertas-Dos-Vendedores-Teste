@@ -56,6 +56,8 @@ const CampanhasPresenter = {
             const config=await GoogleSheetsService.salvarCampanhas(
                 geral,link,this.config.revision||'',source,id
             );
+            if(config.campanhaGeral!==geral || config.utmSource!==source || config.utmId!==id)
+                throw new Error('O Apps Script não confirmou os campos UTM. Atualize Code.gs e publique uma nova versão antes de salvar.');
             this.config=config;
             if(
                 document.getElementById('campanhaGeral')?.value.trim().toLowerCase()===geral &&
