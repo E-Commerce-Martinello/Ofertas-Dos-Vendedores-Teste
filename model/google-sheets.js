@@ -11,7 +11,9 @@ const GoogleSheetsService = {
         const key=action+JSON.stringify(payload);
         if(leitura&&this._snapshots.has(action)&&!payload.apenasResumo)return this._snapshots.get(action);
         if(leitura&&this._leituras.has(key))return this._leituras.get(key);
-        const operacao=this._transport(action,payload).then(r=>{
+        const enviar=()=>this._transport(action,payload);
+        const grupo=action==='sincronizarAdmin'?'sheets-sync':leitura?'sheets-leitura':'sheets-gravacao';
+        const operacao=(typeof DiagnosticoUso==='undefined'?enviar():DiagnosticoUso.medir(grupo,enviar)).then(r=>{
             if(!leitura){this._snapshots.clear();window.dispatchEvent(new Event('mart:gravado'));}
             return r;
         });

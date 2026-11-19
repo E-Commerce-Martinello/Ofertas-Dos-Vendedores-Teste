@@ -1330,6 +1330,17 @@
         </section><!-- /abaContatos -->
 
         <section id="abaConfiguracoes" class="aba-conteudo" style="display:none;">
+            <section class="admin-card" aria-labelledby="diagnosticoTitulo">
+              <h2 id="diagnosticoTitulo">Desempenho e uso da sessão</h2>
+              <p class="vendor-subtext">Medições locais desde que esta página foi aberta. Nenhuma consulta extra, dado pessoal ou envio de relatório automático. Recarregar a página reinicia as medições.</p>
+              <div id="diagnosticoMetricas" class="central-grid"></div>
+              <p id="diagnosticoEstado" class="vendor-subtext"></p>
+              <p id="diagnosticoTamanho" class="vendor-subtext"></p>
+              <div class="vendor-actions"><button type="button" class="btn-outline" onclick="DiagnosticoUso.medirTamanho()">MEDIR OFERTAS JÁ CARREGADAS</button><button type="button" class="btn-outline" onclick="DiagnosticoUso.exportar()">EXPORTAR DIAGNÓSTICO</button></div>
+              <p class="vendor-subtext">Os tempos incluem rede, gateway e servidor; não isolam o tempo do Sheets. Eventos Firebase incluem a entrega inicial e notificações locais/cache: não equivalem a downloads nem a gravações remotas. O intervalo entre conferências não mede o atraso exato entre dois administradores.</p>
+              <p class="vendor-subtext">Consumo real: no console Firebase, abra Realtime Database → Uso e confira downloads, armazenamento, conexões e carga dos últimos 30 dias. Este painel não tem acesso às cotas da conta.</p>
+            </section>
+
             <div class="admin-card">
                 <h2><i class="fas fa-sliders-h" style="color:#d0252a"></i> CENTRAL DE CONFIGURAÇÕES</h2>
                 <p class="vendor-subtext">Acesse as configurações existentes sem alterar a planilha nem o Firebase diretamente. Cada área mantém seu próprio botão de salvar.</p>
@@ -1465,7 +1476,8 @@
     <script src="model/link-track.js?v=1.6.19-utm2"></script>
     <script src="model/analytics.js?v=1.6.19"></script>
     <script src="model/horario.js"></script>
-    <script src="model/storage.js?v=1.6.19"></script>
+    <script src="model/diagnostico-uso.js?v=1.6.19-med1"></script>
+    <script src="model/storage.js?v=1.6.19-med1"></script>
     <script src="model/validators.js?v=1.6.19"></script>
     <script src="model/auth.js?v=1.6.19"></script>
     <script src="view/ui.js?v=1.6.19"></script>
@@ -1475,7 +1487,7 @@
     <script src="presenter/seguranca-presenter.js?v=1.6.19"></script>
     <script src="model/filiais.js?v=1.6.19-fix4"></script>
     <script src="presenter/dashboard-presenter.js?v=1.6.19"></script>
-    <script src="model/google-sheets.js?v=1.6.19-utm2"></script>
+    <script src="model/google-sheets.js?v=1.6.19-med1"></script>
     <!-- SheetJS é carregado sob demanda, apenas quando alguém importa uma planilha. -->
     <script src="model/planilha-loader.js?v=1.6.19"></script>
     <script src="model/vendor-import.js?v=1.6.19"></script>
@@ -1491,6 +1503,6 @@
 <script src="view/admin-components.js?v=1.6.19"></script>
     <script src="presenter/gerentes-solicitacoes-presenter.js?v=1.6.19-ger5"></script>
     <script src="presenter/gerentes-cadastro-presenter.js?v=1.6.19-ger5"></script>
-    <script src="model/admin-sync.js?v=1.6.19-ger2"></script>
+    <script src="model/admin-sync.js?v=1.6.19-med1"></script>
 </body>
 </html>

@@ -148,7 +148,7 @@ const Storage = {
 
         try {
             console.log('📡 Buscando ofertas no Firebase...');
-            const snap  = await ofertasRef.once('value');
+            const snap  = await (typeof DiagnosticoUso==='undefined'?ofertasRef.once('value'):DiagnosticoUso.medir('firebase-leitura',()=>ofertasRef.once('value')));
             const dados = snap.val();
             const arr   = Array.isArray(dados) ? dados
                         : dados && typeof dados === 'object' ? Object.values(dados)
@@ -200,6 +200,7 @@ const Storage = {
     // Mantém qualquer navegador aberto sincronizado com o Firebase.
     escutarOfertas(callback, onErro) {
         const receber = snap => {
+            if(typeof DiagnosticoUso!=='undefined')DiagnosticoUso.firebaseRecebido();
             try {
                 const ofertas = this._listaRemota(snap.val());
                 this._cacheOfertas(ofertas);

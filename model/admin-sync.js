@@ -37,6 +37,7 @@ if(typeof module!=='undefined')module.exports=CoordenadorSync;
 const AdminSync = {
   capacidades:null,coordenador:null,pararPush:null,pararAparencia:null,
   status(estado,detalhe=''){
+    if(typeof DiagnosticoUso!=='undefined')DiagnosticoUso.sincronizacao(estado);
     const el=document.getElementById('adminSyncStatus');if(!el)return;
     const textos={atualizando:'Conferindo atualizações…',atualizado:'Dados administrativos atualizados',
       pausado:navigator.onLine?'Atualização pausada nesta aba':'Sem conexão — dados podem estar desatualizados',

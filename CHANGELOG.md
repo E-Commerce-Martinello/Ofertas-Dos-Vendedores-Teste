@@ -4,6 +4,12 @@
 - Diagnóstico técnico e plano em docs/PLANO-v1.6.19.md.
 - Fontes de infraestrutura recuperados de pacotes anteriores para revisão; não confirmados como os atualmente implantados.
 
+### Diagnóstico de desempenho — 19/11/2026
+- Painel em Configurações com tempos e falhas das chamadas efetivas à API, eventos do listener Firebase e última conferência administrativa.
+- Medição manual do tamanho lógico das ofertas já carregadas e exportação de agregados JSON, sem dados pessoais nem requisições adicionais.
+- Métricas locais por sessão; não representam consumo faturado ou atraso exato entre administradores. Roteiro em `docs/DIAGNOSTICO-DESEMPENHO.md`.
+- Sem migração de dados, implantação de backend ou alteração do oficial.
+
 ### Ajustes de vendedores — 18/11/2026
 - Histórico de telefone permanece no Sheets, mas o painel só o exibe quando o cadastro possui número legado.
 - Removidos os botões redundantes de recarga dos vendedores e dos participantes importados; os dados seguem pela sincronização automática.
