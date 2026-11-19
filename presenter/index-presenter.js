@@ -305,7 +305,8 @@ const IndexPresenter = {
                 if (!continuar) return;
             }
             Storage.salvarUltimaMatricula(cod);
-            await CampanhasPortal.carregar().catch(()=>'');
+            // Não compartilhar com campanha indefinida ou configuração remota indisponível.
+            await CampanhasPortal.carregar();
             const link = LinkTrack.urlCompartilhavel(oferta,cod,vendedorAtivo===true);
             const msg = formatarTexto(oferta.textoOferta, link, cod);
             // Não atribuir acesso de não vendedor aos rankings de vendedores ativos.
@@ -327,7 +328,10 @@ const IndexPresenter = {
             await API.compartilhar(msg, oferta.urlImagem || 'img/produto.png');
         } catch (e) {
             console.error('Falha na preparação do compartilhamento:', e);
-            UI.erro('Não foi possível preparar a mensagem. Tente novamente.');
+            const mensagem=String(e?.message||'');
+            if(/campanha|rastreio|URL HTTPS oficial|destino precisa|API pública/i.test(mensagem))
+                UI.erro(mensagem);
+            else UI.erro('Não foi possível preparar a mensagem. Tente novamente.');
         } finally {
             this.enviando = false;
             this._renderOferta(this.ofertaAtual);
