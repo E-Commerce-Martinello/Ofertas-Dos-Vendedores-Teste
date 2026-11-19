@@ -202,8 +202,8 @@ const GoogleSheetsService = {
         return r.resultado || {campanhaGeral:'',linkGrupo:'https://www.martinello.com.br/ofertasvendedor',revision:''};
     },
 
-    async salvarCampanhas(campanhaGeral,linkGrupo,revision) {
-        const r=await this._post('salvarCampanhas',{campanhaGeral,linkGrupo,revision});
+    async salvarCampanhas(campanhaGeral,linkGrupo,revision,utmSource='grupo_zap',utmId='vendedores_zap') {
+        const r=await this._post('salvarCampanhas',{campanhaGeral,linkGrupo,revision,utmSource,utmId});
         return r.resultado || {};
     },
 
