@@ -49,3 +49,10 @@ Conferir fontes realmente implantadas, autorizar API avançada/escopos e validar
 - Seleção manual rola até o botão de gerar. Miniaturas quadradas, recorte central para preencher.
 - Aviso de não vendedor em card dispensável por 20 segundos de página visível, pausado durante foco/hover; uma vez por dia de Brasília por matrícula e ambiente neste navegador. Não cobre outros dispositivos nem armazenamento apagado.
 - Falhas de conexão/autenticação deixam de ser rotuladas como backend antigo. Nenhuma implantação de backend executada.
+
+### Revisão de gerentes e UTMs — 19/11/2026
+- Preservada a implementação já presente de logo, identidade administrativa, opções avançadas e herança da campanha geral.
+- Corrigidos limites de largura e tabela em tablets; layout não esconde transbordamento; melhor contraste dos destaques no tema escuro.
+- Marcador legado sem_campanha também rejeitado quando salvo como geral; falha de atualização invalida cache para permitir nova consulta imediata.
+- 47 testes aprovados. Fixture dos testes de backend atualizada para os índices por matrícula já usados em produção, sem alteração do backend.
+- Backup: backup/main-2026-11-19-revisao-gerentes-utm (359a40651458b842125b7b349ad18e5dea982716).

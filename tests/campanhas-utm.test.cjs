@@ -74,3 +74,27 @@ test('domínio diferente não é usado como redirecionamento de parceiros',()=>{
   const {links}=criar();
   assert.throws(()=>links.urlCompartilhavel({id:20,linkProduto:'https://example.com/produto'},'19000'),/Martinello/);
 });
+
+test('alterar a geral atualiza ofertas antigas e novas sem gravar nelas',()=>{
+  const {links,portal}=criar();const antiga={id:20,linkProduto:produto};
+  verificar(destino(links.urlCompartilhavel(antiga,'19000')),'novembro_2026');
+  portal.geral='natal_2026';
+  for(const oferta of [antiga,{id:21,linkProduto:produto},{id:22,linkProduto:produto,campanha:'sem_campanha'}])
+    verificar(destino(links.urlCompartilhavel(oferta,'19000')),'natal_2026');
+  assert.equal(antiga.campanha,undefined);
+  verificar(destino(links.urlCompartilhavel({...antiga,campanha:'individual'},'19000')),'individual');
+});
+test('marcador sem_campanha também é rejeitado na configuração geral',()=>{
+  const {links,portal}=criar();portal.geral='sem_campanha';
+  assert.throws(()=>links.urlCompartilhavel({id:20,linkProduto:produto},'19000'),/Nenhuma campanha/);
+});
+test('falha de atualização invalida cache e próxima tentativa consulta novamente',async()=>{
+  const window={},scripts=[];
+  const document={createElement:()=>({remove(){}}),head:{appendChild(s){scripts.push(s);queueMicrotask(()=>s.onerror());}}};
+  const portal=new Function('window','document','CONFIG',texto('model/campanhas.js')+'\nreturn CampanhasPortal;')(window,document,{portalEventsApiUrl:'https://script.google.com/macros/s/test/exec'});
+  portal.carregada=true;portal.consultadaEm=Date.now();portal.geral='antiga';
+  await assert.rejects(portal.carregar(true),/atualizar a campanha/);
+  assert.equal(portal.carregada,false);
+  await assert.rejects(portal.carregar(),/atualizar a campanha/);
+  assert.equal(scripts.length,2);
+});

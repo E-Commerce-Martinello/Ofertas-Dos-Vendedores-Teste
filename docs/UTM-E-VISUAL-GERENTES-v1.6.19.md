@@ -82,3 +82,13 @@ A página usa `img/logo.png` (mesma logo estática do admin) como fallback e con
 **Testes executados no código isolado:** campanhas geral/individual, marcador legado, valores avançados, matrícula não vendedora, bloqueio sem campanha, criação/migração de `Config_Campanhas`, preservação de outras chaves e prevenção de alterações concorrentes. **Testes integrados com Google e Analytics ainda não executados.**
 
 **Backup da `main` antes da alteração:** `backup/main-2026-11-19-antes-utm-gerentes`.
+
+## Revisão complementar — 19/11/2026
+
+A leitura da main 359a406 confirmou que a implementação descrita acima já estava presente. Esta revisão preserva essas funcionalidades e corrige largura máxima, corte de tabela em tablets, contraste de indicadores no tema escuro e herança de padding no alternador. Não há alteração de regras de acesso, backend ou dados.
+
+O marcador sem_campanha não pode ser salvo pelo formulário como nome geral e, se já existir na configuração remota, não vira UTM. Uma consulta remota que falha invalida o cache para que a próxima tentativa realmente consulte o coletor.
+
+Validação: 47 testes aprovados; ensaio de navegador com dados fictícios em 390px e 768px, consultas e relatório nos dois temas, sem largura horizontal excedente. A conexão real ao Sheets e a implantação atual dos Apps Scripts não foram verificadas nesta revisão. Os dois Code.gs descritos acima continuam sendo os arquivos necessários caso as implantações ainda estejam antigas.
+
+Backup anterior à revisão: backup/main-2026-11-19-revisao-gerentes-utm; SHA 359a40651458b842125b7b349ad18e5dea982716. Retorno por novo commit restaurando os arquivos alterados, sem restaurar ou apagar dados.

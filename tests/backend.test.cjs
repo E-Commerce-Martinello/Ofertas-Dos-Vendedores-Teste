@@ -5,6 +5,7 @@ function fixture(){
  const context={base,extras,grupo:{participantes:[],identificacoes:[]},registros:[{matricula:'19000',numero:base[1][4],telefonesExtras:{profissional:extras[1][4]}}],evidencia:'hash'};
  const c=vm.createContext({Telefones:require('../shared/telefones.js'),Sheets:{Spreadsheets:{batchUpdate:(body,id)=>batches.push({body,id})}},LockService:{getScriptLock:()=>({waitLock:()=>{},releaseLock:()=>released++})},obterPlanilhaVendedoresV153_:()=>ss,obterAbaVendedoresV153_:()=>sh,MART1618_FONES_ABA:'Telefones_Vendedores',Utilities:{DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,s)=>Array.from(crypto.createHash('sha256').update(s).digest())}});
  vm.runInContext(fs.readFileSync('infrastructure/apps-script/admin/Refinamento.gs','utf8'),c);c.mart19_contexto_=()=>context;
+ context.basePorMatricula=new Map([['19000',[base[1]]]]);context.extrasPorMatricula=new Map([['19000',[extras[1]]]]);
  const payload={matricula:'19000',nome:'Nome novo',filial:'2',ativo:true,observacoes:'nova',telefonePessoal:'',telefoneProfissional:'11973485620',revision:c.mart19_revisionVendedor_(context,'19000')};
  return {c,payload,batches,context,released:()=>released};
 }

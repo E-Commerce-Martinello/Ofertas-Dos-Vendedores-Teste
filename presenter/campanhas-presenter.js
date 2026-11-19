@@ -59,6 +59,7 @@ const CampanhasPresenter = {
         const source=String(document.getElementById('campanhaUtmSource')?.value||'').trim().toLowerCase();
         const id=String(document.getElementById('campanhaUtmId')?.value||'').trim().toLowerCase();
         const valido=s=>/^[a-z0-9][a-z0-9_-]{0,59}$/.test(s);
+        if(geral==='sem_campanha'){this._msg('Defina um nome de campanha real; sem_campanha é um marcador antigo.',true);return;}
         if(geral&&!valido(geral)){this._msg('Campanha: use até 60 letras minúsculas, números, _ ou -, sem espaços.',true);return;}
         if(!valido(source)||!valido(id)){
             this._msg('UTM source e UTM id: use até 60 letras minúsculas, números, _ ou -, sem espaços.',true);return;

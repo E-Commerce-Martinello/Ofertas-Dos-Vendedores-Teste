@@ -15,7 +15,8 @@ const CampanhasPortal = {
         const individualBruto=this.slug(oferta?.campanha);
         // Ofertas legadas podem ter gravado o marcador antigo como se fosse nome.
         const individual=individualBruto==='sem_campanha'?'':individualBruto;
-        const geral=this.slug(this.geral);
+        const geralBruto=this.slug(this.geral);
+        const geral=geralBruto==='sem_campanha'?'':geralBruto;
         if(!individual&&!geral)
             throw new Error('Nenhuma campanha configurada. Defina a campanha geral no admin ou uma campanha individual nesta oferta.');
         return individual||geral;
@@ -38,7 +39,7 @@ const CampanhasPortal = {
                 clearTimeout(timer);script?.remove();
                 if(window.MartinelloCampanhaReceber===receber)delete window.MartinelloCampanhaReceber;
                 if(erro||!dados||dados.disponivel===false){
-                    this.disponivel=false;
+                    this.disponivel=false;this.carregada=false;
                     reject(new Error('Não foi possível atualizar a campanha geral. Verifique a conexão e o Apps Script coletor.'));
                     return;
                 }

@@ -88,8 +88,9 @@ dialog::backdrop{background:rgba(0,0,0,.68)}
 @media(max-width:650px){.topbar{padding:12px 15px}.link-simple{font-size:.75rem;padding:8px}.brand{font-size:.95rem}.brand-mark{width:36px;height:36px}main{padding:0 12px;margin-top:14px}.panel{padding:18px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.controls{grid-template-columns:1fr}.seller-grid{grid-template-columns:1fr}.dialog-actions>.btn{flex:1 1 100%}}
 
 /* Refinamento da vitrine administrativa, aplicado ao Portal de Gerentes. */
-body{font-size:14px;overflow-x:hidden}
-main,.panel,#gerentesPainel,#gerenteResultados,#gerenteCadastros{min-width:0;max-width:100%}
+body{font-size:14px}
+.panel,#gerentesPainel,#gerenteResultados,#gerenteCadastros{min-width:0;max-width:100%}
+main{width:100%;min-width:0;max-width:1180px}
 .topbar{box-shadow:none}
 .topbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .topbar .link-simple{background:var(--panel);color:var(--text);font-size:13px;font-weight:700;min-height:42px;display:inline-flex;align-items:center;justify-content:center}
@@ -211,3 +212,20 @@ dialog{box-shadow:0 24px 65px #08080b55}
 }
 @media(max-width:380px){.brand-label span{display:none}.topbar .link-simple{font-size:11px}.gerentes-badge{font-size:8px}.kpi strong{font-size:1.22rem}}
 @media(prefers-reduced-motion:reduce){.btn:hover:not(:disabled){transform:none}}
+
+/* Limites reais do layout: não esconder conteúdo que ultrapassa a tela. */
+.topbar>*{min-width:0;max-width:100%}
+.brand-label{overflow-wrap:anywhere}
+.link-simple:active,.btn:active:not(:disabled){background:var(--panel-soft)}
+.btn-primary:active:not(:disabled){background:var(--red-strong)}
+.btn:disabled{box-shadow:none;transform:none}
+.field,.info-head>*,.section-title>*{min-width:0}
+.section-title{flex-wrap:wrap}
+.btn,.status,.small,td,th{overflow-wrap:anywhere}
+.table-wrap table{min-width:0;table-layout:fixed}
+.toggle input{padding:0}
+textarea{resize:vertical}
+@media(min-width:701px) and (max-width:1100px){.topbar{flex-wrap:wrap}.topbar-actions{margin-left:auto}.brand{flex:1 1 100%}}
+@media(max-width:700px){.table-wrap table{table-layout:auto}.brand{width:100%}.topbar-actions{width:100%}.gerentes-badge{white-space:normal;text-align:center}.section-title{align-items:flex-start}.info-head>.btn{width:100%}}
+/* Texto de destaque legível no tema escuro, sem clarear os botões vermelhos. */
+html.dark-mode .kpi strong,html.dark-mode .chip,html.dark-mode .tab[aria-selected=true],html.dark-mode .gerentes-eyebrow{color:#ffabb2}
