@@ -133,3 +133,9 @@ dialog{max-width:calc(100vw - 20px)}
 }
 @media(max-width:380px){.topbar .link-simple{font-size:11px;padding:8px 10px}.kpis{gap:8px}.kpi{padding:13px 9px}.panel{padding:13px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Identidade visual compartilhada com o Portal e Admin */
+.brand-logo{display:block;width:auto;height:52px;max-width:min(36vw,180px);object-fit:contain;flex-shrink:0}
+.brand-title{font-size:.84rem;font-weight:800;letter-spacing:0;color:var(--muted);line-height:1.25}
+@media(max-width:650px){.brand{gap:8px;min-width:0}.brand-logo{height:42px;max-width:140px}.brand-title{font-size:.75rem}}
+@media(max-width:380px){.brand-logo{height:36px;max-width:112px}.brand-title{font-size:.68rem}}
