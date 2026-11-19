@@ -12,7 +12,9 @@ const CampanhasPortal = {
         return /^[a-z0-9][a-z0-9_-]{0,59}$/.test(t)?t:'';
     },
     efetiva(oferta) {
-        const individual=this.slug(oferta?.campanha);
+        const individualBruto=this.slug(oferta?.campanha);
+        // Ofertas legadas podem ter gravado o marcador antigo como se fosse nome.
+        const individual=individualBruto==='sem_campanha'?'':individualBruto;
         const geral=this.slug(this.geral);
         if(!individual&&!geral)
             throw new Error('Nenhuma campanha configurada. Defina a campanha geral no admin ou uma campanha individual nesta oferta.');
