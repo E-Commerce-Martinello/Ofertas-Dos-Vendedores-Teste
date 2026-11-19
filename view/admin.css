@@ -147,3 +147,20 @@ body #painelCadastroGerentes .cadastro-gerente-contato.pendente{
   padding:4px 8px;border:1px solid var(--a-warn);border-radius:7px;
   background:color-mix(in srgb,var(--a-warn) 9%,var(--a-surface))
 }
+
+/* Campanhas: opções avançadas recolhidas por padrão e responsivas. */
+body #painelCampanhaGeral .campanha-geral-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch}
+body #painelCampanhaGeral .campanha-padrao-utm{display:flex;flex-direction:column;gap:5px;min-width:0;background:var(--a-subtle);border:1px solid var(--a-line);border-radius:11px;padding:13px}
+body #painelCampanhaGeral .campanha-padrao-utm strong{font-size:12px}
+body #painelCampanhaGeral .campanha-padrao-utm code{font-size:12px;overflow-wrap:anywhere;white-space:normal;color:var(--a-text)}
+body #painelCampanhaGeral .campanha-utm-avancada{border:1px solid var(--a-line);border-radius:11px;margin-top:14px;padding:12px;background:var(--a-subtle)}
+body #painelCampanhaGeral .campanha-utm-avancada summary{display:flex;align-items:center;gap:10px;font-weight:800;font-size:12px;cursor:pointer;color:var(--a-text);list-style:none}
+body #painelCampanhaGeral .campanha-utm-avancada summary::after{content:'▾';margin-left:auto}
+body #painelCampanhaGeral .campanha-utm-avancada[open] summary::after{content:'▴'}
+body #painelCampanhaGeral .campanha-utm-avancada summary::-webkit-details-marker{display:none}
+body #painelCampanhaGeral .campanha-utm-avancada p{margin:12px 0}
+body #painelCampanhaGeral .campanha-utm-campos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+body #painelCampanhaGeral .campanha-utm-campos .form-group{min-width:0}
+@media(max-width:720px){
+ body #painelCampanhaGeral .campanha-geral-grid,body #painelCampanhaGeral .campanha-utm-campos{grid-template-columns:1fr}
+}
