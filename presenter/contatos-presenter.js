@@ -271,7 +271,11 @@ const ContatosPresenter = {
     if (!v || !oferta || !this._candidatos().some(x=>this._rubi(x.matricula)===rubi)) {
       UI.erro('Atualize a base e confira a oferta e o telefone antes de continuar.');return;
     }
-    const msgs=this._mensagens(v,oferta);
+    let msgs;
+    try{
+      if(!CampanhasPortal.carregada)throw new Error('Configuração de campanhas ainda não carregada. Confira a campanha geral no administrador.');
+      msgs=this._mensagens(v,oferta);
+    }catch(e){UI.erro(e.message||'Não foi possível preparar o link de rastreio.');return;}
     if (!msgs) { UI.erro('Telefone não está válido.');return; }
     if (acao==='nativo') {
       const arquivo = this.bannerCache?.arquivo;
