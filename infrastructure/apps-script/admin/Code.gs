@@ -1120,6 +1120,8 @@ function mart1613_listarSolicitacoesTelefone_() {
 const MART1614_CAMP_ABA = 'Config_Campanhas';
 const MART1614_CAMP_HEADERS = ['chave','valor','atualizado_em','administrador'];
 const MART1614_LINK_PADRAO = 'https://www.martinello.com.br/ofertasvendedor';
+const MART1614_UTM_SOURCE_PADRAO = 'grupo_zap';
+const MART1614_UTM_ID_PADRAO = 'vendedores_zap';
 function mart1614_slug_(valor) {
   const v=String(valor||'').trim().toLowerCase();
   return /^[a-z0-9][a-z0-9_-]{0,59}$/.test(v) ? v : '';
@@ -1132,43 +1134,62 @@ function mart1614_linkGrupo_(valor) {
 }
 function mart1614_listarCampanhas_() {
   const ss=obterPlanilhaVendedoresV153_(),sh=ss.getSheetByName(MART1614_CAMP_ABA);
-  const dados={campanhaGeral:'', linkGrupo:MART1614_LINK_PADRAO, revision:''};
-  if(!sh || sh.getLastRow()<2)return {...dados,revision:mart19_hash_([dados.campanhaGeral,dados.linkGrupo])};
-  const linhas=sh.getRange(2,1,sh.getLastRow()-1,3).getDisplayValues();
-  linhas.forEach(r=>{
-    if(r[0]==='campanha_geral')dados.campanhaGeral=mart1614_slug_(r[1]);
-    if(r[0]==='link_grupo'){
-      try{dados.linkGrupo=mart1614_linkGrupo_(r[1]);}catch(_){}
+  const dados={campanhaGeral:'',linkGrupo:MART1614_LINK_PADRAO,
+    utmSource:MART1614_UTM_SOURCE_PADRAO,utmId:MART1614_UTM_ID_PADRAO};
+  if(sh && sh.getLastRow()>=2){
+    if(sh.getLastRow()>1000)throw new Error('Configuração de campanhas excedeu o limite seguro.');
+    const linhas=sh.getRange(2,1,sh.getLastRow()-1,2).getDisplayValues();
+    // Leitura por chave: migracoes e reordenação de linhas não apagam a campanha geral.
+    for(const r of linhas){
+      const chave=String(r[0]||'').trim(), valor=String(r[1]||'').trim();
+      if(chave==='campanha_geral') dados.campanhaGeral=mart1614_slug_(valor);
+      if(chave==='link_grupo'){try{dados.linkGrupo=mart1614_linkGrupo_(valor);}catch(_){}}
+      if(chave==='utm_source')dados.utmSource=mart1614_slug_(valor)||MART1614_UTM_SOURCE_PADRAO;
+      if(chave==='utm_id')dados.utmId=mart1614_slug_(valor)||MART1614_UTM_ID_PADRAO;
     }
-    if(r[2] && (!dados.revision || r[2]>dados.revision))dados.revision=r[2];
-  });
-  return {...dados,revision:mart19_hash_([dados.campanhaGeral,dados.linkGrupo])};
+  }
+  return {...dados,revision:mart19_hash_([dados.campanhaGeral,dados.linkGrupo,dados.utmSource,dados.utmId])};
 }
 function mart1614_salvarCampanhas_(payload,email) {
   const geral=mart1614_slug_(payload.campanhaGeral);
-  if (String(payload.campanhaGeral||'').trim() && !geral)
-    throw new Error('Campanha: até 60 letras minúsculas, números, _ ou -. Sem espaços.');
+  if(String(payload.campanhaGeral||'').trim() && !geral)
+    throw new Error('Campanha: use até 60 letras minúsculas, números, _ ou -, sem espaços.');
+  const utmSource=mart1614_slug_(payload.utmSource==null?MART1614_UTM_SOURCE_PADRAO:payload.utmSource);
+  const utmId=mart1614_slug_(payload.utmId==null?MART1614_UTM_ID_PADRAO:payload.utmId);
+  if(!utmSource||!utmId)throw new Error('UTM source e UTM id são obrigatórios (até 60 caracteres, letras minúsculas, números, _ ou -).');
   const link=mart1614_linkGrupo_(payload.linkGrupo||MART1614_LINK_PADRAO);
   const lock=LockService.getScriptLock();lock.waitLock(15000);
   try {
     const atual=mart1614_listarCampanhas_();
     if(String(payload.revision||'')!==atual.revision)
-      throw new Error('A campanha foi alterada por outra conta. Atualize os dados antes de salvar.');
+      throw new Error('A configuração de campanhas foi alterada em outra sessão. Atualize e revise os dados antes de salvar.');
     const ss=obterPlanilhaVendedoresV153_();
     let sh=ss.getSheetByName(MART1614_CAMP_ABA);
     if(!sh)sh=ss.insertSheet(MART1614_CAMP_ABA);
+    if(sh.getLastRow()>1000)throw new Error('Configuração de campanhas excedeu o limite seguro.');
+    // Confere chaves duplicadas sem sobrescrever outras configurações da planilha.
+    const n=Math.max(0,sh.getLastRow()-1);
+    const existing=n?sh.getRange(2,1,n,4).getDisplayValues():[];
+    const keys=['campanha_geral','link_grupo','utm_source','utm_id'];
+    for(const key of keys)if(existing.filter(r=>r[0]===key).length>1)
+      throw new Error('Chave duplicada em Config_Campanhas: '+key+'. Corrija antes de salvar.');
+    const agora=new Date().toISOString();
+    const novos={campanha_geral:geral,link_grupo:link,utm_source:utmSource,utm_id:utmId};
+    const changes=[];
+    for(const key of keys){
+      const pos=existing.findIndex(r=>r[0]===key);
+      changes.push({row:pos>=0?pos+2:sh.getLastRow()+1+changes.filter(x=>x.newRow).length,
+        newRow:pos<0,values:[key,novos[key],agora,email]});
+    }
+    // Grava somente as chaves conhecidas, sem apagar outras linhas.
     sh.getRange(1,1,1,4).setValues([MART1614_CAMP_HEADERS]);
-    sh.getRange(2,1,2,4).setNumberFormat('@');
-    const revision=new Date().toISOString();
-    sh.getRange(2,1,2,4).setValues([
-      ['campanha_geral',geral,revision,email],
-      ['link_grupo',link,revision,email]
-    ]);
+    for(const change of changes)
+      sh.getRange(change.row,1,1,4).setNumberFormat('@').setValues([change.values]);
     sh.setFrozenRows(1);
-    return {campanhaGeral:geral,linkGrupo:link,revision:mart19_hash_([geral,link])};
+    return {...novos,campanhaGeral:geral,linkGrupo:link,utmSource,utmId,
+      revision:mart19_hash_([geral,link,utmSource,utmId])};
   }finally{lock.releaseLock();}
 }
-
 
 // ============================================
 // v1.6.15 — Auditoria administrativa / Backup
